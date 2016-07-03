@@ -1,0 +1,75 @@
+###############################################################################
+#
+#   eecs_promises.cf - EECS specific bundles
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+bundle agent eecs_run
+{
+  methods:
+    any::
+      # set up all the host roles and classes
+      "host_roles" usebundle => host_roles;
+
+#    any.linux::
+#      "base_config"	usebundle => base_config;
+#
+#    server.linux::
+#      "server_config"	usebundle => server_config;
+}
+
+bundle agent host_roles
+{
+  vars:
+    # Be cautious here, the function expects CRLF (dos) line endings per RFC4180
+
+    "json_input"
+      data => readjson("$(sys.workdir)/masterfiles/server_roles.json",3k),
+      comment => "We use external data for server identification so it's easier for other people or
+                  automated processes to update the data.";
+    
+    "roles" slist => getindices( json_input );
+
+    "json_str" string => format("%S", json_input);
+    	       	         # Just for printing seralized version of data container for debugging
+                         # (note its JSON).
+
+  classes:
+    
+    "$(roles)"
+      expression => "$(json_input[$(roles)])",
+      scope => "namespace",
+      meta => { "inventory", "attribute_name=Role Class" },
+      comment => "If host name is found in server_roles.json file, then add its specific server role.";
+
+    "server"
+      expression => "$(roles)",
+      scope => "namespace",
+      comment => "If host name is found in server_roles.json file and role is defined, then add it to server class.";
+
+
+    "workstation"
+      not => "$(roles)",
+      scope => "namespace",
+      comment => "(default) If role is not defined, then it is (likely) a client workstation and not a server.";
+      
+  reports:
+
+    # It's good practice to guard your reports. If you don't it will cause much
+    # noise. By convention I use DEBUG and DEBUG_bundlename to guard reports so
+    # that I can easily run the poilicy and get policy debug reports for either
+    # the whole policy, or just a specific bundle.
+
+    (DEBUG|DEBUG_host_roles)::
+      "I want the class '$(roles)' to be defined if the expression '$(json_input[$(roles)])' is defined";
+
+      "Contents of 'json_input' data container: '$(json_str)'";
+
+    (DEBUG|DEBUG_host_roles).server::
+      "host found in server_roles.json, so server class was defined";
+
+    (DEBUG|DEBUG_host_roles).workstation::
+      "host not found in server_roles.json, so workstation class was defined by default";
+
+}

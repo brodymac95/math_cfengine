@@ -1,0 +1,43 @@
+{
+    "chain_policies":
+    {
+        "input": "ACCEPT",
+        "output": "ACCEPT",
+        "forward": "DROP"
+    },
+
+    "filter_rules":
+    {
+        "1":
+        {
+	    "comment": "allow internal connections on loopback interface"
+	    "chain": "INPUT",
+            "interface": "eth1",
+            "target": "ACCEPT",
+        },
+        "2":
+        {
+	    "comment": "allow incoming SSH from WSU wired public network"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "destination_port": "22",
+            "target": "ACCEPT",
+        },
+        "100":
+        {
+	    "comment": "allow incoming CFEngine connections for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
+        "1000":
+        {
+	    "comment": "final INPUT rule REJECTS all other connections"
+            "chain": "INPUT",
+            "target": "REJECT",
+        },
+    }
+}
+

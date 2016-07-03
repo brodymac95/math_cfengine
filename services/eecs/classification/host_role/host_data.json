@@ -1,0 +1,28 @@
+{
+    "hostname": {
+	"machine": "server OR workstation OR laptop OR mobile"
+	"purpose": "teaching OR research OR infrastructure",
+        "role": "role",
+        "owner": "client",
+        "users": "[myWSU IDs in comma separated list for students/faculty]",
+    },
+    "policyhub": {
+	"machine": "server",
+	"purpose": "infrastructure",
+        "role": "policysrv",
+        "owner": "roose",
+	"users": {
+	    "d693f574": "Ben Roose",
+	    "a555z888": "Jarvis",
+	},
+    },
+    "cloudcity": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "csasrv",
+        "owner": "jadliwala",
+	"users": {
+	    "a123b456": "Joe Cocker",
+	},
+    },
+}

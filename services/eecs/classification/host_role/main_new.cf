@@ -1,0 +1,154 @@
+###############################################################################
+#
+#   classification/host_role/main.cf - EECS role classifications
+#   Maintained: Ben Roose, ver 0.3
+#
+###############################################################################
+
+## CLASSES AND ROLES BUNDLES
+
+bundle common classify_host
+# @description: define the classifications of the host from external json file.
+{
+  vars:
+    # Be cautious here, readjson function expects CRLF (dos) line endings per RFC4180
+    "host_data"
+      data => readjson("$(this.promise_dirname)/host_data.json",3k),
+      comment => "We use external data for host identification so it's easier for other people or
+                  automated processes to update the data.";
+
+    "hosts" slist => getindices( host_data );
+
+    "json_str" string => format("%S", host_data);
+    	       	         # Just for printing seralized version of data container for debugging (note its JSON).
+    "host_machine"
+      string => "$(host_data[$(hosts)][machine])",
+      ifvarclass => canonify("$(host_data[$(hosts)][machine])"),
+      meta => { "inventory", "attribute_name=machine" };
+
+    "host_purpose"
+      string => "$(host_data[$(hosts)][purpose])",
+      ifvarclass => canonify("$(host_data[$(hosts)][purpose])"),
+      meta => { "inventory", "attribute_name=purpose" };
+
+    "host_role"
+      string => "$(host_data[$(hosts)][role])",
+      ifvarclass => canonify("$(host_data[$(hosts)][role])"),
+      meta => { "inventory", "attribute_name=role" };
+
+    "host_owner"
+      string => "$(host_data[$(hosts)][owner])",
+      ifvarclass => canonify("$(host_data[$(hosts)][owner])"),
+      meta => { "inventory", "attribute_name=owner" };      
+
+    "mywsu_users"
+      data => mergedata("host_data[$(sys.host)][users]"),
+      ifvarclass => isvariable("host_data[$(sys.host)][users]");
+
+      "json_str2" string => format("%S", "mywsu_users");
+ 
+   "user_list"
+      slist => getindices("mywsu_users");
+
+      
+  classes:
+
+    "$(host_data[$(hosts)][machine])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Machine Class" },
+      comment => "Add host's specific machine type from external data file.";
+      
+    "$(host_data[$(hosts)][purpose])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Purpose Class" },
+      comment => "Add host's specific purpose from external data file.";
+
+    "$(host_data[$(hosts)][role])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Role Class" },
+      comment => "Add host's specific role from external data file.";
+
+    "$(host_data[$(hosts)][owner])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Owner Class" },
+      comment => "Add host's specific owner from external data file.";
+      
+  reports:
+
+    # It's good practice to guard your reports. If you don't it will cause much
+    # noise. By convention I use DEBUG and DEBUG_bundlename to guard reports so
+    # that I can easily run the poilicy and get policy debug reports for either
+    # the whole policy, or just a specific bundle.
+
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_classify_host)::
+      "$(this.bundle): Found machine type: $(host_machine)";
+      "$(this.bundle): Found purpose: $(host_purpose)";
+      "$(this.bundle): Found role: $(host_role)";
+      "$(this.bundle): Found owner: $(host_owner)";
+
+      "$(this.bundle): Found users: $(user_list)";
+      # "Contents of 'external file' data container: '$(json_str)'";
+       "Contents of 'wsu_users' data container: '$(json_str2)'";
+
+#    (DEBUG|DEBUG_classify_host).server::
+#      "$(this.bundle): Host found in host_roles.json, so server class defined";
+
+#    (DEBUG|DEBUG_classify_host).workstation::
+#      "$(this.bundle): Host not found in host_roles.json, so workstation class defined";
+}
+
+bundle common classify_administrator
+# @description: define the administrator of the host, EECS sysadmin or end user.
+{
+  vars:
+    # Be cautious here, readjson function expects CRLF (dos) line endings per RFC4180
+    "admin_data"
+      data => readjson("$(this.promise_dirname)/user_admin_hosts.json",3k),
+      comment => "We use external data for an exception list of the hosts administrated by end users.";
+    
+    "hosts" slist => getindices( admin_data );
+
+    "json_str" string => format("%S", admin_data);
+    	       	         # Just for printing seralized version of data container for debugging (note its JSON).
+
+  classes:
+    
+    "lock_var"
+      expression => isvariable("hosts"),
+      comment => "allowing for hosts variable to be defined before checking on the sysadmin class promise";
+      
+    "enduser"
+      expression => "$(hosts)",
+        ifvarclass => "lock_var",
+      meta => { "derived-from=sys.host,hardclass" },
+      comment => "If host name is found in user_admin_hosts.json file, then define end_user class for this host.";
+
+    "sysadmin"
+      not => "enduser",
+      ifvarclass => "lock_var",
+      meta => { "derived-from=sys.host,hardclass" },
+      comment => "(default) If enduser is not defined, then host must be administrated by sysadmin.";
+
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_admin_config)::
+      "$(this.bundle): Found host $(hosts)";
+      #"I want the class '$(hosts)' to be defined if the expression '$(admin_data[$(roles)])' is defined";
+      #"Contents of 'json_input' data container: '$(json_str)'";
+
+    (DEBUG|DEBUG_admin_config).enduser::
+      "$(this.bundle): Host found in user_admin_hosts.json, so enduser class defined";
+
+    (DEBUG|DEBUG_admin_config).sysadmin::
+      "$(this.bundle): Host not found in user_admin_hosts.json, so sysadmin class defined by default";
+}

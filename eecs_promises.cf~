@@ -1,0 +1,231 @@
+###############################################################################
+#
+#   eecs_promises.cf - EECS specific bundles
+#   Maintained: Ben Roose, ver 0.1.1
+#
+###############################################################################
+
+bundle agent eecs_main
+{
+  methods:
+      # set up all the host roles and classes
+      "host_roles" usebundle => host_roles;
+
+    any.linux::
+      "base_config"	usebundle => base_config;
+#
+#    server.linux::
+#      "server_config"	usebundle => server_config;
+}
+
+## CLASSES AND ROLES BUNDLES
+
+bundle agent host_roles
+{
+  vars:
+    # Be cautious here, the function expects CRLF (dos) line endings per RFC4180
+
+    "json_input"
+      data => readjson("$(sys.workdir)/masterfiles/server_roles.json",3k),
+      comment => "We use external data for server identification so it's easier for other people or
+                  automated processes to update the data.";
+    
+    "roles" slist => getindices( json_input );
+
+    "json_str" string => format("%S", json_input);
+    	       	         # Just for printing seralized version of data container for debugging
+                         # (note its JSON).
+
+  classes:
+    
+    "$(roles)"
+      expression => "$(json_input[$(roles)])",
+      scope => "namespace",
+      meta => { "inventory", "attribute_name=Role Class" },
+      comment => "If host name is found in server_roles.json file, then add its specific server role.";
+
+    "server"
+      expression => "$(roles)",
+      scope => "namespace",
+      comment => "If host name is found in server_roles.json file and role is defined, then add it to server class.";
+
+
+    "workstation"
+      not => "$(roles)",
+      scope => "namespace",
+      comment => "(default) If role is not defined, then it is (likely) a client workstation and not a server.";
+      
+  reports:
+
+    # It's good practice to guard your reports. If you don't it will cause much
+    # noise. By convention I use DEBUG and DEBUG_bundlename to guard reports so
+    # that I can easily run the poilicy and get policy debug reports for either
+    # the whole policy, or just a specific bundle.
+
+    (DEBUG|DEBUG_host_roles)::
+      "Bundle host_roles ran.";
+      "I want the class '$(roles)' to be defined if the expression '$(json_input[$(roles)])' is defined";
+      "Contents of 'json_input' data container: '$(json_str)'";
+
+    (DEBUG|DEBUG_host_roles).server::
+      "host found in server_roles.json, so server class was defined";
+
+    (DEBUG|DEBUG_host_roles).workstation::
+      "host not found in server_roles.json, so workstation class was defined by default";
+
+}
+
+## MACHINE CONFIGURATION BUNDLES
+
+bundle agent base_config
+{
+  # set MOTD banners for login stating CFEngine is maintaining this system
+  # set base firewall rules (can this be added to by a server bundle?)
+  # secure monitoring of files (neighbourhood watch)
+  # auto update/upgrade software packages regularly
+  # install base software package bundle: ??
+  # copy host server ssh keys for clients logging in
+
+  methods:
+      
+      "login_banner" usebundle => login_banner;
+
+#    any.linux::
+#      "base_config"	usebundle => base_config;
+#
+#    server.linux::
+#      "server_config"	usebundle => server_config;
+
+  reports:
+    (DEBUG|DEBUG_base_config)::
+      "Bundle base_config ran.";   
+}
+
+
+
+
+## CONFIG FILE EDITING BUNDLES
+
+bundle agent login_banner
+
+# @description: sets the /etc/motd login banner from a template file
+
+{
+  vars:
+      "template_file" string => "$(sys.workdir)/masterfiles/templates/motd_template.txt";   
+      "motd_file"     string => "/etc/motd";
+      "support"	      string => "EECS: Ben Roose (ben.roose@wichita.edu)";
+
+      server::
+	"type" string => "Server";
+      workstation::
+	"type" string => "Workstation";
+
+  files:
+      "$(motd_file)"   
+        handle => "set_login_banner",
+        comment => "Ensure the login banner is set to the authorized text",
+        create => "true",
+        perms => mog("744", "root", "root"),
+        edit_defaults => empty,
+        edit_line => expand_template("$(template_file)"); 
+
+  reports:
+    (DEBUG|DEBUG_login_banner)::
+      "Bundle Login_banner ran.";
+}
+
+
+bundle agent sshd_config
+{
+  vars:
+    # Files to edit
+    "files[sshd]" string => "/etc/ssh/sshd_config";
+
+    # SSHD configuration to set
+    "sshd[Protocol]" string => "2";
+    "sshd[X11Forwarding]" string => "yes";
+    "sshd[PermitRootLogin]" string => "no";
+    "sshd[UseDNS]" string => "no";
+    #"sshd[banner]" string => "/etc/ssh/banner";
+
+ methods:
+    "sshd" usebundle => sshd_config_values( "sshd_config.sshd" );
+}
+
+bundle agent sshd_config_values(data)
+
+# @brief Configure specific sshd options as defined in `array`
+#
+# @description This bundle uses line based editing to partially manage the sshd
+# config file. Note this is only partial editing. For full file management
+# consider using a mustache template.
+#
+# @param data An array or data container containing the desired key value pairs.
+#
+# **Example:**
+#
+# bundle agent sshd_config
+# {
+#  vars:
+#  
+#    # As a classic array:
+#    "sshd[Protocol]" string => "2";
+#    "sshd[X11Forwarding]" string => "no";
+#  
+#    # As a data container:
+#    "sshd" data => parsejson('
+#  [
+#    "Protocol": "2",
+#    "X11Forwarding": "no"
+#  ]');
+#
+# methods:
+#
+#   "Manage SSHD"
+#     usebundle => sshd_config_values( "sshd_config.sshd" );
+# }
+
+{
+  vars:
+    "sshd_config_file" string => "/etc/ssh/sshd_config";
+
+  files:
+    # Consider managing a temporary file that can be validated with sshd -t -c
+    # If that check returns zero then you can promise that the real sshd config
+    # is a copy of the validated file. and then define the class used to restart
+    # if the main config is repaired by the copy from the validated temporary
+    # file. This improves resilience, and tries to avoid deploying a potentially
+    # broken config.
+
+    "$(sshd_config_file)"
+       handle => "edit_sshd_config_file",
+       comment => "Set desired sshd_config parameters",
+       edit_line => set_config_values("data"),
+
+       # better to describe the state you are in than the state you want to
+       # obtain. Because when reading the policy to restart it can be nice to
+       # know why your restarting, instead of restarting because someone said
+       # restart.
+
+       classes => results("bundle", "sshd_config_file");
+       # `results` classes body will append various outcomes to <prefix> string passed in, such as <prefix>_repaired.
+       # so this is better than 'classes => if_repaired("restart_sshd");'
+
+  services:
+
+    # Now I know that the agent will be actuating the following services promises
+    #  if the sshd config has been repaired and if we have not defined a class
+    #  called no_restarts.
+
+    sshd_config_repaired.!no_restarts::
+      "sshd"
+        service_policy => "restart",
+        handle => "sshd_restart_because_config_changed",
+        comment => "We must restart sshd in order for the changes made to the
+                    config file to take effect.";
+  reports:
+    (DEBUG|DEBUG_sshd_config_values)::
+      "Bundle sshd_config_values ran.";
+
+}

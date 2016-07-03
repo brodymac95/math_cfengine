@@ -1,0 +1,38 @@
+###############################################################################
+#
+#   inventory/ntp/main.cf - EECS ntp inventory
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+bundle agent inventory_ntp_main
+{
+  vars:
+      "server_config_regex" string => "\s?+server\s+.*";
+
+      "ntp_config" string => "/etc/ntp.conf";
+
+    have_ntp_config::
+      "ntp_config_data" data => data_readstringarrayidx($(ntp_config), "\s*#[^\n]*", "\n", 100, 1M);
+      "ntp_config_data_idx" slist => getindices("ntp_config_data");
+
+      "ntp_config_server_entry[$(ntp_config_data_idx)]"
+        string => "$(ntp_config_data[$(ntp_config_data_idx)])",
+        ifvarclass => "ntp_config_server_entry_$(ntp_config_data_idx)";
+
+      "ntp_config_server_entries"
+        slist => getvalues("ntp_config_server_entry"),
+        meta => { "inventory", "attribute_name=NTP Servers Configured" };
+
+  classes:
+      "have_ntp_config" expression => fileexists($(ntp_config));
+
+      "ntp_config_server_entry_$(ntp_config_data_idx)"
+        expression => regcmp("$(server_config_regex)", "$(ntp_config_data[$(ntp_config_data_idx)])");
+
+  reports:
+    (DEBUG|DEBUG_inventory_ntp_main)::
+      "ntp_config_data_idx: $(ntp_config_data_idx)=$(ntp_config_data[$(ntp_config_data_idx)])";
+      "does '$(server_config_regex)' match '$(ntp_config_data[$(ntp_config_data_idx)])'?";
+      "ntp_config_server_entry found at index '$(ntp_config_server_entries)' with value '$(ntp_config_data[$(ntp_config_server_entries)])'";
+}

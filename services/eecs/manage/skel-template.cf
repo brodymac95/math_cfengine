@@ -1,0 +1,27 @@
+##############################################################################
+#
+#   manage/<service>/main.cf - EECS <service> configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+bundle agent config_<service>
+# @description: 
+{
+
+  vars:
+
+  methods:
+
+}

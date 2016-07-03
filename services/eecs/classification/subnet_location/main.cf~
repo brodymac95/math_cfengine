@@ -1,0 +1,79 @@
+###############################################################################
+#
+#   classification/subnet_location/main.cf - EECS subnet classification
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+bundle common classify_subnet_location
+{
+  vars:
+      "subnet_data"
+      data => readjson( "$(this.promise_dirname)/subnet_location.json", 10M );
+
+      "subnets" slist => getindices("subnet_data");
+
+      "subnet_nickname"
+      string => "subnet_$(subnet_data[$(subnets)][subnet_nickname])",
+      ifvarclass => canonify("$(subnet_data[$(subnets)][subnet_nickname])"),
+      meta => { "inventory", "attribute_name=subnet nickname" };
+
+      "building"
+      string => "$(subnet_data[$(subnets)][building])",
+      ifvarclass => canonify("$(subnet_data[$(subnets)][building])"),
+      meta => { "inventory", "attribute_name=building" };
+
+      "vlan"
+      string => "$(subnet_data[$(subnets)][vlan])",
+      ifvarclass => canonify("$(subnet_data[$(subnets)][vlan])"),
+      meta => { "inventory", "attribute_name=vlan" };
+
+      "link_type"
+      string => "$(subnet_data[$(subnets)][link_type])",
+      ifvarclass => canonify("$(subnet_data[$(subnets)][link_type])"),
+      meta => { "inventory", "attribute_name=link_type" };
+
+      "site"
+      string => "$(subnet_data[$(subnets)][site])",
+      ifvarclass => canonify("$(subnet_data[$(subnets)][site])"),
+      meta => { "inventory", "attribute_name=site" };
+
+  classes:
+
+      "subnet_$(subnet_data[$(subnets)][subnet_nickname])"
+      expression => iprange( $(subnets) ),
+      meta => { "derived-from=$(subnets)"},
+              comment => "We commonly refer to subnets by nickname. It could be
+                    43net, or something more fuzzy like frontend_webservers,
+                    this just provides a standard way to reference subnets with
+                    our normal terminoligy. Whatever the nickname, we prefix
+                    with 'subnet_' to clearly identify it as a subnet. We also
+                    set a meta tag to associate it back to the numeric subnet.";
+
+      "$(subnet_data[$(subnets)][building])"
+      expression => iprange( $(subnets) ),
+      meta => { "derived-from=$(subnets)" };
+
+      "$(subnet_data[$(subnets)][vlan])"
+      expression => iprange( $(subnets) ),
+      meta => { "derived-from=$(subnets)" };
+
+      "$(subnet_data[$(subnets)][link_type])"
+      expression => iprange( $(subnets) ),
+      meta => { "derived-from=$(subnets)" };
+
+      "$(subnet_data[$(subnets)][site])"
+      expression => iprange( $(subnets) ),
+      meta => { "derived-from=$(subnets)" };
+
+  reports:
+
+    (DEBUG|DEBUG_classify_subnet_location)::
+      "$(this.bundle): Activated";
+      "$(this.bundle): Found subnet $(subnets)";
+      "$(this.bundle): Found subnet nickname: $(subnet_nickname)";
+      "$(this.bundle): Found subnet building: $(building)";
+      "$(this.bundle): Found subnet vlan: $(vlan)";
+      "$(this.bundle): Found subnet link_type: $(link_type)";
+      "$(this.bundle): Found subnet site: $(site)";
+}

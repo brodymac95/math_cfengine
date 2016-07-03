@@ -1,0 +1,58 @@
+{
+    "156.26.10.0/24": {
+	"subnet_nickname": "bluenet",
+	"building": "JB-2ndFloor",
+	"vlan": "804",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "156.26.10.128/25": {
+	"subnet_nickname": "pinknet",
+	"building": "JB-2ndFloor",
+	"vlan": "802",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "156.26.11.0/24": {
+	"subnet_nickname": "cs-ext",
+	"building": "JB-2ndFloor",
+	"vlan": "unknown",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "156.26.43.0/24": {
+	"subnet_nickname": "engineering",
+	"building": "JB-2ndFloor",
+	"vlan": "43",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "156.26.250.0/26": {
+	"subnet_nickname": "dc-teaching",
+	"building": "JB-DataCenter",
+	"vlan": "970",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "156.26.250.64/26": {
+	"subnet_nickname": "dc-research",
+	"building": "JB-DataCenter",
+	"vlan": "971",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "192.168.250.0/24": {
+	"subnet_nickname": "dc-private",
+	"building": "JB-DataCenter",
+	"vlan": "972",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    },
+    "192.168.1.0": {
+	"subnet_nickname": "ltsp-private",
+	"building": "JB-2ndFloor",
+	"vlan": "805",
+	"link_type": "Wired",
+	"site": "Main Campus"
+    }
+}

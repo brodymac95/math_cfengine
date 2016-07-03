@@ -1,0 +1,64 @@
+###############################################################################
+#
+#   manage/ssh/main.cf - EECS ssh/sshd configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+#PRO TIP:
+# better to describe the state you are in than the state you want to
+# obtain. Because when reading the policy to restart it can be nice to
+# know why your restarting, instead of restarting because someone said restart.
+
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: syscrl_config
+######################################################################
+
+# NOTES for future development of configuration:
+
+bundle agent sysctl_config
+{
+  vars:  
+      # Files to edit
+      "files[sysctl]" string => "/etc/sysctl.conf";
+
+      # Sysctl variables to set
+      "sysctl[net.ipv4.tcp_syncookies]"               string => "1";
+      "sysctl[net.ipv4.conf.all.accept_source_route]" string => "0";
+      "sysctl[net.ipv4.conf.all.accept_redirects]"    string => "0";
+      "sysctl[net.ipv4.conf.all.rp_filter]"           string => "1";
+      "sysctl[net.ipv4.conf.all.log_martians]"        string => "1";
+  methods:
+    server::
+      "sysctl"  usebundle => edit_sysctl;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_files)::
+      
+}
+
+bundle agent edit_sysctl
+{
+  files:
+      "$(sysctl_config.files[sysctl])"
+      handle => "edit_sysctl",
+      comment => "Make sure sysctl.conf contains desired configuration settings",
+      create => "true",
+      edit_line => set_line_based("sysctl_config.sysctl", "=", "\s*=\s*", ".*", "\s*#\s*"),
+      #edit_line => set_variable_values("configfiles.sysctl"),
+      classes => results("bundle", "sysctl");
+
+  commands:
+    sysctl_repaired.!no_restarts::
+      "/sbin/sysctl -p"
+      handle => "reload_sysctl",
+      comment => "Make sure new sysctl settings are loaded";
+}

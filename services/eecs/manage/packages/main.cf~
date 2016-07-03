@@ -1,0 +1,68 @@
+##############################################################################
+#
+#   manage/packages/main.cf - EECS packages management
+#   Maintained: Ben Roose, ver 0.2
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf" };
+#}
+
+bundle agent manage_packages
+# @description: package management for hosts classified by: any (all hosts), workstation only packages, server only packages
+# NOTE: This is an initial version to get up and running. must build this into a nicer interface bundle set!!
+{
+
+  vars:
+
+    ## Packages required
+    debian|ubuntu::
+      "policy[openssh-client]" string => "present";
+      "policy[emacs]" string => "present";
+      "policy[screen]" string => "present";
+      "policy[build-essential]" string => "present";
+
+    workstation.(debian|ubuntu)::
+
+    server.(debian|ubuntu)::
+      "policy[openssh-server]" string => "present";
+
+    ## Packages denied (NEED TO FIX!)
+    #debian|ubuntu::  
+
+    workstation.(debian|ubuntu)::
+      #"policy[openssh-server]" string => "absent";
+
+    server.(debian|ubuntu)::
+
+    any::	
+      #"architectures" slist => { "x86_64" };
+      "allpkgs"       slist => getindices("policy");
+
+  packages:
+      "$(allpkgs)"
+        policy => "$(policy[$(allpkgs)])",
+        package_module => apt_get,
+        version => "latest";
+        #architecture => @(architectures);
+
+  methods:
+
+    #SETTING HOST MANUALLY FOR MATLAB INSTALL (need to build host classification bundles to make this more generic)
+    "jb_256_3432_res1"::
+      "install_matlab" usebundle => install_matlab;   
+  
+  reports:
+    (DEBUG|DEBUG_manage_packages)::
+      "$(this.bundle): Activated";
+}
+
+###################################
