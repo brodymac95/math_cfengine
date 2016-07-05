@@ -10,6 +10,7 @@ bundle common eecs_main_file_control
   vars:
       "inputs"
       slist => {
+	"$(this.promise_dirname)/version_control/main.cf",
 	"$(this.promise_dirname)/classification/main.cf",
 	"$(this.promise_dirname)/inventory/main.cf",
 	"$(this.promise_dirname)/manage/main.cf",
@@ -25,6 +26,7 @@ bundle agent eecs_main
 {
 
   methods:
+    "Update from github" usebundle => vcs_update;
     "Inventory" usebundle => inventory_main;
     "Manage" usebundle => manage_main;
 

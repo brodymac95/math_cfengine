@@ -1,4 +1,4 @@
-q###############################################################################
+###############################################################################
 #
 #   main.cf - EECS entry promises
 #   Maintained: Ben Roose, ver 0.1
@@ -10,7 +10,24 @@ bundle common eecs_main_file_control
   vars:
       "inputs"
       slist => {
-	"$(this.promise_dirname)/classification/main.cf",
+		 "101":
+		 {
+		   "comment": "specific rule for opening SSH on eth1 for jb_257_3432_res1"
+		   "chain": "INPUT",
+		   "interface": "eth1",
+		   "destination_port": "22",
+		   "target": "ACCEPT",
+		   "context": "jb_257_3432_res1"
+		 },
+		 "102":
+		 {
+		   "comment": "specific rule for opening SDN controller on eth1 for jb_257_3432_res1"
+		   "chain": "INPUT",
+		   "interface": "eth1",
+		   "destination_port": "8181",
+		   "target": "ACCEPT",
+		   "context": "jb_257_3432_res1"
+		           },"$(this.promise_dirname)/classification/main.cf",
 	"$(this.promise_dirname)/inventory/main.cf",
 	"$(this.promise_dirname)/manage/main.cf",
       };
