@@ -15,6 +15,24 @@
             "interface": "lo",
             "target": "ACCEPT",
         },
+        "101":
+        {
+	    "comment": "specific rule for opening SSH on eth1 for jb_257_3432_res1"
+            "chain": "INPUT",
+	    "interface": "eth1",
+	    "destination_port": "22",
+            "target": "ACCEPT",
+	    "context": "jb_257_3432_res1"
+        },
+        "102":
+        {
+	    "comment": "specific rule for opening SDN controller on eth1 for jb_257_3432_res1"
+            "chain": "INPUT",
+	    "interface": "eth1",
+	    "destination_port": "8181",
+            "target": "ACCEPT",
+	    "context": "jb_257_3432_res1"
+        },
         "1000":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"
