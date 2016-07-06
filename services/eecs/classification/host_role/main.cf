@@ -1,51 +1,81 @@
 ###############################################################################
 #
 #   classification/host_role/main.cf - EECS role classifications
-#   Maintained: Ben Roose, ver 0.2
+#   Maintained: Ben Roose, ver 0.3
 #
 ###############################################################################
 
 ## CLASSES AND ROLES BUNDLES
 
-bundle common classify_host_role
-# @description: define the role of the host and whether host is a server or workstation
+bundle common classify_host
+# @description: define the classifications of the host from external json file.
 {
   vars:
     # Be cautious here, readjson function expects CRLF (dos) line endings per RFC4180
-    "role_data"
-      data => readjson("$(this.promise_dirname)/server_roles.json",3k),
-      comment => "We use external data for server identification so it's easier for other people or
+    "host_data"
+      data => readjson("$(this.promise_dirname)/host_data.json",3k),
+      comment => "We use external data for host identification so it's easier for other people or
                   automated processes to update the data.";
-    
-    "roles" slist => getindices( role_data );
 
-    "json_str" string => format("%S", role_data);
+    "hosts" slist => getindices( host_data );
+
+    "json_str" string => format("%S", host_data);
     	       	         # Just for printing seralized version of data container for debugging (note its JSON).
+    "host_machine"
+      string => "$(host_data[$(hosts)][machine])",
+      ifvarclass => canonify("$(host_data[$(hosts)][machine])"),
+      meta => { "inventory", "attribute_name=machine" };
 
-  classes:
-    
-    "$(roles)"
-      expression => "$(role_data[$(roles)])",
-      meta => { "derived-from=sys.host,hardclass" },
-      meta => { "inventory", "attribute_name=Role Class" },
-      comment => "If host name is found in server_roles.json file, then add its specific server role.";
+    "host_purpose"
+      string => "$(host_data[$(hosts)][purpose])",
+      ifvarclass => canonify("$(host_data[$(hosts)][purpose])"),
+      meta => { "inventory", "attribute_name=purpose" };
 
-    "lock_var"
-      expression => isvariable("roles"),
-      comment => "allowing for roles variable to be defined before checking on the workstation class promise";
+    "host_role"
+      string => "$(host_data[$(hosts)][role])",
+      ifvarclass => canonify("$(host_data[$(hosts)][role])"),
+      meta => { "inventory", "attribute_name=role" };
 
-    "server"
-      expression => "$(roles)",
-        ifvarclass => "lock_var",
-      meta => { "derived-from=$(roles)+sys.host,hardclass" },
-      comment => "If host name is found in server_roles.json file and role is defined, then add it to server class.";
+    "host_owner"
+      string => "$(host_data[$(hosts)][owner])",
+      ifvarclass => canonify("$(host_data[$(hosts)][owner])"),
+      meta => { "inventory", "attribute_name=owner" };      
+
+    "mywsu_users"
+      data => mergedata("host_data[$(sys.host)][users]"),
+      ifvarclass => isvariable("host_data[$(sys.host)][users]");
+
+      "json_str2" string => format("%S", "mywsu_users");
+ 
+   "user_list"
+      slist => getindices("mywsu_users");
 
       
-    "workstation"
-      not => "server",
-        ifvarclass => "lock_var",
-      meta => { "derived-from=sys.host,hardclass" },
-      comment => "(default) If role is not defined, then it is (likely) a client workstation and not a server.";
+  classes:
+
+    "$(host_data[$(hosts)][machine])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Machine Class" },
+      comment => "Add host's specific machine type from external data file.";
+      
+    "$(host_data[$(hosts)][purpose])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Purpose Class" },
+      comment => "Add host's specific purpose from external data file.";
+
+    "$(host_data[$(hosts)][role])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Role Class" },
+      comment => "Add host's specific role from external data file.";
+
+    "$(host_data[$(hosts)][owner])"
+      expression => "$(hosts)",
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      meta => { "inventory", "attribute_name=Owner Class" },
+      comment => "Add host's specific owner from external data file.";
       
   reports:
 
@@ -57,16 +87,21 @@ bundle common classify_host_role
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_host_roles)::
-      "$(this.bundle): Found role $(roles)";
-     # "I want the class '$(roles)' to be defined if the expression '$(role_data[$(roles)])' is defined";
-     # "Contents of 'json_input' data container: '$(json_str)'";
+    (DEBUG|DEBUG_classify_host)::
+      "$(this.bundle): Found machine type: $(host_machine)";
+      "$(this.bundle): Found purpose: $(host_purpose)";
+      "$(this.bundle): Found role: $(host_role)";
+      "$(this.bundle): Found owner: $(host_owner)";
 
-    (DEBUG|DEBUG_host_roles).server::
-      "$(this.bundle): Host found in server_roles.json, so server class defined";
+      "$(this.bundle): Found users: $(user_list)";
+      # "Contents of 'external file' data container: '$(json_str)'";
+       "Contents of 'wsu_users' data container: '$(json_str2)'";
 
-    (DEBUG|DEBUG_host_roles).workstation::
-      "$(this.bundle): Host not found in server_roles.json, so workstation class defined by default";
+#    (DEBUG|DEBUG_classify_host).server::
+#      "$(this.bundle): Host found in host_roles.json, so server class defined";
+
+#    (DEBUG|DEBUG_classify_host).workstation::
+#      "$(this.bundle): Host not found in host_roles.json, so workstation class defined";
 }
 
 bundle common classify_administrator

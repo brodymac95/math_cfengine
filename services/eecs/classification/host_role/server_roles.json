@@ -1,5 +1,5 @@
 {
-    "policysrv": "policyhub-min"
-    "policysrv": "policyhub-full"
+    "policysrv": "policyhub_min"
+    "policysrv": "policyhub_full"
     "csasrv": "cloudcity"
 }
