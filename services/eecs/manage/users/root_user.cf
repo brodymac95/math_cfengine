@@ -1,0 +1,106 @@
+##############################################################################
+#
+#   manage/users/ldap.cf - EECS manual installer for LDAP user authentication
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: root_passwd
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle common root_passwd_settings
+{
+  vars:
+
+      "password_dist"
+        string => "$(sys.workdir)/host_by_key/$(connection.key)/root.hash",
+        comment => "This is where agents look for their root password hash.";
+
+      "password_cache"
+        string => "$(sys.workdir)/state/passwd/root.hash",
+        comment => "This is where agents will cache the hashed password locally
+        (for offline enforcement).";
+}
+
+bundle agent root_passwd
+{
+  methods:
+
+      "Manage Root Password"
+        usebundle => manage_root_passwd("root_passwd_settings");
+}
+
+bundle agent manage_root_passwd(settings)
+# @brief This bundle is run by agents to enforce the local root password.
+{
+  vars:
+    any::
+      "passwd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/root.hash";
+      "passwd_cache" string => "$($(settings).password_cache)";
+      "passwd_cache_dir" string => dirname("$(passwd_cache)");
+
+    have_cached_hashed_passwd::
+      "root_hash" string => readfile($(passwd_cache), 4096);
+
+  classes:
+      "have_cached_hashed_passwd"
+      expression => fileexists($(passwd_cache));
+
+  files:
+      "$(passwd_cache_dir)/."
+      create => "true";
+      
+    policy_server::
+      "$(passwd_cache)"
+      copy_from => local_dcp( $(passwd_dist) ),
+      comment => "if host is the policy server then perform a local copy of the passwd hash file";
+
+    !policy_server::
+      "$(passwd_cache)"
+      copy_from => secure_cp( $(passwd_dist), $(sys.policy_hub) ),
+      comment => "if host is any other client then perform a secure remote copy of the passwd hash file";
+
+  users:
+      "root"
+      policy => "present",
+      password => hashed_password($(root_hash));
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_root_passwd)::
+      "Password dist file: $(passwd_dist)";
+      "Password cached file: $(passwd_cache)";
+      "root hash: $(root_hash)";
+
+#    (DEBUG|DEBUG_install_ldap.secret_file_exists.cert_file_exists.conf_file_exists)::
+#      "$(this.bundle): already installed.";
+
+}
+
+bundle server passwd_access
+# @brief This bundle shares the path to the password hash
+{
+  access:
+
+      # It's important that this path have $(connection.key) in it!
+      "$(root_passwd_settings.password_dist)"
+        admit_keys =>  { $(connection.key) },
+        comment => "Grant each host to access its own hashed root password. We
+                  assume that each host has a unique keypair";
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+}
