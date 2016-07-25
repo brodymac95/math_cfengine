@@ -14,6 +14,8 @@ bundle common manage_main_file_control
     "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
     "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
     "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
+    "input[root]" string => "$(this.promise_dirname)/users/root_user.cf";
+    "input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
      
     #enable_manage_emacs_config::
       #"input[emacs_config]" string => "$(this.promise_dirname)/emacs_config/main.cf";

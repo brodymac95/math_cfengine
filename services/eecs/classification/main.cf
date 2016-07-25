@@ -18,8 +18,7 @@ bundle common classification_main_file_control
     "bundles"
       slist =>
       {
-	"classify_host_role",
-	"classify_administrator",
+	"classify_host",
 	"classify_subnet_location",
       };
 }

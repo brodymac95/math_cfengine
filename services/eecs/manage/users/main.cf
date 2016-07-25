@@ -1,14 +1,9 @@
 ##############################################################################
 #
-#   manage/users/main.cf - EECS users configuration
+#   manage/users/ldap.cf - EECS manual installer for LDAP user authentication
 #   Maintained: Ben Roose, ver 0.1
 #
-#   SECURITY NOTICE: This policy should ONLY run if the host has the class "sysadmin" defined!
-#
 ###############################################################################
-
-# PROTIP: Use body file control to help make modular policy.
-# "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
 body file control
@@ -16,115 +11,113 @@ body file control
       inputs => { "$(sys.libdir)/stdlib.cf" };
 }
 
-# Future upgrades:
-# 1. check if enduser class is defined, and if so then remove the local host copy of the password hash file and remove the "local" users defined in it (do this before removing the file).
+######################################################################
+# Public entry point: manage_users
+######################################################################
 
-# PSEUDOCODE:
-# FOR SECURITY, WE NEED TO SEPARATE THE PASSWORDS INTO SEPARATE TEXT FILES?
-# 1. using classes (infrastructure, teaching, research) set remote path/filename variable
-# 2. secure cp <pw_class>-hash.json with correct hashed passwords for users (inc. root) to a secure location (/root or /etc)
-# 3. open <pw_class>-hash.json and set user indices and hashed password value pairs from json data containers using getindices()
-# 4. Loop through all users with the users: section - creating user and setting the hashed password (including root, roose, and wallis)
-# 5. rm the <pw_class>-hash.json file (clean up). Does this need to be done, since this information is now in /etc/shadow, so it is not a huge security risk??
+# NOTES for future development of configuration:
+# 1.
 
-# QUESTION: what is the best way to test users and passwords are consistent (or is it built into the users: section)?
-
-bundle agent config_<service>
-# @description: 
-{
-
-  vars:
-
-  methods:
-
-}
-
-bundle agent main
+bundle common root_passwd_settings
 {
   vars:
-      # This is the hashed password for 'vagrant'
-    debian_8::
-      "root_hash"
-      string => "$6$1nRTeNoE$DpBSe.eDsuZaME0EydXBEf.DAwuzpSoIJhkhiIAPgRqVKlmI55EONfvjZorkxNQvK2VFfMm9txx93r2bma/4h/";
+
+      "password_dist"
+        string => "$(sys.workdir)/host_by_key/$(connection.key)/root.hash",
+        comment => "This is where agents look for their root password hash.";
+
+      "password_cache"
+        string => "$(sys.workdir)/state/passwd/root.hash",
+        comment => "This is where agents will cache the hashed password locally
+        (for offline enforcement).";
 }
 
+bundle agent manage_users
+{
+  methods:      
+      "manage root password"
+      usebundle => manage_root_passwd("root_passwd_settings");
+
+      "manage system users"
+      usebundle => manage_system_users("root_passwd_settings");
+
+    pam_ldap::
+      "manage ldap users"
+      usebundle => manage_ldap_users("root_passwd_settings");
+      
+}
 
 ########################################################
 
-bundle agent local_users
-
+bundle agent manage_root_passwd(settings)
+# @brief This bundle is run by agents to enforce the local root password.
 {
   vars:
+    any::
+      "passwd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/root.hash";
+      "passwd_cache" string => "$($(settings).password_cache)";
+      "passwd_cache_dir" string => dirname("$(passwd_cache)");
 
-      "local_hash_file" string => "/root/cfengine/hash_file.json";
-      
-      "remote_server" string => "policyhub.cs.wichita.edu";
-
-    # set the remote pathname for the password hash file specific to class name defined from the host classification
-    infrastructure::
-      "remote_hash_file" string => "/srv/cfengine/users/infrastructure-hash_file.json";
-
-    teaching::
-      "remote_hash_file" string => "/srv/cfengine/users/teaching-hash_file.json";
-
-    research::
-      "remote_hash_file" string => "/srv/cfengine/users/research-hash_file.json";
-
-      # pull in data from external file (once copied from policy server) and create slist of users
-    hash_file_exists::
-      "system_user_data"
-      data => readjson("$(local_hash_file)",3k),
-            comment => "External data from json file for list of local admin users and hashed passwords for host.";
-
-      "system_users" slist => getindices( system_user_data );
-
-      "json_str" string => format("%S", system_user_data);
-      # Just for printing seralized version of data container for debugging (note its JSON).
+    have_cached_hashed_passwd::
+      "root_hash" string => readfile($(passwd_cache), 4096);
 
   classes:
-      "hash_file_exists" expression => fileexists("$(local_hash_file)");
-      
-      
-  files:
-    # SECURITY-CHECK: make sure host is administrated by sysadmin (whenever password hash file is copied to the host)
-    sysadmin::
-      "$(local_hash_file)"
-      copy_from => secure_cp("$(remote_hash_file)","$(remote_server)"),
-      perms => mog ("600", "root", "root"),
-      comment => "secure copy of the remote file with hashed passwords";
+      "have_cached_hashed_passwd"
+      expression => fileexists($(passwd_cache));
 
+  files:
+      "$(passwd_cache_dir)/."
+      create => "true";
+      
+    policy_server::
+      "$(passwd_cache)"
+      copy_from => local_dcp( $(passwd_dist) ),
+      comment => "if host is the policy server then perform a local copy of the passwd hash file";
+
+    !policy_server::
+      "$(passwd_cache)"
+      copy_from => secure_cp( $(passwd_dist), $(sys.policy_hub) ),
+      comment => "if host is any other client then perform a secure remote copy of the passwd hash file";
+
+  users:
+      "root"
+      policy => "present",
+      password => hashed_password($(root_hash));
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_root_passwd)::
+      "Password dist file: $(passwd_dist)";
+      "Password cached file: $(passwd_cache)";
+      "root hash: $(root_hash)";
+}
+
+########################################################
+
+bundle agent manage_ldap_users
+{
+  vars:
+    pam_ldap::
+      "ldap_user" slist => getindices( mywsu_users );
       
   users:
-    # SECURITY-CHECK: make sure host is administrated by sysadmin (whenever users are added into host system)
-    sysadmin.linux.hash_file_exists.TESTING::
-      "$(system_users)"
-      policy => "present",
-      password => hashed_password( "$(system_user_data[$(users)])" ),
-      home_dir => "/home/$(users)",
-      group_primary => "users",
-#      groups_secondary => { "security", "webadmin" },
-      shell => "/bin/bash/",
-#      home_bundle => setup_home_dir("$(system_users)"),
-      if => isvariable("$(system_users)"),
-      comment => "add system user from external file with their hashed password";
-
-    sysadmin.linux.ldap_users_exist.TESTING::
-      "$(ldap_users)"
+      # SECURITY-CHECK: make sure host is administrated by sysadmin (whenever users are added into host system)
+    sysadmin.linux.pam_ldap::
+      "$(ldap_user)"
       policy => "present",
       password => plain_password( "burn" ),
-      home_dir => "/home/$(ldap_users)",
+      description => "$(mywsu_users[$(ldap_user)])",
+      shell => "/bin/bash/",
+      home_dir => "/home/$(ldap_user)",
       group_primary => "users",
 #      groups_secondary => { "security", "webadmin" },
-      shell => "/bin/bash/",
 #      home_bundle => setup_home_dir("$(users)"),
-      if => isvariable("$(ldap_users)"),
-      comment => "add ldap user from external hosts file";
+      comment => "add ldap user from mywsu_users dataset gained via external host file in classify_host bundle";
 
-  methods:
-    sysadmin.linux.ldap_users_exist.TESTING::
-      "delete user password" usebundle => "ldap_user($(ldap_users))";
-      
- }
+}
+
 
 ########################################################
 
@@ -133,7 +126,7 @@ bundle agent ldap_user (user)
 
   vars:
       "shadow_file" string => "/tmp/shadow";
-      
+
   files:
       "$(shadow_file)"
       create    => "false",
@@ -141,36 +134,27 @@ bundle agent ldap_user (user)
       comment => "Remove password line from /etc/shadow for a user externally authenticated by LDAP";
 }
 
+########################################################
+
 bundle edit_line ldap_password_remove (user)
 {
   delete_lines:
       "$(user).*";
 }
 
-
-
-
 ########################################################
 
-bundle server passwords
+bundle server passwd_access
+# @brief This bundle shares the path to the password hash
 {
-  vars:
-
-      # Read a file of format
-      #
-      # classname: host1,host2,host4,IP-address,regex.*,etc
-      #
-
-      "pw_classes" int => readstringarray("acl","$(g.secret_keys_dir)/classes.txt","#[^\n]*",":","100","4000");
-      "each_pw_class" slist => getindices("acl");
-
   access:
 
-      "/secret/keys/$(each_pw_class)-root.txt"
-
-      admit   => splitstring("$(acl[$(each_pw_class)][1])" , ":" , "100"),
-      ifencrypted => "true";
-
+      # It's important that this path have $(connection.key) in it!
+      "$(root_passwd_settings.password_dist)"
+        admit_keys =>  { $(connection.key) },
+        comment => "Grant each host to access its own hashed root password. We
+                  assume that each host has a unique keypair";
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
-
-

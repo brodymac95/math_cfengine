@@ -16,93 +16,109 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1.
+# 1. allow access to pam_ldap directory for specific host!!
+
+bundle common ldap_settings
+{
+  vars:
+
+      "ldap_dist"
+      string => "$(sys.workdir)/host_by_key/$(connection.key)/pam_ldap/",
+      comment => "This is where agents look for their ldap password, cert, and config.";
+
+      "ldap_cache_dir"
+      string => "$(sys.workdir)/state/passwd/pam_ldap/",
+      comment => "This is where agents will cache the ldap data locally
+      (for offline enforcement).";
+}
 
 bundle agent install_ldap
 {
   # @decription: manual install and configuration for system users to authenticate against WSU's LDAP servers
 
   vars:
-      # intial variables for testing if ldap is installed
-      #(NOTE: this bundle needs adjusting if we wish these variables to override what is in the matlab_vars bundle!
-      "secret_file" string =>"/etc/pam_ldap.secret";
-      "cert_file" string =>"/etc/ssl/certs/wsu_cacert.pem";
-      "conf_file" string =>"/etc/pam_ldap.conf";
+    any::
 
+      "config_dir" string => "/etc/";
+      "certs_dir" string => "/etc/ssl/certs/";
+      
+      "secret_file" string => "pam_ldap.secret";
+      "cert_file" string => "wsu_cacert.pem";
+      "conf_file" string => "pam_ldap.conf";
+      "conf_ldap_link" string => "/etc/ldap/ldap.conf";
+
+      "ldap_binary" string => "/usr/bin/ldapsearch";
+
+      "ldap_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/pam_ldap/";
+      "ldap_cache_dir" string => "$($(settings).ldap_cache)";      
+      
   classes: 
       "secret_file_exits"
-      expression => fileexists("$(secret_file)");
+        expression => fileexists( concat( $(config_dir), $(secret_file) ) );
       "cert_file_exists"
-        expression => fileexists("$(cert_file)");
+        expression => fileexists( concat( $(certs_dir), $(cert_file) ) );
       "conf_file_exists"
-        expression => fileexists("$(conf_file)");
+        expression => fileexists( concat( $(config_dir), $(conf_file) ) );
+
+      "ldap_packages_installed"
+        expression => fileexists($(ldap_binary)),
+        comment => "check one of the ldap-utils binary files exists on the system before copying config files";
+
+      
+  files:
+    !policy_server.ldap_packages_installed::
+      "$(config_dir)$(secret_file)"
+      copy_from => secure_cp( concat( $(ldap_dist), $(secret_file) ), $(sys.policy_hub) ),
+      comment => "secure copy of the remote file with LDAP password (WARNING: plaintext password)";
+
+      "$(certs_dir)$(cert_file)"
+      copy_from => secure_cp( concat( $(ldap_dist), $(cert_file) ), $(sys.policy_hub) ),
+      comment => "secure copy of the remote WSU certificate file";
+
+      "$(config_dir)$(conf_file)"
+      copy_from => secure_cp( concat( $(ldap_dist), $(conf_file) ), $(sys.policy_hub) ),
+      comment => "secure copy of the remote LDAP config file";
+
+      "$(conf_ldap_link)"
+      move_obstructions => "true",
+      link_from => linkfrom( concat( $(config_dir), $(conf_file) ), "symlink" ),
+      comment => "create symbolic link from /etc/ldap/ldap.conf to /etc/pam_ldap.conf";
+      
+  methods:
+    !policy_server::
+      "ldap_pkgs"  usebundle => ldap_packages_installation;
+
+      #   !secret_file_exists|!cert_file_exists|!conf_file_exists)::
+#    any::
+#      "ldap_vars"  usebundle => ldap_vars;
+#      "ldap_files_exist"   usebundle => ldap_files_exist("ldap_vars.conf");
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
+    (inform_mode.policy_server|verbose_mode.policy_server)::
+      "$(this.bundle): NOT INSTALLING LDAP CLIENT, since this is a policy server";
+
     (DEBUG|DEBUG_install_ldap)::
 
-    (DEBUG|DEBUG_install_ldap.secret_file_exists.cert_file_exists.conf_file_exists)::
-      "$(this.bundle): already installed.";
+    (DEBUG.secret_file_exists.cert_file_exists.conf_file_exists)::
+      "$(this.bundle): all files copied over to system.";
 
-
-  methods:
-    !secret_file_exists|!cert_file_exists|!conf_file_exists)::
-      "ldap_vars"  usebundle => ldap_vars("$(params)");
-      "ldap_pkgs"  usebundle => ldap_packages_installed("ldap_vars.conf");
-      "ldap_files_exist"   usebundle => ldap_files_exist("ldap_vars.conf");
 }
-
 #############################################
 
-bundle agent ldap_vars(params)  
-{
-  vars:
-      # Default configuration values. Internal parameters start with _
-      "conf[_secret_file]" string =>"/etc/pam_ldap.secret",
-        policy => "overridable";
-      "conf[_cert_file]" string =>"/etc/ssl/certs/wsu_cacert.pem",
-        policy => "overridable";
-      "conf[_conf_file1]" string =>"/etc/pam_ldap.conf",
-        policy => "overridable";
-      "conf[_conf_file2]" string =>"/etc/ldap/pam_ldap.conf",
-        policy => "overridable";
-      "conf[_remote_secret_file]" string => "/srv/cfengine/users/pam_ldap.secret",
-        policy => "overridable";
-      "conf[_remote_cert_file]" string => "/srv/cfengine/users/wsu_cacert.pem",
-        policy => "overridable";
-      "conf[_master_conf_file]" string => "$(this.promise_dirname)/pam_ldap.conf",
-        policy => "overridable";
-      "conf[_remote_server]" string => "policyhub.cs.wichita.edu",
-        policy => "overridable";
-
-    any::
-      # Copy configuration parameters passed, into a local array
-      "param_keys"          slist  => getindices("$(params)");
-      "conf[$(param_keys)]" string => "$($(params)[$(param_keys)])",
-      policy => "overridable";
-}
-
-#############################################
-
-bundle agent ldap_report_params(params)
-{
-  vars:
-      "keys" slist => getindices("$(params)");
-  reports:
-    cfengine_3::
-      "$(keys) = $($(params)[$(keys)])";
-}
-
-#############################################
-
-bundle agent ldap_packages_installed(params)
+bundle agent ldap_packages_installation
 {
   vars:
     debian::  
       "desired_package" slist => { 
-        "ldap-utils ldaptor-doc ldaptor-utils libpam-ldap libsasl2-modules-ldap python-ldaptor",
+      "ldap-utils",
+      "ldaptor-doc",
+      "ldaptor-utils",
+      "libpam-ldap",
+      "libsasl2-modules-ldap",
+      "python-ldaptor",
       };
     redhat::
       "desired_package" slist => {
@@ -114,54 +130,29 @@ bundle agent ldap_packages_installed(params)
         package_module => apt_get,
         version => "latest",
         comment => "Install LDAP authentication module packages";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
 }
 
 #############################################
 
-bundle agent ldap_files_exist(params)
+bundle server ldap_access
+# @brief This bundle shares the path to the password hash
 {
-  classes:
-      "ldap_secret_file_exists"  
-      expression => fileexists("$($(params)[_secret_file])");
-      "wsu_cert_file_exists"  
-      expression => fileexists("$($(params)[_cert_file])");
-# WILL ALREADY EXIST!      "ldap_conf_file_exists"  
-#      expression => fileexists("$($(params)[_conf_file])");
+  access:
 
-  files:
-    !ldap_secret_file_exists.sysadmin::
-      "$($(params)[_secret_file])"
-      copy_from => secure_cp("$($(params)[remote_secret_file])","$($(params)[remote_server])"),
-      perms => mog ("600", "root", "root"),
-      comment => "secure copy of the remote file with LDAP password (WARNING: plaintext password)";
-
-    !ldap_cert_file_exists.sysadmin::
-      "$($(params)[_cert_file])"
-      copy_from => secure_cp("$($(params)[remote_cert_file])","$($(params)[remote_server])"),
-      perms => mog ("600", "root", "root"),
-      comment => "secure copy of the remote file with WSU pem certificate";
-
-    sysadmin::
-      # Need to copy LDAP configuration file to both locations /etc and /etc/ldap. We could use a symlink on one of these
-      "$($(params)[_conf_file1])"
-      copy_from => local_dcp("$($(params)[_master_conf_file)"),
-      perms => mog ("622", "root", "root"),
-      comment => "copy local LDAP conf file from cfengine files to /etc if digest is different";
-
-      "$($(params)[_conf_file2])"
-      copy_from => local_dcp("$($(params)[_master_conf_file)"),
-      perms => mog ("622", "root", "root"),
-      comment => "copy local LDAP conf file from cfengine files to /etc/ldap if digest is different";
-      
+      # It's important that this path have $(connection.key) in it!
+      "$(ldap_settings.ldap_dist)"
+      admit_keys =>  { $(connection.key) },
+              comment => "Grant each host to access its own hashed root password. We
+                  assume that each host has a unique keypair";
   reports:
-    DEBUG.ldap_secret_file_exists::
-      "LDAP secret file $($(params)[_secret_file]) is present";
-    DEBUG.!ldap_secret_file_exists::
-      "LDAP secret file $($(params)[_secret_file]) is not present";
-    DEBUG.ldap_cert_file_exists::
-      "LDAP cert file $($(params)[_cert_file]) is present";
-    DEBUG.!ldap_cert_file_exists::
-      "LDAP cert file $($(params)[_cert_file]) is not present";
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
 }
 
 #############################################

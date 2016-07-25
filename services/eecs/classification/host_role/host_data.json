@@ -4,25 +4,25 @@
 	"purpose": "teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
-        "users": "[myWSU IDs in comma separated list for students/faculty]",
+	"authentication": "pam_ldap",
+        "users": { "myWSU ID of students/faculty": "full name" },
     },
-    "policyhub": {
+    "policyhub_full": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "policysrv",
         "owner": "roose",
-	"users": {
-	    "d693f574": "Ben Roose",
-	    "a555z888": "Jarvis",
-	},
     },
-    "cloudcity": {
+    "test_latitude_e5470": {
 	"machine": "workstation",
 	"purpose": "research",
-        "role": "csasrv",
-        "owner": "jadliwala",
+        "role": "testsrv",
+        "owner": "yourmom",
+	"authentication": "pam_ldap",
 	"users": {
 	    "a123b456": "Joe Cocker",
+	    "d693f574": "Ben Roose",
+	    "a555z888": "Jarvis",
 	},
     },
 }
