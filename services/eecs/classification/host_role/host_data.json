@@ -4,8 +4,8 @@
 	"purpose": "teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
-	"authentication": "pam_ldap",
-        "users": { "myWSU ID of students/faculty": "full name" },
+	"authentication": "pam_ldap OR pam_local",
+        "users": { "myWSU ID OR local_user": "full name" },
     },
     "policyhub_full": {
 	"machine": "server",
@@ -18,11 +18,9 @@
 	"purpose": "research",
         "role": "testsrv",
         "owner": "yourmom",
-	"authentication": "pam_ldap",
+	"authentication": "pam_local",
 	"users": {
-	    "a123b456": "Joe Cocker",
-	    "d693f574": "Ben Roose",
-	    "a555z888": "Jarvis",
+	    "roose": "Ben Roose",
 	},
     },
 }

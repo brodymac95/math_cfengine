@@ -42,20 +42,22 @@ bundle common classify_host
       meta => { "inventory", "attribute_name=owner" };      
 
     "host_authentication"
-      string => "$(host_data[$(hosts)][authenticaion])",
+      string => "$(host_data[$(hosts)][authentication])",
       ifvarclass => canonify("$(host_data[$(hosts)][authentication])"),
       meta => { "inventory", "attribute_name=authentication" };      
 
-    "mywsu_users"
-      data => mergedata("host_data[$(sys.host)][users]"),
-      ifvarclass => isvariable("host_data[$(sys.host)][users]");
+    "canonified_host" string => canonify("$(sys.host)");
+
+    "wsu_users"
+      data => mergedata( "host_data[$(canonified_host)][users]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][users]");
  
-    #"json_str2" string => format("%S", "mywsu_users"),
-    #  ifvarclass => isvariable("host_data[$(sys.host)][users]");
+    "json_str2" string => format("%S", "wsu_users"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][users]");
  
     "user_list"
-      slist => getindices("mywsu_users"),
-      ifvarclass => isvariable("host_data[$(sys.host)][users]");
+      slist => getindices("wsu_users"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][users]");
       
   classes:
 
@@ -104,10 +106,11 @@ bundle common classify_host
       "$(this.bundle): Found purpose: $(host_purpose)";
       "$(this.bundle): Found role: $(host_role)";
       "$(this.bundle): Found owner: $(host_owner)";
-
+      "$(this.bundle): Found authentication: $(host_authentication)";
       "$(this.bundle): Found users: $(user_list)";
-      # "Contents of 'external file' data container: '$(json_str)'";
-      # "Contents of 'wsu_users' data container: '$(json_str2)'";
+      
+#       "Contents of 'external file' data container: '$(json_str)'";
+       "Contents of 'wsu_users' data container: '$(json_str2)'";
 
 #    (DEBUG|DEBUG_classify_host).server::
 #      "$(this.bundle): Host found in host_roles.json, so server class defined";

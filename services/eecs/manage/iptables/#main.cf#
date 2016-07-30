@@ -63,6 +63,8 @@ bundle agent config_iptables
         handle => "iptables_tidy";
 
   reports:
+   (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_main)::
       # "Contents of 'json_input' data container: '$(json_str)'";  
@@ -190,7 +192,7 @@ bundle edit_line iptables_write_policy(p, r)
 
   insert_lines:
       "*filter";
-      ":INPUT $(p[input])";
+q      ":INPUT $(p[input])";
       ":FORWARD $(p[forward])";
       ":OUTPUT $(p[output])";
       "-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT";
