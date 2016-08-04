@@ -16,7 +16,8 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1.
+# 1. fix LDAP authentication
+# 2. have the ssh_key_distribution look for user public keys located on policy server (per host connection key directory) and then add all the user keys found in that directory
 
 bundle common user_settings
 {
@@ -39,19 +40,27 @@ bundle common user_settings
         string => "$(sys.workdir)/state/ssh_key_cache/$(user).pub",
         comment => "This is where agents will cache the user ssh public key locally
         (for offline enforcement).";
+
+      "home_skeleton" string => "/etc/skel";
+
+      "group_primary" string => "users";
+
+    pam_local|pam_ldap::
+      "user" slist => getindices( "classify_host.wsu_users" );
+      "json_str_users" string => format("%S", "classify_host.wsu_users");
+
 }
 
 ########################################################
 
 bundle agent manage_users
+# @description: runs the bundles for different user management depending on the authentication method specified in the classification host_data.json file
 {
   vars:
-    (pam_local|pam_ldap)::
-      "user" slist => getindices( "classify_host.wsu_users" );
-      "json_str2" string => format("%S", "classify_host.wsu_users");
 
-      "home_skeleton" string => "/etc/skel";
-
+      # for ssh keys, need to check if there are any user.pub files in ssh_key_dist directory
+      # then build a user list from .pub files in that directory!
+      
   methods:      
       "manage root password"
       usebundle => manage_root_passwd("user_settings");
@@ -61,15 +70,15 @@ bundle agent manage_users
 
     pam_local::
       "manage local users"
-      usebundle => manage_local_users($(user));
+      usebundle => manage_local_users("user_settings");
 
     pam_ldap::
       "manage ldap users"
-      usebundle => manage_ldap_users($(user));
+      usebundle => manage_ldap_users("user_settings");
 
     any::
-      "manage user ssh authorized keys"
-      usebundle => manage_ssh_authorized_keys("user_settings",$(user));
+#      "manage user ssh authorized keys"
+#      usebundle => manage_ssh_authorized_keys("user_settings",$(user));
       
 }
 
@@ -126,21 +135,22 @@ bundle agent manage_root_passwd(settings)
 
 ########################################################
 
-bundle agent manage_local_users(local_user)
+bundle agent manage_local_users(settings)
+# @description: adds local user accounts to system. Does NOT add or change user password
 {
   vars:
       
   users:
     linux.pam_local::
-      "$(local_user)"
+      "$($(settings).user)"
       policy => "present",
-#      password => hashed_password( "!##lockedpassword##" ),
-      description => "$(classify_host.wsu_users[$(local_user)])",
-      shell => "/bin/bash/",
-      home_dir => "/home/$(local_user)",
-      home_bundle => home_skel($(local_user), $(home_skeleton)),
-      group_primary => "users",
+      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      shell => "/bin/bash",
+      home_dir => "/home/$($(settings).user)",
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).group_primary)",
 #      groups_secondary => { "security", "webadmin" },
+#      password => hashed_password( "!##lockedpassword##" ),
       comment => "add local user from wsu_users dataset gained via external host file in classify_host bundle
                  NOTE: local user password is not set by CFEngine, and must be set on local system by user or root!";
 
@@ -149,34 +159,36 @@ bundle agent manage_local_users(local_user)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "local user: $(local_user)";
-      "Username: $(classify_host.wsu_users[$(local_user)])";
-      "Contents of 'wsu_users' data container: '$(json_str2)'";    
+      "local user: $($(settings).user)";
+      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
 }
 
 ########################################################
 
-bundle agent manage_ldap_users(ldap_user)
+bundle agent manage_ldap_users(settings)
+# @description: adds local user accounts to system with LDAP password authentication
+# Does not work yet!!
 {
   vars:
       
   users:
     linux.pam_ldap::
-      "$(ldap_user)"
+      "$($(settings).user)"
       policy => "present",
 #      password => hashed_password( "!##lockedpassword##" ),
-      description => "$(classify_host.wsu_users[$(ldap_user)])",
-      shell => "/bin/bash/",
-      home_dir => "/home/$(ldap_user)",
-      home_bundle => home_skel($(ldap_user), $(home_skeleton)),
-      group_primary => "users",
+      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      shell => "/bin/bash ",
+      home_dir => "/home/$($(settings).user)",
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).group_primary)",
 #      groups_secondary => { "security", "webadmin" },
       comment => "add ldap user from wsu_users dataset gained via external host file in classify_host bundle";
 
   methods:
     linux.pam_ldap::
       "remove user password"
-      usebundle =>  ldap_remove_password( $(ldap_user) ),
+      usebundle =>  ldap_remove_password( "$($(settings).user)" ),
       comment =>"For PAM to use LDAP to authenticate user, there must be no user entry in /etc/shadow file";
 
   reports:
@@ -184,24 +196,27 @@ bundle agent manage_ldap_users(ldap_user)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_ldap_users)::
-      "ldap user: $(ldap_user)";
-      "Username: $(classify_host.wsu_users[$(ldap_user)])";
-      "Contents of 'wsu_users' data container: '$(json_str2)'";    
+      "ldap user: $($(settings).user)";
+      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Contents of 'wsu_users' data container: $($(settings).json_str2)";    
 }
 
 ########################################################
 
-bundle agent home_skel(user, skel)
+bundle agent home_skel(user, group, skel)
+# @description: copies skeleton files to new user home path
 {
   files:
       "/home/$(user)/."
       create => "true",
       copy_from => seed_cp( $(skel) ),
-      depth_search => recurse( "inf" );
+      perms => mog("600", "$(user)", "$(group)"),
+      depth_search => recurse_with_base( "inf" );
   reports:
 
     (DEBUG|DEBUG_home_skel)::
-      "Creating home for user: $(user)";
+      "Creating home for user and group: $(user):$(group)";
+      "Using skeleton path: $(skel)";
 }
 
 ########################################################
@@ -235,13 +250,15 @@ bundle edit_line password_entry_removal(user)
 ########################################################
 
 bundle agent manage_ssh_authorized_keys(settings, user)
+# @description: copies ssh public key for user login from policy server to authorized_keys file on system
+# does not work yet!!
 {
   vars:
       "ssh_key_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/ssh_keys/$(user).pub";
       "ssh_key_cache"       string => "$($(settings).ssh_key_cache)";
       "ssh_key_cache_dir" string => dirname("$(ssh_key_cache)");
 
-      "authorized_keys_file" string => "/home/$(user)/.ssh/authorized_keys"
+      "authorized_keys_file" string => "/home/$(user)/.ssh/authorized_keys";
 
   files:
 
@@ -264,9 +281,9 @@ bundle agent manage_ssh_authorized_keys(settings, user)
 
     any::
       "$(authorized_keys_file)"
-      edit_line => insert_file_if_no_line_matching("$(user)","$(ssh_key_cache"),
+      edit_line => insert_file_if_no_line_matching("$(user)","$(ssh_key_cache)"),
       action => if_elapsed("60"),
-      comment => "Edit the authorized keys file and add public key to the user's personal ssh keyring",
+      comment => "Edit the authorized keys file and add public key to the user's personal ssh keyring";
 
   reports:
     (inform_mode|verbose_mode)::
@@ -275,7 +292,6 @@ bundle agent manage_ssh_authorized_keys(settings, user)
     (DEBUG|DEBUG_manage_ssh_authorized_keys)::
       "ssh key dist file: $(ssh_key_dist)";
       "ssh key cached file: $(ssh_key_cache)";
-#      "root hash: $(root_hash)";
 
 }
 
@@ -295,7 +311,7 @@ bundle edit_line insert_file_if_no_line_matching(user,file)
 ########################################################
 
 bundle server passwd_access
-# @brief This bundle shares the path to the password hash
+# @description: shares the path on policy hub for password hash and ssh public keys with access restricted to each host connection key directory
 {
   access:
 

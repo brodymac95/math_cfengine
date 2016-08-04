@@ -13,14 +13,14 @@
         "role": "policysrv",
         "owner": "roose",
     },
-    "test_latitude_e5470": {
+    "jb_247_3918_lt1": {
 	"machine": "workstation",
 	"purpose": "research",
-        "role": "testsrv",
-        "owner": "yourmom",
+        "role": "laptop",
+        "owner": "huzefa_kagdi",
 	"authentication": "pam_local",
 	"users": {
-	    "roose": "Ben Roose",
+	    "zanjani": "Sara Zanjani",
 	},
     },
 }
