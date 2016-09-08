@@ -44,6 +44,7 @@ bundle common user_settings
       "home_skeleton" string => "/etc/skel";
 
       "group_primary" string => "users";
+      "group_secondary" string => "audio,plugdev";
 
     pam_local|pam_ldap::
       "user" slist => getindices( "classify_host.wsu_users" );
@@ -73,6 +74,9 @@ bundle agent manage_users
       usebundle => manage_local_users("user_settings");
 
     pam_ldap::
+      "install and configure ldap client packages"
+      usebundle => install_ldap_client;
+
       "manage ldap users"
       usebundle => manage_ldap_users("user_settings");
 
@@ -149,7 +153,7 @@ bundle agent manage_local_users(settings)
       home_dir => "/home/$($(settings).user)",
       home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).group_primary)",
-#      groups_secondary => { "security", "webadmin" },
+      groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
       comment => "add local user from wsu_users dataset gained via external host file in classify_host bundle
                  NOTE: local user password is not set by CFEngine, and must be set on local system by user or root!";
@@ -178,11 +182,11 @@ bundle agent manage_ldap_users(settings)
       policy => "present",
 #      password => hashed_password( "!##lockedpassword##" ),
       description => "$(classify_host.wsu_users[$($(settings).user)])",
-      shell => "/bin/bash ",
+      shell => "/bin/bash",
       home_dir => "/home/$($(settings).user)",
       home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).group_primary)",
-#      groups_secondary => { "security", "webadmin" },
+#      groups_secondary => { "$($(settings).group_secondary)" },
       comment => "add ldap user from wsu_users dataset gained via external host file in classify_host bundle";
 
   methods:

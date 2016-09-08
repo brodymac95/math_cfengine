@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   manage/users/ldap.cf - EECS manual installer for LDAP user authentication
-#   Maintained: Ben Roose, ver 0.1
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -12,7 +12,7 @@ body file control
 }
 
 ######################################################################
-# Public entry point: install_ldap bundle
+# Public entry point: install_ldap_client bundle
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -32,7 +32,7 @@ bundle common ldap_settings
       (for offline enforcement).";
 }
 
-bundle agent install_ldap
+bundle agent install_ldap_client
 {
   # @decription: manual install and configuration for system users to authenticate against WSU's LDAP servers
 
@@ -46,22 +46,23 @@ bundle agent install_ldap
       "cert_file" string => "wsu_cacert.pem";
       "conf_file" string => "pam_ldap.conf";
       "conf_ldap_link" string => "/etc/ldap/ldap.conf";
+      "secret_file_link" string => "/etc/ldap.secret";
 
       "ldap_binary" string => "/usr/bin/ldapsearch";
 
       "ldap_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/pam_ldap/";
-      "ldap_cache_dir" string => "$($(settings).ldap_cache)";      
+#      "ldap_cache_dir" string => "$(ldap_settings.ldap_cache_dir)";
+
+      "files_to_check" slist => { "concat( $(config_dir), $(secret_file) )", "concat( $(certs_dir), $(cert_file) )", "concat( $(config_dir), $(conf_file) )" };
       
-  classes: 
-      "secret_file_exits"
-        expression => fileexists( concat( $(config_dir), $(secret_file) ) );
-      "cert_file_exists"
-        expression => fileexists( concat( $(certs_dir), $(cert_file) ) );
-      "conf_file_exists"
-        expression => fileexists( concat( $(config_dir), $(conf_file) ) );
+  classes:
+
+      "ldap_client_configured"
+      expression => filesexist( @(files_to_check) ),
+        comment => "check config and secret files exist and create a useful class";
 
       "ldap_packages_installed"
-        expression => fileexists($(ldap_binary)),
+        expression => fileexists( $(ldap_binary) ),
         comment => "check one of the ldap-utils binary files exists on the system before copying config files";
 
       
@@ -69,29 +70,32 @@ bundle agent install_ldap
     !policy_server.ldap_packages_installed::
       "$(config_dir)$(secret_file)"
       copy_from => secure_cp( concat( $(ldap_dist), $(secret_file) ), $(sys.policy_hub) ),
+      perms => mog("600", "root", "root"),
       comment => "secure copy of the remote file with LDAP password (WARNING: plaintext password)";
 
       "$(certs_dir)$(cert_file)"
       copy_from => secure_cp( concat( $(ldap_dist), $(cert_file) ), $(sys.policy_hub) ),
+      perms => mog("600", "root", "root"),
       comment => "secure copy of the remote WSU certificate file";
 
       "$(config_dir)$(conf_file)"
       copy_from => secure_cp( concat( $(ldap_dist), $(conf_file) ), $(sys.policy_hub) ),
+      perms => mog("644", "root", "root"),
       comment => "secure copy of the remote LDAP config file";
 
       "$(conf_ldap_link)"
       move_obstructions => "true",
       link_from => linkfrom( concat( $(config_dir), $(conf_file) ), "symlink" ),
       comment => "create symbolic link from /etc/ldap/ldap.conf to /etc/pam_ldap.conf";
+
+      "$(secret_file_link)"
+      move_obstructions => "true",
+      link_from => linkfrom( concat( $(config_dir), $(secret_file) ), "symlink" ),
+      comment => "create symbolic link from /etc/pam_ldap.secret to /etc/ldap.secret";
       
   methods:
     !policy_server::
       "ldap_pkgs"  usebundle => ldap_packages_installation;
-
-      #   !secret_file_exists|!cert_file_exists|!conf_file_exists)::
-#    any::
-#      "ldap_vars"  usebundle => ldap_vars;
-#      "ldap_files_exist"   usebundle => ldap_files_exist("ldap_vars.conf");
 
   reports:
     (inform_mode|verbose_mode)::
@@ -112,7 +116,7 @@ bundle agent ldap_packages_installation
 {
   vars:
     debian::  
-      "desired_package" slist => { 
+      "package_installs" slist => { 
       "ldap-utils",
       "ldaptor-doc",
       "ldaptor-utils",
@@ -121,16 +125,14 @@ bundle agent ldap_packages_installation
       "python-ldaptor",
       };
     redhat::
-      "desired_package" slist => {
+      "package_installs" slist => {
 	# ??
       };
-  packages:  
-      "$(desired_package)"
-        policy => "present",
-        package_module => apt_get,
-        version => "latest",
-        comment => "Install LDAP authentication module packages";
 
+  methods:
+      "install_ldap_packages" usebundle => package_latest("$(package_installs)"),
+      comment => "Install LDAP authentication module packages";
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -147,8 +149,8 @@ bundle server ldap_access
       # It's important that this path have $(connection.key) in it!
       "$(ldap_settings.ldap_dist)"
       admit_keys =>  { $(connection.key) },
-              comment => "Grant each host to access its own hashed root password. We
-                  assume that each host has a unique keypair";
+              comment => "Grant each host to access its own copy of the ldap client files.
+                  We assume that each host has a unique keypair";
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";

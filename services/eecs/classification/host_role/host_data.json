@@ -6,12 +6,24 @@
         "owner": "client",
 	"authentication": "pam_ldap OR pam_local",
         "users": { "myWSU ID OR local_user": "full name" },
+	"extra_repository_packages": [ "package1", "package2" ],
+	"custom_packages": [ "package1", "package2" ],
     },
     "policyhub_full": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "policysrv",
         "owner": "roose",
+    },
+    "testing": {
+	"machine": "server",
+	"purpose": "infrastructure",
+        "role": "testingserver",
+        "owner": "eecs",
+	"authentication": "pam_ldap",
+	"users": {
+	    "d693f574": "Ben Roose",
+	},
     },
     "jb_247_3918_lt1": {
 	"machine": "workstation",
@@ -20,7 +32,32 @@
         "owner": "huzefa_kagdi",
 	"authentication": "pam_local",
 	"users": {
-	    "zanjani": "Sara Zanjani",
+	    "bahrami": "Sara Bahrami",
 	},
+	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref" ],
+	"custom_packages": [ "pip_gensim" ],
+    },
+    "jb_251_3432_lt28": {
+	"machine": "workstation",
+	"purpose": "teaching",
+        "role": "laptop",
+        "owner": "geetha_lakshmikanth",
+	"authentication": "pam_local",
+	"users": {
+	    "lakshmikanth": "geetha Lakshmikanth",
+	    "roose": "Ben Roose",
+	},
+    },
+    "jb_258_3143_lab11": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "matlab",
+        "owner": "Kaushik_sinha",
+	"authentication": "pam_ldap",
+	"users": {
+	    "d693f574": "Ben Roose",
+	},
+	"extra_repository_packages": [ "chromium-browser", "r-base", "git", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks" ],
+	"custom_packages": [ "matlab_research", "pip_theano", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
     },
 }

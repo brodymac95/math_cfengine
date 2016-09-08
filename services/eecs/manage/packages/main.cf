@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   manage/packages/main.cf - EECS packages management
-#   Maintained: Ben Roose, ver 0.3
+#   Maintained: Ben Roose, ver 0.4
 #
 ###############################################################################
 
@@ -11,10 +11,10 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf" };
-#}
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
 
 ######################################################################
 # Public entry point: manage_packages bundle
@@ -26,10 +26,26 @@
 # 3. figure out how to upgrade the Linux kernel and security packages from the package management end
 
 bundle agent manage_packages
-# @description: package management for hosts classified by: core (all hosts), workstation only packages, server only packages. Allows for software installation (package_latest) and removal (package_absent)
+# @description: package management entry point
+{
+
+  methods:
+    any::
+      "manage standard repository packages" usebundle => manage_repository_packages;
+
+    install_custom_packages::
+      "manage custom installer packages" usebundle => manage_custom_packages;
+      
+}
+
+
+bundle agent manage_repository_packages
+# @description: package management using standard repositories (i.e. apt) for hosts classified by: core (all hosts), workstation only packages, server only packages. Allows for software installation (package_latest) and removal (package_absent)
 {
 
   vars:
+     "extra_installs" slist => {},
+      policy => "overridable";
      "core_installs" slist => {},
       policy => "overridable";
      "workstation_installs" slist => {},
@@ -44,6 +60,10 @@ bundle agent manage_packages
       policy => "overridable";
 
     ## Required packages to be INSTALLED
+    install_extra_packages::
+      "extra_installs" slist => getvalues( "classify_host.extra_packages" );
+      "packages_json_str" string => format("%S", "classify_host.extra_packages");
+
     debian|ubuntu::
       "core_installs" slist => {
 				  "iptables",
@@ -55,12 +75,21 @@ bundle agent manage_packages
       
     workstation.(debian|ubuntu):: 
       # Unattended upgrades are dangerous, so only use automated security upgrades for single user workstations
+      # libvte9 is needed by geany to show a terminal window inside
       "workstation_installs" slist => {
 					"unattended-upgrades",
 					"update-notifier-common",
+					"arandr",
 					"libreoffice",
 					"chromium-browser",
 					"firefox",
+					"default-jre",
+					"default-jdk",
+					"eclipse",
+					"eclipse-cdt",
+					"geany",
+					"libvte9",
+					"texmaker",
                                  };
       
     server.(debian|ubuntu)::
@@ -82,7 +111,7 @@ bundle agent manage_packages
       "server_removals" slist => {
 		                 };
     any::
-      "all_installs"       slist => {@(core_installs), @(workstation_installs), @(server_installs)};
+      "all_installs"       slist => {@(core_installs), @(workstation_installs), @(server_installs), @(extra_installs)};
       "all_removals"       slist => {@(core_removals), @(workstation_removals), @(server_removals)};
 
   methods:
@@ -102,8 +131,11 @@ bundle agent manage_packages
       "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_manage_packages)::
-      "Package to be installed: $(all_installs)";
-      "Package to be removed: $(all_removals)";
+      "Repository package to be installed: $(all_installs)";
+      "Repository package to be removed: $(all_removals)";
+      
+    (DEBUG|DEBUG_manage_packages).install_extra_packages::
+      "Extra repository packages specifically for this host: $(packages_json_str)";
 }
 
 ###################################
@@ -133,4 +165,73 @@ bundle agent unattended_upgrades_config
     (DEBUG|DEBUG_unattended_upgrades_config)::
       "file to add for enabling unattended upgrades: $(enable_unattended_file)";
       "Lines to be added into file: $(added_lines)";
+}
+
+###################################
+
+bundle agent manage_custom_packages
+# @description: custom scripting for packages required by users but not in standard repositories
+{
+  vars:
+#     "custom_installs" slist => {},
+#      policy => "overridable";
+
+    ## Required packages to be INSTALLED
+    install_custom_packages::
+      "custom_installs" slist => getvalues( "classify_host.custom_packages" ),
+      comment => "list of custom packages from host_data.json file. Each package must have a specific installation method listed in this bundle";
+      "packages_json_str" string => format("%S", "classify_host.custom_packages");
+
+      "texworks_dictionary_source" string => "/usr/share/hunspell";
+      "texworks_dictionary_target" string => "/usr/share/myspell/dicts";
+
+#    any::
+#      "all_installs"       slist => {@(custom_installs)};
+
+  classes:
+      
+      "$(custom_installs)"
+      expression => isvariable ("custom_installs"),
+      comment => "create classes from values within custom_installs list";
+      
+  packages:
+    pip_gensim::
+      "gensim" package_method =>pip(""), package_policy => "add",
+      comment => "install the gensim package using python pip (used by Sara Bahrami)";
+
+    pip_theano::
+      "theano" package_method =>pip(""), package_policy => "add",
+      comment => "install the theano package using python pip (used by Dr. Kaushik Sinha)";
+
+    pip_pattern::
+      "pattern" package_method =>pip(""), package_policy => "add",
+      comment => "install the pattern package using python pip (used by Dr. Kaushik Sinha)";
+
+    pip_orange::
+      "orange" package_method =>pip(""), package_policy => "add",
+      comment => "install the orange package using python pip (used by Dr. Kaushik Sinha)";
+
+  files:
+    texworks_dictionaries::
+      "$(texworks_dictionary_target)"
+      move_obstructions => "true",
+      link_from => linkchildren( "$(texworks_dictionary_source)" ),
+      comment => "create symbolic links for all libreoffice dictionaries in texworks dictionary directory";
+
+  methods:
+#   matlab_research|matlab_classroom::
+#      "install matlab software" usebundle => install_matlab,
+#      comment => "run the set of custom bundles for installing the commercial matlab software. Must specify whether to use the research or classroom license";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_manage_packages)::
+      "Custom packages to be installed: $(custom_installs)";
+      "Custom repository packages specifically for this host: $(packages_json_str)";
+
+    (DEBUG|DEBUG_manage_packages).test_package::
+      "$(this.bundle): test_package is listed in host_data.json file for this host and a test_package class has been created";
+      
 }

@@ -19,7 +19,7 @@ bundle common classify_host
 
     "hosts" slist => getindices( host_data );
 
-    "json_str" string => format("%S", host_data);
+    "hosts_json_str" string => format("%S", host_data);
     	       	         # Just for printing seralized version of data container for debugging (note its JSON).
     "host_machine"
       string => "$(host_data[$(hosts)][machine])",
@@ -50,14 +50,31 @@ bundle common classify_host
 
     "wsu_users"
       data => mergedata( "host_data[$(canonified_host)][users]" ),
-      ifvarclass => isvariable("host_data[$(canonified_host)][users]");
+      ifvarclass => isvariable("host_data[$(canonified_host)][users]"),
+      comment => "create data subset of users from host_data.json file";
  
-    "json_str2" string => format("%S", "wsu_users"),
+    "users_json_str" string => format("%S", "wsu_users"),
       ifvarclass => isvariable("host_data[$(canonified_host)][users]");
  
     "user_list"
       slist => getindices("wsu_users"),
       ifvarclass => isvariable("host_data[$(canonified_host)][users]");
+
+    "extra_packages"
+      data => mergedata( "host_data[$(canonified_host)][extra_repository_packages]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][extra_repository_packages]"),
+      comment => "create data subset of extra repository packages for installation from host_data.json file";
+ 
+    "extra_packages_json_str" string => format("%S", "extra_packages"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][extra_repository_packages]");
+
+    "custom_packages"
+      data => mergedata( "host_data[$(canonified_host)][custom_packages]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][custom_packages]"),
+      comment => "create data subset of custom packages for installation from host_data.json file";
+ 
+    "custom_packages_json_str" string => format("%S", "custom_packages"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][custom_packages]");
       
   classes:
 
@@ -90,6 +107,16 @@ bundle common classify_host
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       meta => { "inventory", "attribute_name=authentication class" },
       comment => "Add host's specific authentication method from external data file.";
+
+    "install_extra_packages"
+      expression => isvariable("extra_packages"),
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      comment => "Add class install_extra_packages if found for host from external data file.";
+
+    "install_custom_packages"
+      expression => isvariable("custom_packages"),
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      comment => "Add class install_custom_packages if found for host from external data file.";
       
   reports:
 
@@ -109,8 +136,10 @@ bundle common classify_host
       "$(this.bundle): Found authentication: $(host_authentication)";
       "$(this.bundle): Found users: $(user_list)";
       
-#       "Contents of 'external file' data container: '$(json_str)'";
-       "Contents of 'wsu_users' data container: '$(json_str2)'";
+#       "Contents of 'external file' data container: '$(hosts_json_str)'";
+       "Contents of 'wsu_users' data container: '$(users_json_str)'";
+       "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
+       "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
 
 #    (DEBUG|DEBUG_classify_host).server::
 #      "$(this.bundle): Host found in host_roles.json, so server class defined";

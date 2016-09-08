@@ -5,7 +5,7 @@
 #
 ###############################################################################
 
-# PROTIP: Use body file control to help make modular policy.
+1# PROTIP: Use body file control to help make modular policy.
 # "There can be only one" body common control per policy entry (promises.cf,
 # update.cf)
 
@@ -192,7 +192,7 @@ bundle edit_line iptables_write_policy(p, r)
 
   insert_lines:
       "*filter";
-q      ":INPUT $(p[input])";
+      ":INPUT $(p[input])";
       ":FORWARD $(p[forward])";
       ":OUTPUT $(p[output])";
       "-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT";
