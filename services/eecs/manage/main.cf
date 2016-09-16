@@ -12,6 +12,7 @@ bundle common manage_main_file_control
     "input[login_banner]" string => "$(this.promise_dirname)/login_banner/main.cf";
     "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
     "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
+    "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
     "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
     "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
     "input[users]" string => "$(this.promise_dirname)/users/main.cf";
@@ -49,6 +50,9 @@ bundle agent manage_main
     server::
       "configure_sshd" usebundle => sshd_config;
 
+    install_printers::
+      "printer_management" usebundle => manage_printers;
+      
 
     #nickanderson_thinkpad_w520::
     #  "emacs"

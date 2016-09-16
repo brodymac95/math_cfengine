@@ -16,6 +16,14 @@ body file control
       inputs => { "$(sys.libdir)/stdlib.cf" };
 }
 
+######################################################################
+# Public entry point: bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
 bundle agent config_<service>
 # @description: 
 {
@@ -25,3 +33,5 @@ bundle agent config_<service>
   methods:
 
 }
+
+######################################################################

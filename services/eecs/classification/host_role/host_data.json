@@ -8,6 +8,7 @@
         "users": { "myWSU ID OR local_user": "full name" },
 	"extra_repository_packages": [ "package1", "package2" ],
 	"custom_packages": [ "package1", "package2" ],
+	"printers": [ "printer1", "printer2" ],
     },
     "policyhub_full": {
 	"machine": "server",
@@ -53,11 +54,14 @@
 	"purpose": "research",
         "role": "matlab",
         "owner": "Kaushik_sinha",
-	"authentication": "pam_ldap",
+	"authentication": "pam_local",
 	"users": {
-	    "d693f574": "Ben Roose",
+	    "p862d927": "Kaushik Sinha",
+	    "p377z922": "Omid Keivani",
 	},
-	"extra_repository_packages": [ "chromium-browser", "r-base", "git", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks" ],
+	"extra_repository_packages": [ "chromium-browser", "r-base", "git", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
 	"custom_packages": [ "matlab_research", "pip_theano", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
+        "printers": [ "jb258_laserjet" ]
     },
+    
 }

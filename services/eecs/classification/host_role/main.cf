@@ -75,6 +75,15 @@ bundle common classify_host
  
     "custom_packages_json_str" string => format("%S", "custom_packages"),
       ifvarclass => isvariable("host_data[$(canonified_host)][custom_packages]");
+
+   "printers"
+      data => mergedata( "host_data[$(canonified_host)][printers]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][printers]"),
+      comment => "create data subset of printers for installation from host_data.json file";
+ 
+    "printers_json_str" string => format("%S", "printers"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][printers]");
+
       
   classes:
 
@@ -117,6 +126,11 @@ bundle common classify_host
       expression => isvariable("custom_packages"),
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       comment => "Add class install_custom_packages if found for host from external data file.";
+
+    "install_printers"
+      expression => isvariable("printers"),
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      comment => "Add class install_printers if found for host from external data file.";
       
   reports:
 
@@ -140,6 +154,7 @@ bundle common classify_host
        "Contents of 'wsu_users' data container: '$(users_json_str)'";
        "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
        "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
+       "Contents of 'printers' data container: '$(printers_json_str)'";
 
 #    (DEBUG|DEBUG_classify_host).server::
 #      "$(this.bundle): Host found in host_roles.json, so server class defined";

@@ -5,7 +5,7 @@
 #
 ###############################################################################
 
-1# PROTIP: Use body file control to help make modular policy.
+# PROTIP: Use body file control to help make modular policy.
 # "There can be only one" body common control per policy entry (promises.cf,
 # update.cf)
 

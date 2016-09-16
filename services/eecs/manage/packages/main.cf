@@ -83,6 +83,7 @@ bundle agent manage_repository_packages
 					"libreoffice",
 					"chromium-browser",
 					"firefox",
+					"filezilla",
 					"default-jre",
 					"default-jdk",
 					"eclipse",
@@ -120,12 +121,7 @@ bundle agent manage_repository_packages
 
     workstation.(debian|ubuntu)::
       "add unattended-upgrades config files" usebundle => unattended_upgrades_config;
-
       
-    #SETTING HOST MANUALLY FOR MATLAB INSTALL (need to build host classification bundles to make this more generic)
-#    jb_256_3432_res1::
-#      "install_matlab" usebundle => install_matlab;   
-  
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
