@@ -1,0 +1,100 @@
+{
+    "printer": "data copied from a template /etc/cups/printers.conf",
+
+    "oce_copier": [ "<Printer OCECopier>
+UUID urn:uuid:c7fe99f9-ac71-3779-6cea-0ad412d83c45
+Info Oce Copier in EECS (P8)
+Location JB 249
+DeviceURI lpd://print.cs.wichita.edu/P8
+PPDTimeStamp *
+State Idle
+StateTime 1473716235
+Type 36892
+Accepting Yes
+Shared No
+ColorManaged Yes
+JobSheets none none
+QuotaPeriod 0
+PageLimit 0
+KLimit 0
+OpPolicy default
+ErrorPolicy retry-job
+Option media 12
+Option media-col media-bottom-margin
+Option output-bin 0
+Option print-color-mode color
+Option print-quality 4
+</Printer>" ],
+    
+    "color_laserjet": [ "<Printer ColorLaserJet>
+UUID urn:uuid:b2d3e01c-8c57-3e3f-6112-dc01b5a97dc0
+Info HP Color Laser in EECS (P12)
+Location JB 249
+DeviceURI lpd://print.cs.wichita.edu/P12
+PPDTimeStamp *
+State Idle
+StateTime 1473716201
+Type 8425692
+Accepting Yes
+Shared No
+ColorManaged Yes
+JobSheets none none
+QuotaPeriod 0
+PageLimit 0
+KLimit 0
+OpPolicy default
+ErrorPolicy stop-printer
+Option media 0
+Option media-col media-bottom-margin
+Option output-bin 0
+Option print-color-mode color
+Option print-quality 5
+</Printer>" ],
+
+    "jb258_laserjet": [ "<Printer JB258_LaserJet>
+UUID urn:uuid:77dce574-1881-33ff-75a0-bc2170e0b4a6
+Info HP LaserJet Pro MFP M426fdn
+Location JB 258
+DeviceURI lpd://print.cs.wichita.edu/prt13276
+PPDTimeStamp *
+State Idle
+StateTime 1473794214
+Type 8433876
+Accepting Yes
+Shared Yes
+ColorManaged Yes
+JobSheets none none
+QuotaPeriod 0
+PageLimit 0
+KLimit 0
+OpPolicy default
+ErrorPolicy retry-job
+</Printer>" ],
+
+    "jb247_laserjet": [ "<Printer JB247_MFC>
+UUID urn:uuid:5e8e4e1a-54d6-3a08-5bdd-5402be4b32f8
+Info Brother Mono MFC-7840W
+Location JB 247
+DeviceURI lpd://prt13262.cs.wichita.edu
+PPDTimeStamp *
+State Idle
+StateTime 1474054758
+Type 8433732
+Accepting Yes
+Shared Yes
+ColorManaged Yes
+JobSheets none none
+QuotaPeriod 0
+PageLimit 0
+KLimit 0
+OpPolicy default
+ErrorPolicy retry-job
+Option media 0
+Option media-col media-bottom-margin
+Option output-bin 0
+Option print-color-mode monochrome
+Option print-quality 5
+</Printer>
+" ]
+    
+}
