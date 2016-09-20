@@ -24,6 +24,7 @@
 	"authentication": "pam_ldap",
 	"users": {
 	    "d693f574": "Ben Roose",
+        "printers": [ "oce_copier", "jb247_laserjet" ]
 	},
     },
     "jb_247_3918_lt1": {
@@ -37,6 +38,7 @@
 	},
 	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref" ],
 	"custom_packages": [ "pip_gensim" ],
+        "printers": [ "oce_copier", "jb247_laserjet", ]
     },
     "jb_251_3432_lt28": {
 	"machine": "workstation",
