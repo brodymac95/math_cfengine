@@ -14,10 +14,13 @@ bundle common manage_main_file_control
     "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
     "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
     "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
+    "input[sssd]" string => "$(this.promise_dirname)/packages/sssd.cf";
     "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
     "input[users]" string => "$(this.promise_dirname)/users/main.cf";
-    "input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
-     
+
+    #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
+    #"input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
+      
     #enable_manage_emacs_config::
       #"input[emacs_config]" string => "$(this.promise_dirname)/emacs_config/main.cf";
       #"input[emacs_config_settings]" string => "$(this.promise_dirname)/emacs_config/settings.cf";
@@ -52,6 +55,9 @@ bundle agent manage_main
 
     install_printers::
       "printer_management" usebundle => manage_printers;
+
+    pam_ad::
+      "configure sssd and join host to ad domain" usebundle => join_host_to_ad;
       
 
     #nickanderson_thinkpad_w520::

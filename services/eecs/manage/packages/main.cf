@@ -219,6 +219,9 @@ bundle agent manage_custom_packages
 #      "install matlab software" usebundle => install_matlab,
 #      comment => "run the set of custom bundles for installing the commercial matlab software. Must specify whether to use the research or classroom license";
 
+    ad_authentication::
+      "configure sssd and join host to ad domain" usebundle => join_host_to_ad;
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";

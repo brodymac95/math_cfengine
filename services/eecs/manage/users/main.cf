@@ -43,13 +43,36 @@ bundle common user_settings
 
       "home_skeleton" string => "/etc/skel";
 
-      "group_primary" string => "users";
+      "shared_group_primary" string => "users";
       "group_secondary" string => "audio,plugdev";
 
-    pam_local|pam_ldap::
+    local_user_shared_group|local_user_own_group::
       "user" slist => getindices( "classify_host.wsu_users" );
       "json_str_users" string => format("%S", "classify_host.wsu_users");
 
+}
+
+########################################################
+
+bundle server passwd_access
+# @description: shares the path on policy hub for password hash and ssh public keys with access restricted to each host connection key directory
+{
+  access:
+
+      # It's important that this path have $(connection.key) in it!
+      "$(user_settings.password_dist)"
+        admit_keys =>  { $(connection.key) },
+        comment => "Grant each host to access its own hashed root password. We
+                  assume that each host has a unique keypair";
+
+      "$(user_settings.ssh_key_dist)"
+        admit_keys =>  { $(connection.key) },
+        comment => "Grant each host to access user public ssh keys. We
+                  assume that each host has a unique keypair";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
 
 ########################################################
@@ -69,16 +92,20 @@ bundle agent manage_users
 #      "manage system users"
 #      usebundle => manage_system_users("root_passwd_settings");
 
-    pam_local::
+    local_user_shared_group::
       "manage local users"
-      usebundle => manage_local_users("user_settings");
+      usebundle => manage_local_users_shared_group("user_settings");
 
-    pam_ldap::
-      "install and configure ldap client packages"
-      usebundle => install_ldap_client;
+    local_user_own_group::
+      "manage ad users"
+      usebundle => manage_local_users_own_group("user_settings");
 
-      "manage ldap users"
-      usebundle => manage_ldap_users("user_settings");
+#    pam_ldap::
+#     "install and configure ldap client packages"
+#      usebundle => install_ldap_client;
+
+#      "manage ldap users"
+#      usebundle => manage_ldap_users("user_settings");
 
     any::
 #      "manage user ssh authorized keys"
@@ -134,29 +161,69 @@ bundle agent manage_root_passwd(settings)
     (DEBUG|DEBUG_manage_root_passwd)::
       "Password dist file: $(passwd_dist)";
       "Password cached file: $(passwd_cache)";
-      "root hash: $(root_hash)";
+#      "root hash: $(root_hash)";
 }
 
 ########################################################
 
-bundle agent manage_local_users(settings)
-# @description: adds local user accounts to system. Does NOT add or change user password
+bundle agent manage_local_users_shared_group(settings)
+# @description: adds local user accounts to system with a shared primary group.
+# Does NOT add or change user password
+# SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
       
   users:
-    linux.pam_local::
+    linux.shared_group_exists_kept::
       "$($(settings).user)"
       policy => "present",
       description => "$(classify_host.wsu_users[$($(settings).user)])",
       shell => "/bin/bash",
       home_dir => "/home/$($(settings).user)",
-      home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
-      group_primary => "$($(settings).group_primary)",
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).shared_group_primary)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).shared_group_primary)",
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
-      comment => "add local user from wsu_users dataset gained via external host file in classify_host bundle
-                 NOTE: local user password is not set by CFEngine, and must be set on local system by user or root!";
+      comment => "add local user with shared group from wsu_users dataset gained via external host file
+                 NOTE: local user password is not set by CFEngine, but can be authenticated from AD domain via sssd";
+
+  methods:
+      "ensure shared primary group exists"
+      usebundle => group_exist( "$($(settings).shared_group_primary)" ),
+      classes => results("bundle", "shared_group_exists");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_local_users)::
+      "local user: $($(settings).user)";
+      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
+}
+
+########################################################
+
+bundle agent manage_local_users_own_group(settings)
+# @description: adds local user accounts to system with their own primary group (group = user).
+# Does NOT add or change user password
+# SSSD/AD authentication can be used if user is a myWSU ID
+{
+  vars:
+      
+  users:
+    linux::
+      "$($(settings).user)"
+      policy => "present",
+      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      shell => "/bin/bash",
+      home_dir => "/home/$($(settings).user)",
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
+#      group_primary => "$($(settings).user)",
+      groups_secondary => { "$($(settings).group_secondary)" },
+      comment => "add AD user (with group = user) from wsu_users dataset gained via external host file
+                  user must be a myWSU ID but fullname can be the person's name (as set by description) 
+                 NOTE: password is not set by CFEngine but can be authenticated from AD domain via sssd";
 
   reports:
     (inform_mode|verbose_mode)::
@@ -170,39 +237,50 @@ bundle agent manage_local_users(settings)
 
 ########################################################
 
-bundle agent manage_ldap_users(settings)
-# @description: adds local user accounts to system with LDAP password authentication
-# Does not work yet!!
+bundle agent manage_local_users_custom_groups(settings)
+# @description: adds local user accounts to system with their own primary group (group = user).
+# Does NOT add or change user password
+# SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
       
   users:
-    linux.pam_ldap::
+    linux::
       "$($(settings).user)"
       policy => "present",
-#      password => hashed_password( "!##lockedpassword##" ),
       description => "$(classify_host.wsu_users[$($(settings).user)])",
       shell => "/bin/bash",
       home_dir => "/home/$($(settings).user)",
-      home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
-      group_primary => "$($(settings).group_primary)",
-#      groups_secondary => { "$($(settings).group_secondary)" },
-      comment => "add ldap user from wsu_users dataset gained via external host file in classify_host bundle";
-
-  methods:
-    linux.pam_ldap::
-      "remove user password"
-      usebundle =>  ldap_remove_password( "$($(settings).user)" ),
-      comment =>"For PAM to use LDAP to authenticate user, there must be no user entry in /etc/shadow file";
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
+#      group_primary => "$($(settings).user)",
+      groups_secondary => { "$($(settings).group_secondary)" },
+      comment => "add AD user (with group = user) from wsu_users dataset gained via external host file
+                  user must be a myWSU ID but fullname can be the person's name (as set by description) 
+                 NOTE: password is not set by CFEngine but can be authenticated from AD domain via sssd";
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_manage_ldap_users)::
-      "ldap user: $($(settings).user)";
+    (DEBUG|DEBUG_manage_local_users)::
+      "local user: $($(settings).user)";
       "Username: $(classify_host.wsu_users[$($(settings).user)])";
-      "Contents of 'wsu_users' data container: $($(settings).json_str2)";    
+      "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
+}
+
+########################################################
+
+bundle agent group_exist(group)
+# @description: makes sure group exists on host
+{
+  classes:
+      "group_absent"
+      not => groupexists( "$(group)" );
+
+  commands:
+    linux.group_absent::
+      "$(paths.groupadd)"
+              args => "$(group)";
 }
 
 ########################################################
@@ -221,34 +299,6 @@ bundle agent home_skel(user, group, skel)
     (DEBUG|DEBUG_home_skel)::
       "Creating home for user and group: $(user):$(group)";
       "Using skeleton path: $(skel)";
-}
-
-########################################################
-
-bundle agent ldap_remove_password(user)
-{
-
-  vars:
-      "shadow_file" string => "/etc/shadow";
-
-  files:
-      "$(shadow_file)"
-      create    => "false",
-      edit_line => password_entry_removal("$(user)"),
-      comment => "Remove user password entry from /etc/shadow for a user externally authenticated by LDAP";
-
-  reports:
-
-    (DEBUG|DEBUG_ldap_remove_password)::
-      "User to remove from $(shadow_file): $(user)";
-}
-
-########################################################
-
-bundle edit_line password_entry_removal(user)
-{
-  delete_lines:
-      "$(user).*";
 }
 
 ########################################################
@@ -313,24 +363,68 @@ bundle edit_line insert_file_if_no_line_matching(user,file)
 }
 
 ########################################################
+# NO LONGER USED
+########################################################
 
-bundle server passwd_access
-# @description: shares the path on policy hub for password hash and ssh public keys with access restricted to each host connection key directory
+bundle agent manage_ldap_users(settings)
+# @description: adds local user accounts to system with LDAP password authentication
+# LDAP SETUP IS OUTDATED - DO NOT USE!
 {
-  access:
+  vars:
+      
+  users:
+    linux.pam_ldap::
+      "$($(settings).user)"
+      policy => "present",
+#      password => hashed_password( "!##lockedpassword##" ),
+      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      shell => "/bin/bash",
+      home_dir => "/home/$($(settings).user)",
+      home_bundle => home_skel( "$($(settings).user)","$($(settings).group_primary)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).group_primary)",
+#      groups_secondary => { "$($(settings).group_secondary)" },
+      comment => "add ldap user from wsu_users dataset gained via external host file in classify_host bundle";
 
-      # It's important that this path have $(connection.key) in it!
-      "$(user_settings.password_dist)"
-        admit_keys =>  { $(connection.key) },
-        comment => "Grant each host to access its own hashed root password. We
-                  assume that each host has a unique keypair";
-
-      "$(user_settings.ssh_key_dist)"
-        admit_keys =>  { $(connection.key) },
-        comment => "Grant each host to access user public ssh keys. We
-                  assume that each host has a unique keypair";
+  methods:
+    linux.pam_ldap::
+      "remove user password"
+      usebundle =>  ldap_remove_password( "$($(settings).user)" ),
+      comment =>"For PAM to use LDAP to authenticate user, there must be no user entry in /etc/shadow file";
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_ldap_users)::
+      "ldap user: $($(settings).user)";
+      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Contents of 'wsu_users' data container: $($(settings).json_str2)";    
+}
+
+########################################################
+
+bundle agent ldap_remove_password(user)
+{
+
+  vars:
+      "shadow_file" string => "/etc/shadow";
+
+  files:
+      "$(shadow_file)"
+      create    => "false",
+      edit_line => password_entry_removal("$(user)"),
+      comment => "Remove user password entry from /etc/shadow for a user externally authenticated by LDAP";
+
+  reports:
+
+    (DEBUG|DEBUG_ldap_remove_password)::
+      "User to remove from $(shadow_file): $(user)";
+}
+
+########################################################
+
+bundle edit_line password_entry_removal(user)
+{
+  delete_lines:
+      "$(user).*";
 }

@@ -1,0 +1,126 @@
+##############################################################################
+#
+#   manage/packages/apt_sources.cf - EECS apt- sources configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
+bundle agent config_source_ensure(runenv, metadata, given_file, url, distribution, components, types, options)
+# @description: 
+{
+
+  vars:
+      "CFEnotice"
+      string  => "# This file is managed by CFEngine, manual edits will be reverted",
+      comment => "It's nice to let people know why the file keep magically reverting on them";
+
+      "components_str" string => join(" ", "components");
+
+      "file" string => "$(default:eu.path_prefix)$(given_file)",
+      policy => "free";
+
+      "class_prefix" string => canonify($(file)),
+      policy => "free";
+
+      "entries" slist => maplist("$(this) $(options) $(url) $(distribution) $(components_str)", "types");
+      
+  methods:
+   #   "utils" usebundle => default:eu($(runenv));
+
+   # verbose::
+   #   "metadata" usebundle => default:report_metadata($(this.bundle), $(metadata)),
+   #   inherit => "true";
+      
+  files:
+    activated::
+      "$(file)"
+      create        => "true",
+      perms         => default:m("0644"),
+      edit_defaults => default:empty,
+      edit_line     => sources_list($(CFEnotice), @(entries)),
+      classes       => default:classes_generic("$(class_prefix)_ensure"),
+      comment       => "Create $(file) and note that the file is managed by CFEngine";
+
+  reports:
+    verbose::
+      "$(this.bundle): imported environment '$(runenv)' var '$(vars)' with value '$($(vars))'";
+      "$(this.bundle): imported environment '$(runenv)' class '$(vars)' because 'default:runenv_$(runenv)_$(vars)' was defined"
+      ifvarclass => "$(vars)";
+
+      "$(this.bundle): file $(file); ensuring line $(entries)";
+
+    cfengine::
+      "$(file)" bundle_return_value_index => "file",
+      ifvarclass => canonify("$(class_prefix)_ensure_ok");
+
+      "" bundle_return_value_index => "file",
+      ifvarclass => canonify("$(class_prefix)_ensure_not_ok");
+      
+}
+
+######################################################################
+
+bundle edit_line sources_list( header, lines )
+{
+  delete_lines:
+      ".*";
+  insert_lines:
+      "$(header)";
+      "$(lines)";
+}
+
+######################################################################
+
+bundle agent wipe(runenv, metadata, wipe, given_file)
+{
+
+  vars:
+      "file" string => "$(default:eu.path_prefix)$(given_file)",
+      policy => "free";
+
+      "class_prefix" string => canonify($(file)),
+      policy => "free";
+
+  methods:
+      "utils" usebundle => default:eu($(runenv));
+
+   # verbose::
+   #   "metadata" usebundle => default:report_metadata($(this.bundle), $(metadata)),
+   #   inherit => "true";
+
+  files:
+      "$(file)"
+      delete  => default:tidy,
+      classes => default:classes_generic("$(class_prefix)_wipe"),
+      comment => "Wipe $(file)";
+
+  reports:
+    verbose::
+      "$(this.bundle): imported environment '$(runenv)' var '$(vars)' with value '$($(vars))'";
+      "$(this.bundle): imported environment '$(runenv)' class '$(vars)' because 'default:runenv_$(runenv)_$(vars)' was defined"
+      ifvarclass => "$(vars)";
+
+      "$(this.bundle): wiping file $(file)";
+
+    cfengine::
+      "$(file)" bundle_return_value_index => "file";
+}

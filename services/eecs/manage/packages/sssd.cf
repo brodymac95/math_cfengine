@@ -1,0 +1,218 @@
+##############################################################################
+#
+#   manage/users/sssd.cf - EECS manual installer for AD user authentication
+#   Maintained: Ben Roose, ver 0.2
+#
+###############################################################################
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf" };
+#}
+
+######################################################################
+# Public entry point: join_host_to_ad bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. 
+
+bundle common sssd_settings
+{
+  vars:
+
+      "sssd_dist"
+      string => "$(sys.workdir)/host_by_key/$(connection.key)/pam_sssd/",
+      comment => "This is where agents look for their sssd password, cert, and config.";
+
+      "password_cache"
+      string => "$(sys.workdir)/state/passwd/pam_ad.secret",
+      comment => "This is where agents will cache the sssd/ad password locally (for offline enforcement).";
+
+      "keytab_file"
+      string => "/etc/krb5.keytab",
+      comment => "This file is created once host has joined the AD domain.";
+
+  classes:
+      "host_joined_to_ad"
+      expression => fileexists( $(keytab_file) );
+      
+}
+
+bundle agent join_host_to_ad
+{
+  methods:
+
+    pam_ad.debian.!policy_server.!host_joined_to_ad::    
+      "install and configure sssd"  usebundle => install_sssd_client;
+
+  services:
+    pam_ad.debian.!policy_server::
+      "sssd"
+      service_policy => "start",
+      comment => "make sure sssd is running";
+      
+  reports:
+      
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (inform_mode.policy_server|verbose_mode.policy_server)::
+      "$(this.bundle): NOT INSTALLING SSSD/AD CLIENT, since this is a policy server";
+
+    (DEBUG|DEBUG_join_host_to_ad)::
+#      "$(this.bundle): ";
+
+    (DEBUG|DEBUG_join_host_to_ad).host_joined_to_ad::
+      "$(this.bundle): $(sssd_settings.keytab_file) found on host. Not running install_sssd_client bundle";
+
+}
+
+
+bundle agent install_sssd_client
+{
+  # @decription: installation and configuration of sssd for system users to authenticate against WSU's AD servers
+
+  vars:
+    any::
+      "sssd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/pam_sssd/";
+      "passwd_cache" string => "$(sssd_settings.password_cache)";
+
+      "config_dir" string => "/etc/";
+      "sssd_dir" string => "/etc/sssd/";
+      "sssd_conf_file" string => "sssd.conf";
+      "krb5_conf_file" string => "krb5.conf";
+      "password_file" string => "pam_ad.secret";
+            
+      "ntp_server" string => "ntp1.wichita.edu";
+      "ad_domain" string => "ad.wichita.edu";
+      "domain_ou" string => "OU=MCSEE,OU=UNIX_Servers,DC=ad,DC=wichita,DC=edu";
+      "ad_user" string => "unix.joiner";
+      
+      "files_to_check" slist => { "concat( $(config_dir), $(secret_file) )", "concat( $(certs_dir), $(cert_file) )", "concat( $(config_dir), $(conf_file) )" };
+
+    have_cached_password::
+      "ad_password" string => readfile($(passwd_cache), 4096);
+
+  classes:
+      "have_cached_password"
+      expression => fileexists( $(passwd_cache) );
+
+      
+  files:
+    sssd_packages_kept::
+      "$(sssd_dir)$(sssd_conf_file)"
+      copy_from => secure_cp( concat( $(sssd_dist), $(sssd_conf_file) ), $(sys.policy_hub) ),
+      perms => mog("600", "root", "root"),
+      #action => if_elapsed("60"),
+      classes => results("bundle", "sssd_config"),
+      comment => "secure copy of the remote sssd config file and set repaired class if copied";
+
+      "$(config_dir)$(krb5_conf_file)"
+      copy_from => secure_cp( concat( $(sssd_dist), $(krb5_conf_file) ), $(sys.policy_hub) ),
+      perms => mog("644", "root", "root"),
+      #action => if_elapsed("60"),
+      classes => results("bundle", "krb5_config"),
+      comment => "secure copy of the remote krb5 config file and set repaired class if copied";
+
+      "$(passwd_cache)"
+      copy_from => secure_cp( concat( $(sssd_dist), $(password_file) ), $(sys.policy_hub) ),
+      perms => mog("600", "root", "root"),
+      #action => if_elapsed("60"),
+      comment => "secure remote copy of the password file to local cache";
+      
+  methods:
+    !policy_server::
+      "sssd_pkgs"  usebundle => sssd_packages_installation;
+
+  commands:      
+    sssd_packages_kept::
+      "/usr/sbin/ntpdate -u $(ntp_server)"
+      contain => in_dir_shell("/root");
+
+    !host_joined_to_ad.have_cached_password.sssd_config_kept.krb5_config_kept::
+      "/bin/echo -n $(ad_password) | /usr/sbin/adcli join $(ad_domain) --stdin-password -U $(ad_user) -O '$(domain_ou)'"
+      contain => in_dir_shell("/root"),
+      classes => results("bundle", "adcli_join"),
+      comment => "run the adcli join command to link client to ad domain";
+
+  services:
+
+    !policy_server.!no_restarts.(sssd_config_repaired|kbr5_config_repaired)::
+      "sssd"
+      service_policy => "enable",
+      comment => "enable sssd service upon boot";
+
+      "sssd"
+      service_policy => "restart",
+      comment => "restart sssd if configuration files were modified";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (inform_mode.policy_server|verbose_mode.policy_server)::
+      "$(this.bundle): NOT INSTALLING SSSD CLIENT, since this is a policy server";
+
+    (DEBUG|DEBUG_install_sssd)::
+      #"$(this.bundle): ";
+
+    (DEBUG|DEBUG_install_sssd).sssd_packages_repaired::
+      "$(this.bundle): sssd packages installed";
+
+    (DEBUG|DEBUG_install_sssd).(sssd_config_repaired|kbr5_config_repaired)::
+      "$(this.bundle): repaired sssd and kbr5 config files";
+
+    (DEBUG|DEBUG_install_sssd).adcli_join_reached::
+      "$(this.bundle): adcli join command was run";
+
+}
+#############################################
+
+bundle agent sssd_packages_installation
+{
+  vars:
+    debian::  
+      "package_installs" slist => { 
+				    "sssd-krb5",
+				    "sssd-tools",
+				    "krb5-user",
+				    "adcli",
+				    "ntp",
+				    "ntpdate",
+      };
+    redhat::
+      "package_installs" slist => {
+	# ??
+      };
+
+  methods:
+      "install_sssd_packages" usebundle => package_latest("$(package_installs)"),
+      classes => results("namespace", "sssd_packages"),
+      comment => "Install SSSD/AD authentication module packages and set class upon completion";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+#############################################
+
+bundle server sssd_access
+# @brief This bundle shares the path to the password hash
+{
+  access:
+
+      # It's important that this path have $(connection.key) in it!
+      "$(sssd_settings.sssd_dist)"
+      admit_keys =>  { $(connection.key) },
+              comment => "Grant each host to access its own copy of the ldap client files.
+                  We assume that each host has a unique keypair";
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+}
+
+#############################################

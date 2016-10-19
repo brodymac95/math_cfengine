@@ -4,39 +4,56 @@
 	"purpose": "teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
-	"authentication": "pam_ldap OR pam_local",
+	"authentication": "local_user_shared_group OR local__user_own_group OR local_groups",
         "users": { "myWSU ID OR local_user": "full name" },
 	"extra_repository_packages": [ "package1", "package2" ],
 	"custom_packages": [ "package1", "package2" ],
 	"printers": [ "printer1", "printer2" ],
     },
+    
+    "SERVERS": {},
     "policyhub_full": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "policysrv",
         "owner": "roose",
     },
-    "testing": {
+    "cstesting": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "testingserver",
         "owner": "eecs",
-	"authentication": "pam_ldap",
+	"authentication": "local_user_shared_group",
 	"users": {
 	    "d693f574": "Ben Roose",
-        "printers": [ "oce_copier", "jb247_laserjet" ]
+	    "t233a534": "Tom Wallis"
 	},
+	"custom_packages": [ "ad_authentication", ],
+
     },
+    "cudasrv": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "cuda_ide",
+        "owner": "eecs",
+	"authentication": "local_user_shared_group",
+	"users": {
+	    "d693f574": "Ben Roose",
+	},
+	"extra_repository_packages": [ "nvidia-cuda-toolkit", ],
+    },
+    
+    "WORKSTATIONS": {},
     "jb_247_3918_lt1": {
 	"machine": "workstation",
 	"purpose": "research",
         "role": "laptop",
         "owner": "huzefa_kagdi",
-	"authentication": "pam_local",
+	"authentication": "local_user_shared_group",
 	"users": {
 	    "bahrami": "Sara Bahrami",
 	},
-	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref" ],
+	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref", "subversion", "octave" ],
 	"custom_packages": [ "pip_gensim" ],
         "printers": [ "oce_copier", "jb247_laserjet", ]
     },
@@ -45,7 +62,7 @@
 	"purpose": "teaching",
         "role": "laptop",
         "owner": "geetha_lakshmikanth",
-	"authentication": "pam_local",
+	"authentication": "local_user_shared_group",
 	"users": {
 	    "lakshmikanth": "geetha Lakshmikanth",
 	    "roose": "Ben Roose",
@@ -54,9 +71,9 @@
     "jb_258_3143_lab11": {
 	"machine": "workstation",
 	"purpose": "research",
-        "role": "matlab",
+        "role": "matlab_desktop",
         "owner": "Kaushik_sinha",
-	"authentication": "pam_local",
+	"authentication": "local_user_shared_group",
 	"users": {
 	    "p862d927": "Kaushik Sinha",
 	    "p377z922": "Omid Keivani",
