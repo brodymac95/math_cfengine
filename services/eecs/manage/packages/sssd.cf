@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   manage/users/sssd.cf - EECS manual installer for AD user authentication
+#   manage/packages/sssd.cf - EECS manual installer for AD user authentication
 #   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
@@ -36,12 +36,15 @@ bundle common sssd_settings
 
   classes:
       "host_joined_to_ad"
-      expression => fileexists( $(keytab_file) );
+      expression => fileexists( $(keytab_file) ),
+      comment => "Checks existence of file which is created on host upon successful joining of AD domain";
       
 }
 
 bundle agent join_host_to_ad
 {
+  # @decription: main entry point for installing sssd and joining host to AD
+
   methods:
 
     pam_ad.debian.!policy_server.!host_joined_to_ad::    
@@ -172,6 +175,8 @@ bundle agent install_sssd_client
 
 bundle agent sssd_packages_installation
 {
+# @description: installs packages required for joining host to AD domain
+
   vars:
     debian::  
       "package_installs" slist => { 
@@ -200,7 +205,7 @@ bundle agent sssd_packages_installation
 #############################################
 
 bundle server sssd_access
-# @brief This bundle shares the path to the password hash
+# @description: This bundle shares the path to the sssd config and password files
 {
   access:
 

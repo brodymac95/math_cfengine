@@ -16,7 +16,7 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1. fix LDAP authentication
+# 1. 
 # 2. have the ssh_key_distribution look for user public keys located on policy server (per host connection key directory) and then add all the user keys found in that directory
 
 bundle common user_settings
@@ -46,9 +46,15 @@ bundle common user_settings
       "shared_group_primary" string => "users";
       "group_secondary" string => "audio,plugdev";
 
-    local_user_shared_group|local_user_own_group::
+    local_users_shared_group|local_users_own_group::
       "user" slist => getindices( "classify_host.wsu_users" );
       "json_str_users" string => format("%S", "classify_host.wsu_users");
+
+    local_users_custom_groups::
+      "custom_group" slist => getindices( "classify_host.wsu_users" );
+      "custom_group" slist => getindices( "classify_host.wsu_users" );
+      
+      "json_str_custom_groups" string => format("%S", "classify_host.wsu_users");
 
 }
 
@@ -92,11 +98,11 @@ bundle agent manage_users
 #      "manage system users"
 #      usebundle => manage_system_users("root_passwd_settings");
 
-    local_user_shared_group::
+    local_users_shared_group::
       "manage local users"
       usebundle => manage_local_users_shared_group("user_settings");
 
-    local_user_own_group::
+    local_users_own_group::
       "manage ad users"
       usebundle => manage_local_users_own_group("user_settings");
 
@@ -197,8 +203,9 @@ bundle agent manage_local_users_shared_group(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "local user: $($(settings).user)";
+      "Local user: $($(settings).user)";
       "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Shared group: $($(settings).shared_group_primary)";
       "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
 }
 
@@ -219,7 +226,6 @@ bundle agent manage_local_users_own_group(settings)
       shell => "/bin/bash",
       home_dir => "/home/$($(settings).user)",
       home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
-#      group_primary => "$($(settings).user)",
       groups_secondary => { "$($(settings).group_secondary)" },
       comment => "add AD user (with group = user) from wsu_users dataset gained via external host file
                   user must be a myWSU ID but fullname can be the person's name (as set by description) 
@@ -230,7 +236,7 @@ bundle agent manage_local_users_own_group(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "local user: $($(settings).user)";
+      "Local user: $($(settings).user)";
       "Username: $(classify_host.wsu_users[$($(settings).user)])";
       "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
 }
