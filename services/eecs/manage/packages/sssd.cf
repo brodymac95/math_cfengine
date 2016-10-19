@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   manage/packages/sssd.cf - EECS manual installer for AD user authentication
+#   manage/packages/sssd.cf - EECS installer for AD user authentication
 #   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
