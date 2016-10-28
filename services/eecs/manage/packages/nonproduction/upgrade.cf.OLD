@@ -1,0 +1,164 @@
+##############################################################################
+#
+#   manage/<service>/main.cf - EECS <service> configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle agent upgrade_all
+{
+  methods:
+      "upgrade all packages, do not allow rebooting" usebundle => "upgrade_installed_packages";
+}
+
+######################################################################
+
+bundle agent upgrade_kernel
+{
+  vars:
+    ubuntu::
+      "p" slist => { "linux-generic" };
+
+    debian.64_bit::
+      "p" slist => { "linux-image-amd64" };
+
+    debian.32_bit::
+      "p" slist => { "linux-image-686" };
+      # Future note: once you get cfengine on a 32bit machine, check what the class and kernel package needs to be!
+
+  methods:
+      "upgrade" usebundle => dpkgup("@(upgrade_some.p)","allow_reboot");
+}
+
+######################################################################
+
+bundle agent upgrade_installed_packages(p_list, allow_reboot) {
+# @description: upgrade either all packages (if nothing is specified in p_list) or upgrade packages as specified by calling bundle in p_list var. If anything is defined in allow_reboot var, then check if the system needs to reboot for mainenance (i.e. a kernel update).
+
+  vars:
+
+    second_pass.package_list_provided::
+      "pkg_list" string => join(" ", p_list), policy => "free";
+    second_pass.!package_list_provided::
+      "pkg_list" string => "", policy => "free";
+
+    second_pass::
+      "apt_show_versions" string => execresult("/usr/bin/apt-show-versions -u $(pkg_list)","useshell");
+      "dim" int => parsestringarray("upgrade","$(apt_show_versions)","NoComments","[/ ]","1000","200000");
+
+      "package" slist => getindices("upgrade");
+
+  classes:
+
+      "reboot_is_allowed" expression => isvariable("allow_reboot");
+      "package_list_provided" expression => isvariable("p_list");
+      "second_pass" expression => "any";
+
+  packages:
+      
+    notifier_installed_kept|!reboot_is_allowed::
+      "apt-show-versions"
+      package_policy => "addupdate",
+      handle => canonify("$(this.bundlename)_apt_get_install_$(install)"),
+      package_method => apt_get_permissive,
+      comment => "gain list of updates and plug into the package slist
+                  confirm update-notifier is installed before running upgrade if automated reboot is allowed";
+
+      "$(package)"
+      package_policy => "addupdate",
+      handle => canonify("$(this.bundlename)_apt_get_install_$(package)"),
+      package_method => apt_get,
+      package_version => "$(upgrade[$(package)][6])",
+      package_select => ">=";
+      comment => "upgrades package as specified in the upgrade list to newest version (after package slist is built)";
+
+  methods:
+    reboot_is_allowed::
+      "check if system needs to reboot"
+      usebundle => reboot_required;
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_upgrade_installed_packages)::
+      "$(this.bundle): Upgrade $(package) to $(upgrade[$(package)][6])";
+
+}
+
+######################################################################
+
+bundle agent reboot_required
+# @description: uses update-notifier to evaluate whether system needs to reboot, then reboots system at a defined time
+# BE CAREFUL TO USE THIS PACKAGE SPARINGLY!!
+{
+
+  vars:
+      "reboot_required_file" string => "/var/run/reboot-required";
+      "reboot_delay_time" string => "10";
+      "reboot_system_message" => "CFEngine: scheduled maintenance reboot due to package updates";
+      "time_of_reboot" string => "Hr02";
+
+    debian::
+      "desired_package" slist => {
+				   "update-notifier",
+      };
+    redhat::
+      "desired_package" slist => {
+				   # ??
+      };
+
+  classes:
+      "reboot_required"
+      expression => fileexists($(reboot_required_file)),
+      comment => "the update-notifier will create this file if a reboot is needed after package updates are done";
+      
+  methods:
+      "install notifier package to warn us of a required reboot"
+      usebundle => package_latest("$(desired_package)"),
+      classes => results("namespace", "notifier_installed");
+
+    reboot_required::
+      "fully reboot system if required AND it is the time to reboot"
+      usebundle => reboot( $(reboot_delay_time), $(reboot_system_message) ),
+      ifvarclass => "$(time_of_reboot)";
+}
+
+######################################################################
+
+bundle agent reboot(time, message)
+# @description: generic reboot bundle with definable variables for delay time before reboot and a system wide message prior to reboot.
+{
+  commands:
+    linux.!no_restarts::
+      "/sbin/shutdown -r $(time) $(message)";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+
+
+# LOOK AT: https://linux-audit.com/check-required-reboot-debian-ubuntu-others/
+# cat /var/run/reboot-required
+# cat /var/run/reboot-required.pkgs
+# this check requires update-notifier to be installed!

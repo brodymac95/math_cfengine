@@ -16,7 +16,7 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1. 
+# 1. Build system users (i.e. roose and wallis). Possibly shift these to sudo accounts and remove root passwords
 # 2. have the ssh_key_distribution look for user public keys located on policy server (per host connection key directory) and then add all the user keys found in that directory
 
 bundle common user_settings
@@ -51,10 +51,8 @@ bundle common user_settings
       "json_str_users" string => format("%S", "classify_host.wsu_users");
 
     local_users_custom_groups::
-      "custom_group" slist => getindices( "classify_host.wsu_users" );
-      "custom_group" slist => getindices( "classify_host.wsu_users" );
-      
-      "json_str_custom_groups" string => format("%S", "classify_host.wsu_users");
+      "custom_umask" string => "007";
+      "json_str_users" string => format("%S", "classify_host.wsu_users");
 
 }
 
@@ -99,12 +97,16 @@ bundle agent manage_users
 #      usebundle => manage_system_users("root_passwd_settings");
 
     local_users_shared_group::
-      "manage local users"
+      "manage local users in shared group"
       usebundle => manage_local_users_shared_group("user_settings");
 
     local_users_own_group::
-      "manage ad users"
+      "manage local users in their own groups"
       usebundle => manage_local_users_own_group("user_settings");
+
+    local_users_custom_groups::
+      "manage local users in custom groups"
+      usebundle => manage_local_users_custom_groups("user_settings");
 
 #    pam_ldap::
 #     "install and configure ldap client packages"
@@ -191,9 +193,11 @@ bundle agent manage_local_users_shared_group(settings)
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
       comment => "add local user with shared group from wsu_users dataset gained via external host file
+                  user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (set in description)
                  NOTE: local user password is not set by CFEngine, but can be authenticated from AD domain via sssd";
 
   methods:
+    linux::
       "ensure shared primary group exists"
       usebundle => group_exist( "$($(settings).shared_group_primary)" ),
       classes => results("bundle", "shared_group_exists");
@@ -227,17 +231,16 @@ bundle agent manage_local_users_own_group(settings)
       home_dir => "/home/$($(settings).user)",
       home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
       groups_secondary => { "$($(settings).group_secondary)" },
-      comment => "add AD user (with group = user) from wsu_users dataset gained via external host file
-                  user must be a myWSU ID but fullname can be the person's name (as set by description) 
-                 NOTE: password is not set by CFEngine but can be authenticated from AD domain via sssd";
-
+      comment => "add local user (with group = user) from wsu_users dataset gained via external host file
+                  user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (set in description)
+                  NOTE: password is not set by CFEngine but can be authenticated from AD domain via sssd";
+ 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "Local user: $($(settings).user)";
-      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "Local user: $($(settings).user) - $(classify_host.wsu_users[$($(settings).user)])";
       "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
 }
 
@@ -249,29 +252,79 @@ bundle agent manage_local_users_custom_groups(settings)
 # SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
+      "group_unsorted" slist => getindices( "classify_host.wsu_users" );
+      "group" slist => sort("group_unsorted",lex);
+
+      "userdata_$(group)" data => mergedata("classify_host.wsu_users[$(group)]");
+      "user_$(group)" slist => getindices( "userdata_$(group)" );
+      "grader_user" slist => getindices("classify_host.wsu_users[grader]");
+
+      "group_parent_dir" string => "/tmp/";
+      "group_dir" string => concat ("$(group_parent_dir)", "$(group)");
       
   users:
-    linux::
-      "$($(settings).user)"
+    linux.group_exists_kept::
+      "$(user_$(group))"
       policy => "present",
-      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      description => "$(userdata_$(group)[$(user_$(group))])",
       shell => "/bin/bash",
-      home_dir => "/home/$($(settings).user)",
-      home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
-#      group_primary => "$($(settings).user)",
+      home_dir => "/home/$(user_$(group))",
+      home_bundle => home_skel( "$(user_$(group))","$(group)", "$($(settings).home_skeleton)" ),
+      group_primary => "$(group)",
       groups_secondary => { "$($(settings).group_secondary)" },
-      comment => "add AD user (with group = user) from wsu_users dataset gained via external host file
-                  user must be a myWSU ID but fullname can be the person's name (as set by description) 
+      classes => results("bundle", "user_exists"),
+      comment => "add local user with custom groups from wsu_users dataset gained via external host file
+                  user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (in description)
                  NOTE: password is not set by CFEngine but can be authenticated from AD domain via sssd";
+
+  methods:
+    linux::
+      "ensure each custom group exists"
+      usebundle => group_exist( "$(group)" ),
+      classes => results("bundle", "group_exists");
+
+    user_exists_kept::
+      "create group directories and enforce perms on all files inside"
+      usebundle => enforce_group_dirs( "$(group__dir)", "$(grader_user)" ),
+      classes => results("bundle", "group_dirs");
+
+      "insert into user .bashrc file an automatic cd to group directory"
+      usebundle => insert_autorun_command("$(user_$(group))", concat( "cd ", "$(group_dir)" )),
+      classes => results("bundle", "group_dirs");
+
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "local user: $($(settings).user)";
-      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+#      "local user: $(classify_host.wsu_users[$(group)])";
+      "Local users in $(group): $(user_$(group)) - $(userdata_$(group)[$(user_$(group))])";
+      "Grader user: $(grader_user)";
+      
+#      "Username: $(classify_host.wsu_users[$(group)][$(user)])";
       "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
+}
+
+########################################################
+
+bundle agent enforce_group_dirs(directory, grader)
+# @description:
+{
+
+  vars:
+      "mode" string => "660";
+
+  files:
+      "$(directory)/."
+      create => "true",
+      perms => mog( $(mode), $(grader), $(group) ),
+      depth_search => recurse_with_base("inf");
+
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
 
 ########################################################
@@ -287,6 +340,27 @@ bundle agent group_exist(group)
     linux.group_absent::
       "$(paths.groupadd)"
               args => "$(group)";
+}
+
+########################################################
+
+bundle agent insert_autorun_command(user, command)
+# @description:
+{
+
+  vars:
+      "bashrc" string => "~$(user)/.bashrc";
+
+  files:
+      "$(bashrc)"
+      create => "true",
+      edit_line => insert_lines( "$(command)" ),
+      comment => "add command to end of user's .bashrc file";
+
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
 
 ########################################################

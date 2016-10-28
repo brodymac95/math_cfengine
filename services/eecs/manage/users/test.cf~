@@ -24,19 +24,41 @@ body file control
 # 1.
 
 
-bundle agent config_<service>
+bundle agent main
 # @description: 
 {
 
   vars:
+      "group" slist  => {"group1", "group2", "group3"};
 
-  methods:
+      "grader_group" slist  => grep("grader", "group");
 
+  classes:
+      "grader_class" expression => strcmp("$(group)", "grader");
+      
   reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
+	"Normal Group: $(group)";
 
-    (DEBUG|DEBUG_config)::
+        "Grader Group: $(grader_group)";
+
+}
+
+bundle agent main_old
+# @description: 
+{
+
+  vars:
+      "group" slist  => {"group1", "group2", "grader", "group3"};
+#      "test" string  => "grader";
+
+  classes:
+      "grader_class" expression => strcmp("$(group)", "grader");
+      
+  reports:
+	"Normal Group: $(group)";
+
+    grader_class::
+        "Grader Group: $(group)";
 
 }
 

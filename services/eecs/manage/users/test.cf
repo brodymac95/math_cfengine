@@ -1,0 +1,82 @@
+##############################################################################
+#
+#   manage/<service>/main.cf - EECS <service> configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
+bundle agent main
+# @description: 
+{
+
+  vars:
+      "group" slist  => {"group1", "group2", "group3", "grader"};
+      "parent_dir" string => "/srv/";
+      "grader" string => "gta";
+      
+
+  classes:
+      "grader_class" expression => strcmp("$(group)", "grader");
+
+  files:
+      "$(parent_dir)$(group)/."
+      create => "true",
+      perms => grader,
+      depth_search => recurse("inf");
+      
+      
+  reports:
+	"Normal Group: $(group)";
+
+        "Grader Group: $(grader_group)";
+
+}
+
+body perms grader
+{
+      owners => { "$(main.grader)" };
+      groups => { "$(main.group)" };
+      mode  => "0007";
+}
+
+
+bundle agent finding_entry_in_list
+# @description: 
+{
+
+  vars:
+      "group" slist  => {"group1", "group2", "grader", "group3"};
+#      "test" string  => "grader";
+      "grader_group" slist  => grep("grader", "group");
+
+  classes:
+      "grader_class" expression => strcmp("$(group)", "grader");
+      
+  reports:
+	"Normal Group: $(group)";
+
+    grader_class::
+        "Grader Group: $(grader_group)";
+
+}
+
+######################################################################

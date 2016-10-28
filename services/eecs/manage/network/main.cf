@@ -1,0 +1,110 @@
+##############################################################################
+#
+#   manage/network/main.cf - EECS network configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. See here: https://groups.google.com/forum/#!topic/help-cfengine/NPCfVkNkwYU
+
+bundle common net_settings
+{
+  vars:
+ 
+      "interfaces_dist"
+      string => "$(sys.workdir)/host_by_key/$(connection.key)/interfaces",
+      comment => "This is where agents look for a custom network interfaces file.";
+
+      "interfaces_cache"
+      string => "$(sys.workdir)/state/network/interfaces",
+              comment => "This is where agents will cache the interfaces file locally
+                          (for offline enforcement).";
+
+      "interfaces_file" string => "/etc/network/interfaces";
+      
+}
+
+######################################################################
+
+bundle agent config_net_interfaces
+# @description: 
+{
+
+  vars:
+      #"net_data" data => readjson( "$(this.promise_dirname)/subnets.json", 10M );
+      #"networks" slist => getindices("net_data");
+
+      "interfaces_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/interfaces";
+      "interfaces_cache" string => "$(net_settings.interfaces_cache)";
+      "interfaces_cache_dir" string => dirname("$(interfaces_cache)");
+
+  classes:
+      "have_cached_interfaces"
+      expression => fileexists($(interfaces_cache));
+
+  files:
+      "$(interfaces_cache_dir)/."
+      create => "true";
+
+    policy_server::
+      "$(interfaces_cache)"
+      perms => mo("600","root"),
+      copy_from => local_dcp( $(interfaces_dist) ),
+      action => if_elapsed("60"),
+      comment => "if host is the policy server then perform a local copy of the file";
+
+    !policy_server::
+      "$(interfaces_cache)"
+      perms => mo("600","root"),
+      copy_from => secure_cp( $(interfaces_dist), $(sys.policy_hub) ),
+      action => if_elapsed("60"),
+      comment => "if host is any other client then perform a secure remote copy of thefile";
+
+    have_cached_interfaces::
+      "$(net_settings.interfaces_file)"
+      perms => mog("644","root","root"),
+      copy_from => local_dcp( $(interfaces_cache) ),
+      comment => "copy file from cache into the system directory";
+
+  methods:
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_net_interfaces).have_cached_interfaces::
+      "$(this.bundle): custom interfaces file found on policy hub for this host";      
+}
+
+######################################################################
+
+bundle server interfaces_access
+# @description: shares the path on policy hub for interface file with access restricted to each host connection key directory
+{
+  access:
+
+      # It's important that this path have $(connection.key) in it!
+      "$(net_settings.interfaces_dist)"
+      admit_keys =>  { $(connection.key) },
+              comment => "Grant each host to access its custom interfaces file. We        
+                  assume that each host has a unique keypair";
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}

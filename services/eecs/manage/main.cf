@@ -9,13 +9,12 @@ bundle common manage_main_file_control
 {
   vars:
 
-    "input[login_banner]" string => "$(this.promise_dirname)/login_banner/main.cf";
     "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
-    "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
+    "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
+    "input[network]" string => "$(this.promise_dirname)/network/main.cf";
     "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
     "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
-    "input[sssd]" string => "$(this.promise_dirname)/packages/sssd.cf";
-    "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
+    "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
     "input[users]" string => "$(this.promise_dirname)/users/main.cf";
 
     #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
@@ -46,19 +45,18 @@ bundle agent manage_main
 
     any::
       "configure_motd" usebundle => config_login_banner;
+      "configure_login_defs" usebundle => config_login_defs;
       "configure_firewall" usebundle => config_iptables;
       "package_management" usebundle => manage_packages;
       "user_management" usebundle => manage_users;
 
     server::
       "configure_sshd" usebundle => sshd_config;
+      "use_custom_network_interfaces" usebundle => config_net_interfaces;
+
 
     install_printers::
       "printer_management" usebundle => manage_printers;
-
-    pam_ad::
-      "configure sssd and join host to ad domain" usebundle => join_host_to_ad;
-      
 
     #nickanderson_thinkpad_w520::
     #  "emacs"

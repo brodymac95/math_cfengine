@@ -1,0 +1,122 @@
+###############################################################################
+#
+#   manage/ssh/main.cf - EECS ssh/sshd configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+#PRO TIP:
+# better to describe the state you are in than the state you want to
+# obtain. Because when reading the policy to restart it can be nice to
+# know why your restarting, instead of restarting because someone said restart.
+
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf" };
+#}
+
+######################################################################
+# Public entry point: sshd_config
+######################################################################
+
+# NOTES for future development of configuration:
+# Consider managing a temporary file that can be validated with sshd -t -c
+# If that check returns zero then you can promise that the real sshd config
+# is a copy of the validated file. and then define the class used to restart
+# if the main config is repaired by the copy from the validated temporary
+# file. This improves resilience, and tries to avoid deploying a potentially
+# broken config.bundle agent configfiles
+
+bundle agent sshd_config
+{
+  vars:  
+      # Files to edit
+      "files[sshd]"   string => "/etc/ssh/sshd_config";
+
+      # SSHD configuration to set
+      "sshd[Port]"                                    string => "22";
+      "sshd[X11Forwarding]"                           string => "yes";
+      "sshd[UseDNS]"                                  string => "no";
+      "sshd[PermitRootLogin]"                         string => "no";
+
+  methods:
+      "sshd"    usebundle => edit_sshd;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_files)::
+      
+}
+
+bundle agent edit_sshd
+{
+  files:
+      "$(sshd_config.files[sshd])"
+      handle => "edit_sshd",
+      comment => "Set desired sshd_config parameters",
+      edit_line => set_line_based("sshd_config.sshd", " ", "\s+", ".*", "\s*#\s*"),
+      classes => results("bundle", "sshd");
+      
+  services:
+      "ssh"
+      service_policy => "start",
+      comment => "make sure ssh is always running";
+
+    sshd_repaired.!no_restarts::
+      "ssh"
+      service_policy => "reload",
+      handle => "sshd_restart",
+      comment => "Restart sshd if the configuration file was modified";
+
+
+      
+}
+
+bundle agent sshd_config
+{
+  vars:  
+      # Files to edit
+      "files[sshd]"   string => "/etc/ssh/sshd_config";
+
+      # SSHD configuration to set
+      "sshd[Port]"                                    string => "22";
+      "sshd[X11Forwarding]"                           string => "yes";
+      "sshd[UseDNS]"                                  string => "no";
+      "sshd[PermitRootLogin]"                         string => "no";
+
+  methods:
+      "sshd"    usebundle => edit_sshd;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_files)::
+      
+}
+
+bundle agent edit_sshd
+{
+  files:
+      "$(sshd_config.files[sshd])"
+      handle => "edit_sshd",
+      comment => "Set desired sshd_config parameters",
+      edit_line => set_line_based("sshd_config.sshd", " ", "\s+", ".*", "\s*#\s*"),
+      classes => results("bundle", "sshd");
+      
+  services:
+      "ssh"
+      service_policy => "start",
+      comment => "make sure ssh is always running";
+
+    sshd_repaired.!no_restarts::
+      "ssh"
+      service_policy => "reload",
+      handle => "sshd_restart",
+      comment => "Restart sshd if the configuration file was modified";
+
+
+      
+}

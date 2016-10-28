@@ -1,0 +1,83 @@
+##############################################################################
+#
+#   manage/users/ldap_removal.cf - EECS removal script for LDAP
+#   Maintained: Ben Roose, ver 0.2
+#
+###############################################################################
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: remove_ldap bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. 
+
+bundle agent remove_ldap
+{
+  # @decription: removal of all LDAP files and packages
+
+  vars:      
+      "files[cert_file]" string => "/etc/sss/certs/wsu_cacert.pem";
+      "files[secret_file]" string => "/etc/pam_ldap.secret";
+      "files[conf_file]" string => "/etc/pam_ldap.conf";
+      "files[conf_ldap_link]" string => "/etc/ldap/ldap.conf";
+      "files[secret_file_link]" string => "/etc/ldap.secret";
+
+      "ldap_files" slist => getvalues(files);
+
+  classes:
+      "ldap_files_found"
+      expression => fileexists( $(files[$(conf_file)]) );
+      
+  files:
+    ldap_files_found::
+      "$(ldap_files)"
+      delete => tidy,
+      classes => results("bundle", "file_remove"),
+      comment => "remove listed files related to LDAP configuration";
+      
+  methods:
+    file_remove_repaired::
+      "ldap_pkgs"  usebundle => ldap_packages_removal;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_remove_ldap)::
+      "$(this.bundle): files to remove: $(ldap_files)";
+      
+}
+#############################################
+
+bundle agent ldap_packages_removal
+{
+  vars:
+    debian::  
+      "package_installs" slist => { 
+      "ldap-utils",
+      "ldaptor-doc",
+      "ldaptor-utils",
+      "libpam-ldap",
+      "libsasl2-modules-ldap",
+      "python-ldaptor",
+      };
+    redhat::
+      "package_installs" slist => {
+	# ??
+      };
+
+  methods:
+      "remove_ldap_packages" usebundle => package_absent("$(package_installs)"),
+      comment => "remove LDAP authentication module packages";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}

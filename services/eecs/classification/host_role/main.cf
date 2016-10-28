@@ -13,7 +13,7 @@ bundle common classify_host
   vars:
     # Be cautious here, readjson function expects CRLF (dos) line endings per RFC4180
     "host_data"
-      data => readjson("$(this.promise_dirname)/host_data.json",3k),
+      data => readjson("$(this.promise_dirname)/host_data.json",1M),
       comment => "We use external data for host identification so it's easier for other people or
                   automated processes to update the data.";
 
@@ -47,6 +47,14 @@ bundle common classify_host
       meta => { "inventory", "attribute_name=authentication" };      
 
     "canonified_host" string => canonify("$(sys.host)");
+
+#    "net_interfaces"
+#      data => mergedata( "host_data[$(canonified_host)][network_interfaces]" ),
+#      ifvarclass => isvariable("host_data[$(canonified_host)][network_interfaces]"),
+#      comment => "create data subset of network interfaces from host_data.json file";
+
+#    "net_interfaces_json_str" string => format("%S", "net_interfaces"),
+#      ifvarclass => isvariable("host_data[$(canonified_host)][network_interfaces]");
 
     "wsu_users"
       data => mergedata( "host_data[$(canonified_host)][users]" ),
@@ -116,6 +124,11 @@ bundle common classify_host
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       meta => { "inventory", "attribute_name=authentication class" },
       comment => "Add host's specific authentication method from external data file.";
+
+#    "configure_interfaces"
+#      expression => isvariable("net_interfaces"),
+#      meta => { "derived-from=sys.host,hardclass and host_data file" },
+#      comment => "Add class configure_interfaces if found for host from external data file.";
 
     "install_extra_packages"
       expression => isvariable("extra_packages"),

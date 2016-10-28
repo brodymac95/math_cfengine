@@ -47,11 +47,11 @@ bundle agent join_host_to_ad
 
   methods:
 
-    pam_ad.debian.!policy_server.!host_joined_to_ad::    
+    debian.!policy_server.!host_joined_to_ad::    
       "install and configure sssd"  usebundle => install_sssd_client;
 
   services:
-    pam_ad.debian.!policy_server::
+    debian.!policy_server::
       "sssd"
       service_policy => "start",
       comment => "make sure sssd is running";
@@ -93,15 +93,12 @@ bundle agent install_sssd_client
       "domain_ou" string => "OU=MCSEE,OU=UNIX_Servers,DC=ad,DC=wichita,DC=edu";
       "ad_user" string => "unix.joiner";
       
-      "files_to_check" slist => { "concat( $(config_dir), $(secret_file) )", "concat( $(certs_dir), $(cert_file) )", "concat( $(config_dir), $(conf_file) )" };
-
     have_cached_password::
       "ad_password" string => readfile($(passwd_cache), 4096);
 
   classes:
       "have_cached_password"
       expression => fileexists( $(passwd_cache) );
-
       
   files:
     sssd_packages_kept::

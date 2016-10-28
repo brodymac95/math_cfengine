@@ -4,6 +4,7 @@
 	"purpose": "teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
+	"NOT IMPLEMENTED-network_interfaces": { "eth0": "ip_address", "eth1": "ip_address" }
 	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups",
         "users": { "myWSU ID OR local_user": "full name" },
 	"extra_repository_packages": [ "package1", "package2" ],
@@ -26,12 +27,17 @@
 	"authentication": "local_users_custom_groups",
 	"users": {
 	    "group1" : {
-	        "d693f574": "Ben Roose",
 		"t233a534": "Tom Wallis"
+	    },
+	    "group2" : {
+	        "a123b456": "tester A",
+		"c456d123": "tester B"
+	    },
+	    "grader" : {
+	        "d693f574": "Ben Roose",
 	    },
 	},
 	"custom_packages": [ "ad_authentication", ],
-
     },
     "cudasrv": {
 	"machine": "server",
@@ -40,9 +46,10 @@
         "owner": "eecs",
 	"authentication": "local_users_shared_group",
 	"users": {
-	    "d693f574": "Ben Roose",
+	    "roose": "Ben Roose",
 	},
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", ],
+	"custom_packages": [ "ad_authentication", ]
     },
     
     "WORKSTATIONS": {},
