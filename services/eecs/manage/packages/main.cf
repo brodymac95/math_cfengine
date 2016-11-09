@@ -10,7 +10,8 @@ bundle common packages_main_file_control
   vars:
     "input[install]" string => "$(this.promise_dirname)/installation.cf";
     #"input[upgrade]" string => "$(this.promise_dirname)/packages/upgrades.cf";
-    "input[sssd]" string => "$(this.promise_dirname)/sssd.cf";
+    "input[ad]" string => "$(this.promise_dirname)/ad.cf";
+    "input[ldap_removal]" string => "$(this.promise_dirname)/ldap_removal.cf";
     "input[matlab]" string => "$(this.promise_dirname)/matlab.cf";
 
       "inputs"

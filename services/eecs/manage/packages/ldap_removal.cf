@@ -23,7 +23,7 @@ bundle agent remove_ldap
   # @decription: removal of all LDAP files and packages
 
   vars:      
-      "files[cert_file]" string => "/etc/sss/certs/wsu_cacert.pem";
+      "files[cert_file]" string => "/etc/ssl/certs/wsu_cacert.pem";
       "files[secret_file]" string => "/etc/pam_ldap.secret";
       "files[conf_file]" string => "/etc/pam_ldap.conf";
       "files[conf_ldap_link]" string => "/etc/ldap/ldap.conf";
@@ -33,7 +33,7 @@ bundle agent remove_ldap
 
   classes:
       "ldap_files_found"
-      expression => fileexists( $(files[$(conf_file)]) );
+      expression => fileexists( $(files[conf_file]) );
       
   files:
     ldap_files_found::

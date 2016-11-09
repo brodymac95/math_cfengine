@@ -19,7 +19,7 @@
         "role": "policysrv",
         "owner": "roose",
     },
-    "cstesting": {
+    "oldtesting": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "testingserver",
@@ -37,7 +37,18 @@
 	        "d693f574": "Ben Roose",
 	    },
 	},
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ldap_removal", "ad_authentication", ],
+    },
+    "cstesting": {
+	"machine": "server",
+	"purpose": "infrastructure",
+        "role": "testingserver",
+        "owner": "eecs",
+	"authentication": "local_users_shared_group",
+	"users": {
+            "d693f574": "Ben Roose",
+	   },
+	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
     "cudasrv": {
 	"machine": "server",

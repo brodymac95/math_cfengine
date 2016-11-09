@@ -1,0 +1,31 @@
+[logging]
+ default = FILE:/var/log/krb5libs.log
+ kdc = FILE:/var/log/krb5kdc.log
+ admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+ default_realm = AD.WICHITA.EDU
+ dns_lookup_realm = true
+ dns_lookup_kdc = true
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+ rdns = false
+ $(default_tkt_enctypes)
+ $(default_tgs_enctypes)
+
+[realms]
+ AD.WICHITA.EDU = {
+ kdc = dcsvc-307.ad.wichita.edu
+ kdc = latitude.ad.wichita.edu
+ kdc = dcsvc-300.ad.wichita.edu
+ kdc = longitude.ad.wichita.edu
+ admin_server = dcsvc-307.ad.wichita.edu
+ admin_server = latitude.ad.wichita.edu
+ admin_server = dcsvc-300.ad.wichita.edu
+ admin_server = longitude.ad.wichita.edu
+}
+
+[domain_realm]
+ .ad.wichita.edu = AD.WICHITA.EDU
+  ad.wichita.edu = AD.WICHITA.EDU

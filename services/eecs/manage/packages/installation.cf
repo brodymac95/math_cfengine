@@ -57,6 +57,7 @@ bundle agent manage_repository_packages
 				  "openssh-client",
 				  "emacs",
 				  "screen",
+				  "tmux",
 				  "build-essential",
                                 };
       
@@ -171,7 +172,10 @@ bundle agent manage_custom_packages
   methods:
 
     ad_authentication::
-      "configure sssd and join host to ad domain" usebundle => join_host_to_ad;
+      "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
+      
+    ldap_removal::
+      "remove old ldap config files and packages" usebundle => remove_ldap;
       
 #   matlab_research|matlab_classroom::
 #      "install matlab software" usebundle => install_matlab,

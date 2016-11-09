@@ -1,7 +1,7 @@
 ##############################################################################
 #
-#   manage/packages/sssd.cf - EECS installer for AD user authentication
-#   Maintained: Ben Roose, ver 0.2
+#   manage/packages/ad.cf - EECS installer for AD user authentication
+#   Maintained: Ben Roose, ver 0.3
 #
 ###############################################################################
 
@@ -30,6 +30,10 @@ bundle common sssd_settings
       string => "$(sys.workdir)/state/passwd/pam_ad.secret",
       comment => "This is where agents will cache the sssd/ad password locally (for offline enforcement).";
 
+      "krb5_cache"
+      string => "$(sys.workdir)/state/passwd/krb5.conf",
+      comment => "This is where agents will cache the sssd/ad password locally (for offline enforcement).";
+
       "keytab_file"
       string => "/etc/krb5.keytab",
       comment => "This file is created once host has joined the AD domain.";
@@ -48,13 +52,13 @@ bundle agent join_host_to_ad
   methods:
 
     debian.!policy_server.!host_joined_to_ad::    
-      "install and configure sssd"  usebundle => install_sssd_client;
+      "install and configure host for joining ad"  usebundle => install_ad_client;
 
   services:
-    debian.!policy_server::
+    !policy_server.debian_8::
       "sssd"
       service_policy => "start",
-      comment => "make sure sssd is running";
+      comment => "make sure sssd is running on debian 8 host";
       
   reports:
       
@@ -68,12 +72,12 @@ bundle agent join_host_to_ad
 #      "$(this.bundle): ";
 
     (DEBUG|DEBUG_join_host_to_ad).host_joined_to_ad::
-      "$(this.bundle): $(sssd_settings.keytab_file) found on host. Not running install_sssd_client bundle";
+      "$(this.bundle): $(sssd_settings.keytab_file) found on host. Not running install_ad_client bundle";
 
 }
 
 
-bundle agent install_sssd_client
+bundle agent install_ad_client
 {
   # @decription: installation and configuration of sssd for system users to authenticate against WSU's AD servers
 
@@ -81,17 +85,29 @@ bundle agent install_sssd_client
     any::
       "sssd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/pam_sssd/";
       "passwd_cache" string => "$(sssd_settings.password_cache)";
+      "krb5_cache" string => "$(sssd_settings.krb5_cache)";
+      "krb5_template_file" string => "$(this.promise_dirname)/data/krb5_template.conf";
+      "sssd_template_file" string => "$(this.promise_dirname)/data/sssd_template.conf";
 
       "config_dir" string => "/etc/";
       "sssd_dir" string => "/etc/sssd/";
       "sssd_conf_file" string => "sssd.conf";
       "krb5_conf_file" string => "krb5.conf";
       "password_file" string => "pam_ad.secret";
-            
+       
       "ntp_server" string => "ntp1.wichita.edu";
       "ad_domain" string => "ad.wichita.edu";
       "domain_ou" string => "OU=MCSEE,OU=UNIX_Servers,DC=ad,DC=wichita,DC=edu";
       "ad_user" string => "unix.joiner";
+
+    debian_7::
+      "default_tkt_enctypes" string => "default_tkt_enctypes = arcfour-hmac-md5 des-cbc-crc des-cbc-md5";
+      "default_tgs_enctypes" string => "default_tgs_enctypes = arcfour-hmac-md5 des-cbc-crc des-cbc-md5";
+      "deb7_ad_join" string => "$(this.promise_dirname)/data/deb7_ad.join";
+
+    debian_8::
+      "default_tkt_enctypes" string => "";
+      "default_tgs_enctypes" string => "";
       
     have_cached_password::
       "ad_password" string => readfile($(passwd_cache), 4096);
@@ -101,81 +117,115 @@ bundle agent install_sssd_client
       expression => fileexists( $(passwd_cache) );
       
   files:
-    sssd_packages_kept::
+    #debian_7.ad_packages_kept::
+     # "/tmp/$(deb7_ad_join)"
+     # copy_from => secure_cp( concat( $(sssd_dist), $(deb7_ad_join) ), $(sys.policy_hub) ),
+     # perms => mog("600", "root", "root"),
+     # #action => if_elapsed("60"),
+     # classes => results("bundle", "ad_join"),
+     # comment => "secure copy of the remote temporary ad_join file and set repaired class if copied";
+
+    debian_8.ad_packages_kept::
       "$(sssd_dir)$(sssd_conf_file)"
-      copy_from => secure_cp( concat( $(sssd_dist), $(sssd_conf_file) ), $(sys.policy_hub) ),
+      copy_from => local_cp( $(sssd_template_file) ),
       perms => mog("600", "root", "root"),
       #action => if_elapsed("60"),
       classes => results("bundle", "sssd_config"),
-      comment => "secure copy of the remote sssd config file and set repaired class if copied";
+      comment => "copy the sssd config file and set repaired class if copied";
 
-      "$(config_dir)$(krb5_conf_file)"
-      copy_from => secure_cp( concat( $(sssd_dist), $(krb5_conf_file) ), $(sys.policy_hub) ),
-      perms => mog("644", "root", "root"),
-      #action => if_elapsed("60"),
-      classes => results("bundle", "krb5_config"),
-      comment => "secure copy of the remote krb5 config file and set repaired class if copied";
-
+    ad_packages_kept::
       "$(passwd_cache)"
       copy_from => secure_cp( concat( $(sssd_dist), $(password_file) ), $(sys.policy_hub) ),
       perms => mog("600", "root", "root"),
       #action => if_elapsed("60"),
       comment => "secure remote copy of the password file to local cache";
+
+     # "$(krb5_cache)"
+     # copy_from => secure_cp( concat( $(sssd_dist), $(krb5_conf_file) ), $(sys.policy_hub) ),
+     # perms => mog("600", "root", "root"),
+     # #action => if_elapsed("60"),
+     # comment => "secure copy of the remote krb5 template file to cached file";
+
+      "$(config_dir)$(krb5_conf_file)"
+      perms => mog("644", "root", "root"),
+      #action => if_elapsed("60"),
+      
+      edit_defaults => empty,
+      edit_line => expand_template( $(krb5_template_file) ),
+      classes => results("bundle", "krb5_config"),
+      comment => "Expand template file into krb5 config file and set repaired class if copied";
       
   methods:
     !policy_server::
-      "sssd_pkgs"  usebundle => sssd_packages_installation;
+      "install kerberos and sssd packages"  usebundle => ad_packages_installation;
 
+    debian_7.adcli_join_repaired::
+      "delete temporary deb7_ad_join file" usebundle => file_tidy( "/tmp/$(deb7_ad_join)" );      
+      
   commands:      
-    sssd_packages_kept::
+    ad_packages_kept::
       "/usr/sbin/ntpdate -u $(ntp_server)"
       contain => in_dir_shell("/root");
 
-    !host_joined_to_ad.have_cached_password.sssd_config_kept.krb5_config_kept::
+    !host_joined_to_ad.debian_7.have_cached_password.sssd_config_kept.krb5_config_kept::
+      "net ads join -s $(deb7_ad_join) -U $(ad_user)%$(ad_password) createcomputer='$(domain_ou)'"
+      contain => in_dir_shell("/root"),
+      classes => results("bundle", "ads_join"),
+      comment => "if host is debian 7, run the net ads join command to link client to ad domain";
+
+    !host_joined_to_ad.debian_8.have_cached_password.sssd_config_kept.krb5_config_kept::
       "/bin/echo -n $(ad_password) | /usr/sbin/adcli join $(ad_domain) --stdin-password -U $(ad_user) -O '$(domain_ou)'"
       contain => in_dir_shell("/root"),
       classes => results("bundle", "adcli_join"),
-      comment => "run the adcli join command to link client to ad domain";
+      comment => "if host is debian 8, run the adcli join command to link client to ad domain";
 
   services:
 
-    !policy_server.!no_restarts.(sssd_config_repaired|kbr5_config_repaired)::
+    !policy_server.!no_restarts.debian_8.(sssd_config_repaired|kbr5_config_repaired)::
       "sssd"
       service_policy => "enable",
-      comment => "enable sssd service upon boot";
+      comment => "enable sssd service upon boot for Debian 8 host";
 
       "sssd"
       service_policy => "restart",
-      comment => "restart sssd if configuration files were modified";
+      comment => "restart sssd if configuration files were modified on Debian 8 host";
       
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     (inform_mode.policy_server|verbose_mode.policy_server)::
-      "$(this.bundle): NOT INSTALLING SSSD CLIENT, since this is a policy server";
+      "$(this.bundle): NOT INSTALLING AD CLIENT, since this is a policy server";
 
-    (DEBUG|DEBUG_install_sssd)::
+    (DEBUG|DEBUG_install_ad)::
       #"$(this.bundle): ";
 
-    (DEBUG|DEBUG_install_sssd).sssd_packages_repaired::
-      "$(this.bundle): sssd packages installed";
+    (DEBUG|DEBUG_install_ad).ad_packages_repaired::
+      "$(this.bundle): ad packages installed";
 
-    (DEBUG|DEBUG_install_sssd).(sssd_config_repaired|kbr5_config_repaired)::
-      "$(this.bundle): repaired sssd and kbr5 config files";
+    (DEBUG|DEBUG_install_ad).(sssd_config_repaired|krb5_config_repaired)::
+      "$(this.bundle): repaired sssd or krb5 config files";
 
-    (DEBUG|DEBUG_install_sssd).adcli_join_reached::
+    (DEBUG|DEBUG_install_ad).adcli_join_reached::
       "$(this.bundle): adcli join command was run";
 
 }
 #############################################
 
-bundle agent sssd_packages_installation
+bundle agent ad_packages_installation
 {
-# @description: installs packages required for joining host to AD domain
+# @description: installs packages required for joining Debian 7 host to AD domain
 
   vars:
-    debian::  
+    debian_7::
+      "package_installs" slist => {
+				    "libpam-krb5",
+				    "samba-common-bin",
+				    "ntp",
+				    "ntpdate",
+      };
+
+    debian_8::
       "package_installs" slist => { 
 				    "sssd-krb5",
 				    "sssd-tools",
@@ -184,15 +234,16 @@ bundle agent sssd_packages_installation
 				    "ntp",
 				    "ntpdate",
       };
+
     redhat::
       "package_installs" slist => {
 	# ??
       };
 
   methods:
-      "install_sssd_packages" usebundle => package_latest("$(package_installs)"),
-      classes => results("namespace", "sssd_packages"),
-      comment => "Install SSSD/AD authentication module packages and set class upon completion";
+      "install_packages" usebundle => package_latest("$(package_installs)"),
+      classes => results("namespace", "ad_packages"),
+      comment => "Install Kerberos/AD authentication module packages and set class upon completion";
       
   reports:
     (inform_mode|verbose_mode)::
