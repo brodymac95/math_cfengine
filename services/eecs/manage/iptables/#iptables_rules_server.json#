@@ -19,7 +19,7 @@
         {
 	    "comment": "allow all incoming connections from CS network in data center"
             "chain": "INPUT"
-            "source_ip": "156.26.250.0/25",
+          "source_ip": "156.26.250.0/25",
             "target": "ACCEPT",
         },
         "1011":

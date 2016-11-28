@@ -1,0 +1,53 @@
+##############################################################################
+#
+#   server/main.cf - EECS server configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: none
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
+bundle server host_key_access
+# @description: share host key specific directory only to that host
+{
+
+  vars:
+      "key_dist"
+      string => "$(sys.workdir)/host_by_key/$(connection.key)/",
+      comment => "This is where agents can access host specific files.";
+
+      
+  access:
+
+      # It's important that this path have $(connection.key) in it!
+      "$(key_dist)"
+      admit_keys =>  { $(connection.key) },
+                    comment => "Grant each host to access its own copy of the ldap client files.
+                                We assume that each host has a unique keypair";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+
+}
+
+######################################################################

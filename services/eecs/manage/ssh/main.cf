@@ -60,9 +60,9 @@ bundle agent edit_sshd
       classes => results("bundle", "sshd");
       
   services:
-      "ssh"
-      service_policy => "start",
-      comment => "make sure ssh is always running";
+#      "ssh"
+#      service_policy => "start",
+#      comment => "make sure ssh is always running";
 
     sshd_repaired.!no_restarts::
       "ssh"

@@ -41,8 +41,8 @@
     },
     "cstesting": {
 	"machine": "server",
-	"purpose": "infrastructure",
-        "role": "testingserver",
+	"purpose": "testing",
+        "role": "testingsystem",
         "owner": "eecs",
 	"authentication": "local_users_shared_group",
 	"users": {
@@ -61,6 +61,17 @@
 	},
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", ],
 	"custom_packages": [ "ad_authentication", ]
+    },
+    "roger": {
+	"machine": "server",
+	"purpose": "research",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"authentication": "local_users_shared_group",
+	"users": {
+            "d693f574": "Ben Roose",
+	   },
+	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
     
     "WORKSTATIONS": {},

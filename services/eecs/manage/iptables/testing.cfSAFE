@@ -1,7 +1,7 @@
 ###############################################################################
 #
 #   manage/iptables/main.cf - EECS iptables firewall configuration
-#   Maintained: Ben Roose, ver 0.3
+#   Maintained: Ben Roose, ver 0.1
 #
 ###############################################################################
 
@@ -24,54 +24,51 @@
 # c) iptables_dump is odd, would it be good to use "iptables -P INPUT ACCEPT iptables -P OUTPUT ACCEPT iptables -P FORWARD ACCEPT iptables -F to flush iptables directly as here: https://help.ubuntu.com/community/IptablesHowTo#Disabling_the_firewall
 
 # FIXES
-# 1. dump iptables current and test hash
-# 2. generate policy file and test hash
-# 3. if hashes repair then restore policy and save as backup!
-# 4. cp backup as current
-# add a line to /etc/rc.local for running iptables restore of the backup dump file at startup
+# 1. dump iptables and test against a previous file
+# 2. check policy file against a backup
+# 3. if either files differ then generate and restore policy!
+# 4. add a line to /etc/rc.local for running iptables restore of the backup dump file at startup
 
-bundle agent config_iptables
+bundle agent testing_config_iptables
 # @description: takes in iptables filter rules from external json file (either server or workstation) and resets iptables firewall using save/restore commands
+
 {
   vars:
+    "_cache_dir" string => "$(sys.workdir)/cache/security/iptables/filter";
+
     server::
-      "iptables_rules_file" string => "$(this.promise_dirname)/iptables_rules_server.json";
+      "iptables_data"
+        data => readjson( "$(this.promise_dirname)/iptables_rules_server.json", 10M );
 
     workstation::
-      "iptables_rules_file" string => "$(this.promise_dirname)/iptables_rules_workstation.json";
+      "iptables_data"
+        data => readjson( "$(this.promise_dirname)/iptables_rules_workstation.json", 10M );
 
     any::
-      "iptables_data"
-        data => readjson( $(iptables_rules_file), 10M );
-
       "chain_policies" data => mergedata("iptables_data[chain_policies]");      
       "filter_rules" data => mergedata ("iptables_data[filter_rules]");
 
       "json_str" string => format("%S", iptables_data);
-      # json_str is just for printing seralized version of data container for debugging (note it is JSON).
-
-      "_cache_dir" string => "$(sys.workdir)/cache/security/iptables/filter";
-
+       # json_str is just for printing seralized version of data container for debugging (note it is JSON).
   files:
       "$(_cache_dir)/."
       create => "true";
       #handle => "iptables_create_cache_dir";
 
-      "$(iptables_rules_file)"
-      changes => detect_content_change,
-      classes => results("bundle", "iptables_rules_change"),
-      comment => "check if rules policy file content has changed and set repaired class if changed";     
       
   methods:
-    any::      
-      "save current iptables filters and check for changes"
-      usebundle => iptables_check($(_cache_dir));
-            
-    iptables_rules_change_repaired|iptables_current_change_repaired::
-      "if either policy file or iptables has changed, generate new filter policy and restore to iptables"
-      usebundle => iptables_generate_policy($(_cache_dir), @(chain_policies), @(filter_rules));
 
-#      "NOT USED - delete temporary files"
+    any::
+      "save current iptables filters and check for changes"
+        usebundle => testing_iptables_check($(_cache_dir)),
+        inherit => "true";
+
+    iptables_change_failed::
+      "generate new filter policy and restore to iptables"
+        usebundle => testing_iptables_write_policy($(_cache_dir), @(chain_policies), @(filter_rules)),
+        inherit => "true";
+
+#      "TEST TIDY TEMP FILES"
 #        inherit => "true",
 #        usebundle => iptables_tidy($(_cache_dir));
       
@@ -83,46 +80,31 @@ bundle agent config_iptables
       # "Contents of 'json_input' data container: '$(json_str)'";  
 }
 
-bundle agent iptables_restore_on_boot(cdir)
-{
-  vars:
-      "restore_command" string => "
-CFEngine added line for restoring iptables firewall at boot time
-/sbin/iptables-restore < $(cdir)/cf.iptables.filter.policy";
+bundle agent testing_iptables_write_policy(cdir, chain_policies, filter_rules) {
 
-  files:
-      "/etc/rc.local"
-      create => "true",
-      edit_line => append_if_no_line("$(restore_command)");
-}
-
-bundle agent iptables_generate_policy(cdir, chain_policies, filter_rules)
-# @description: generate iptables file from cfengine policy and restore to iptables
-{
   files:
       "$(cdir)/cf.iptables.filter.policy"
       create => "true",
       edit_defaults => empty,
       edit_line => iptables_write_policy(@(chain_policies), @(filter_rules)),
-      handle => "edit_iptables_filter",
+      #handle => "edit_iptables_filter",
       comment => "generate the new policy file";
 
-      #"$(cdir)/cf.iptables.filter.policy"
-      #changes => detect_content_change,
-      #classes => results("bundle", "iptables_policy_change"),
-      #comment => "NOT USED - check if policy file content has changed and set repaired class if changed";     
+#      "$(cdir)/cf.iptables.filter.current"
+#      copy_from => local_dcp("$(cdir)/cf.iptables.filter.policy"),
+#      classes => if_repaired("iptables_filter_repaired");
 
   commands:
       "/sbin/iptables-restore < $(cdir)/cf.iptables.filter.policy"
       contain => in_shell,
       classes => results("namespace", "iptables_restore"),
-      comment => "restore cfengine policy file to iptables configuration if policy file or current file changed";
+      comment => "restore cfengine policy file to iptables configuration";
+#        ifvarclass => "iptables_filter_repaired";
 
-      "/sbin/iptables-save -t filter > $(cdir)/cf.iptables.filter.current"
-      contain => in_shell,
-      handle => canonify("iptables_filter_resave"),
-      classes => results("bundle", "iptables_save_new"),
-      comment => "save current iptables configuration as current file in cache directory";
+  methods:
+    iptables_restore_reached::
+      "save new iptables filters and update file hash"
+        usebundle => testing_iptables_check($(cdir));
       
   reports:
    (inform_mode|verbose_mode)::
@@ -135,17 +117,17 @@ bundle agent iptables_generate_policy(cdir, chain_policies, filter_rules)
        "iptables_restore repaired";
 }
 
-bundle agent iptables_check(cdir)
+bundle agent testing_iptables_check(cdir)
 {
-# @description: save current iptables to file and call bundle to detect changes
   vars:
 
   commands:
       "/sbin/iptables-save -t filter > $(cdir)/cf.iptables.filter.current"
       contain => in_shell,
-      handle => canonify("iptables_filter_save"),
+      #handle => canonify("iptables_filter_save"),
+      #depends_on => { "iptables_create_cache_dir" },
       classes => results("bundle", "iptables_save"),
-      comment => "save current iptables configuration as current file in cache directory";
+      comment => "save current iptables configuration as file to cache directory";
 
   methods:
     iptables_save_repaired::
@@ -154,6 +136,9 @@ bundle agent iptables_check(cdir)
   reports:
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_testing)::
+      # "Contents of 'json_input' data container: '$(json_str)'";
 
     (DEBUG|DEBUG_testing).iptables_save_reached::
        "iptables_save reached";
@@ -163,20 +148,27 @@ bundle agent iptables_check(cdir)
 }
 
 bundle agent edit_iptables_filter(cdir)
-# @description: removes comments from saved iptables file and detect changes in the file hash database
 {
   files:
-     "$(cdir)/cf.iptables.filter.current"
+#    iptables_save_reached::
+      "$(cdir)/cf.iptables.filter.current"
+#      depends_on => { "iptables_filter_save" },
       edit_defaults => no_backup,
       edit_line => iptables_remove_comments,
       classes => results("bundle", "comments_remove"),
       comment => "remove comment lines containing log times from iptables saved file and set repaired class";
 
-    comments_remove_repaired::
+    comments_remove_repaired.!iptables_restore_repaired::
       "$(cdir)/cf.iptables.filter.current"
       changes => detect_content_change,
-      classes => results("namespace", "iptables_current_change"),
+      classes => results("namespace", "iptables_change"),
       comment => "check if iptables saved file content has changed and set repaired class if changed";     
+
+    comments_remove_repaired.iptables_restore_repaired::
+      "$(cdir)/cf.iptables.filter.current"
+      changes => update_hash_database,
+      classes => results("namespace", "iptables_change"),
+      comment => "update iptables saved file hash and set repaired class if changed";     
 
   reports:
    (inform_mode|verbose_mode)::
@@ -201,7 +193,6 @@ bundle agent edit_iptables_filter(cdir)
 
 bundle agent testing_iptables_tidy(cdir)
 {
-# @description: NOT USED - delete temp files
   files:
       "$(cdir)/cf.iptables.filter.*"
       pathtype => "regex",
@@ -217,7 +208,7 @@ bundle agent testing_iptables_tidy(cdir)
 
 bundle edit_line iptables_remove_comments
 {
-# @description: removes comment lines from text file
+  # @description: removes comment lines from text file
 
   delete_lines:
       "^#.*";
@@ -232,13 +223,22 @@ body changes detect_content_change
 {
       hash           => "best";
       report_changes => "content";
+      update_hashes  => "no";
+}
+
+body changes update_hash_database
+{
+      hash           => "best";
+      report_changes => "content";
       update_hashes  => "yes";
 }
 
-bundle edit_line iptables_write_policy(p, r)
+
+bundle edit_line testing_iptables_write_policy(p, r)
 # @description: takes in chain policies (p) and filter rules (r) as arrays and
 # builds the iptables-restore input file
 {
+
   vars:
       "i_unsorted" slist => getindices("r");
       "i" slist => sort("i_unsorted",int);

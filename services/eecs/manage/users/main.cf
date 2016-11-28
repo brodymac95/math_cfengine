@@ -58,26 +58,26 @@ bundle common user_settings
 
 ########################################################
 
-bundle server passwd_access
+#bundle server passwd_access
 # @description: shares the path on policy hub for password hash and ssh public keys with access restricted to each host connection key directory
-{
-  access:
-
-      # It's important that this path have $(connection.key) in it!
-      "$(user_settings.password_dist)"
-        admit_keys =>  { $(connection.key) },
-        comment => "Grant each host to access its own hashed root password. We
-                  assume that each host has a unique keypair";
-
-      "$(user_settings.ssh_key_dist)"
-        admit_keys =>  { $(connection.key) },
-        comment => "Grant each host to access user public ssh keys. We
-                  assume that each host has a unique keypair";
-
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-}
+#{
+#  access:
+#
+#      # It's important that this path have $(connection.key) in it!
+#      "$(user_settings.password_dist)"
+#        admit_keys =>  { $(connection.key) },
+#        comment => "Grant each host to access its own hashed root password. We
+#                  assume that each host has a unique keypair";
+#
+#      "$(user_settings.ssh_key_dist)"
+#        admit_keys =>  { $(connection.key) },
+#        comment => "Grant each host to access user public ssh keys. We
+#                  assume that each host has a unique keypair";
+#
+#  reports:
+#    (inform_mode|verbose_mode)::
+#      "$(this.bundle): Activated";
+#}
 
 ########################################################
 

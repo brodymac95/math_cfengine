@@ -1,0 +1,88 @@
+##############################################################################
+#
+#   manage/autorun/main.cf - EECS rc.local configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
+
+######################################################################
+# Public entry point: config_rc_local bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle agent config_rc_local
+# @description: sets /etc/rc.local from a template file and inserts autostart commands
+{
+  vars:
+      "template_file" string => "$(this.promise_dirname)/rclocal_template.txt";
+      "rclocal_file"     string => "/etc/rc.local";
+      "support"       string => "EECS: Ben Roose (ben.roose@wichita.edu)";
+
+      "iptables_filter" string => "$(sys.workdir)/cache/security/iptables/filter/cf.iptables.filter.policy";
+
+      "autostart[iptables]" string => "
+# CFEngine added line for restoring iptables firewall at boot time
+/sbin/iptables-restore < $(iptables_filter)";
+
+      
+      "insertions" slist => getvalues( "autostart" );
+      
+  files:
+      "$(rclocal_file)"
+      handle => "set_rc_local",
+      create => "true",
+      perms => mog ("644", "root", "root"),
+      edit_defaults => empty,
+      edit_line => expand_template("$(template_file)"),
+      comment => "Ensure rc.local file is configured correctly";
+
+  methods:
+      "insert autostart elements into file"
+      usebundle => edit_rc_local( $(rclocal_file), @(insertions) );
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_rc_local)::
+      "$(this.bundle): autostart items: $(insertions)";
+}
+
+###############################################################################
+
+bundle agent edit_rc_local(file, line)
+# @description: inserts autostart commands before exit 0
+{
+  files:
+      "$(file)"
+      handle => "edit_rc_local",
+      edit_line => insert_line_into_rc_local("$(line)"),
+      #classes => results("bundle", "rc_local"),
+      comment => "insert line before exit 0 in file";
+}
+
+######################################################################
+
+bundle edit_line insert_line_into_rc_local(line)
+{
+  insert_lines:
+      "$(line)" location => before_exit_0,
+      comment => "insert line before exit 0 in file";
+}
+
+body location before_exit_0
+{
+      select_line_matching => "exit 0";
+      before_after => "before";
+}
