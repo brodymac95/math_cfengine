@@ -48,6 +48,14 @@ bundle common classify_host
 
     "canonified_host" string => canonify("$(sys.host)");
 
+    "security_rules"
+      data => mergedata( "host_data[$(canonified_host)][security]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][security]"),
+      comment => "create data subset of host security rules from host_data.json file";
+ 
+    "security_rules_json_str" string => format("%S", "security_rules"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][security]");
+
 #    "net_interfaces"
 #      data => mergedata( "host_data[$(canonified_host)][network_interfaces]" ),
 #      ifvarclass => isvariable("host_data[$(canonified_host)][network_interfaces]"),
@@ -68,6 +76,14 @@ bundle common classify_host
       slist => getindices("wsu_users"),
       ifvarclass => isvariable("host_data[$(canonified_host)][users]");
 
+    "user_configs"
+      data => mergedata( "host_data[$(canonified_host)][user_configs]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][user_configs]"),
+      comment => "create data subset of users with config directory in host_by_key directories from host_data.json file";
+ 
+    "user_configs_json_str" string => format("%S", "user_configs"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][user_configs]");
+ 
     "extra_packages"
       data => mergedata( "host_data[$(canonified_host)][extra_repository_packages]" ),
       ifvarclass => isvariable("host_data[$(canonified_host)][extra_repository_packages]"),
@@ -130,7 +146,12 @@ bundle common classify_host
 #      meta => { "derived-from=sys.host,hardclass and host_data file" },
 #      comment => "Add class configure_interfaces if found for host from external data file.";
 
-    "install_extra_packages"
+    "security_rules"
+      expression => isvariable("security_rules"),
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      comment => "Add class security_rules if found for host from external data file.";
+
+      "install_extra_packages"
       expression => isvariable("extra_packages"),
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       comment => "Add class install_extra_packages if found for host from external data file.";
@@ -164,6 +185,7 @@ bundle common classify_host
       "$(this.bundle): Found users: $(user_list)";
       
 #       "Contents of 'external file' data container: '$(hosts_json_str)'";
+       "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
        "Contents of 'wsu_users' data container: '$(users_json_str)'";
        "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
        "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";

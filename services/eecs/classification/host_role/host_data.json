@@ -4,12 +4,13 @@
 	"purpose": "teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
-	"NOT IMPLEMENTED-network_interfaces": { "eth0": "ip_address", "eth1": "ip_address" }
+	"security": [ "ssh_public", "rdp_public", ],
 	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups",
         "users": { "myWSU ID OR local_user": "full name" },
 	"extra_repository_packages": [ "package1", "package2" ],
 	"custom_packages": [ "package1", "package2" ],
 	"printers": [ "printer1", "printer2" ],
+	"NOT IMPLEMENTED-network_interfaces": { "eth0": "ip_address", "eth1": "ip_address" }
     },
     
     "SERVERS": {},
@@ -47,7 +48,9 @@
 	"authentication": "local_users_shared_group",
 	"users": {
             "d693f574": "Ben Roose",
-	   },
+	    "roose": "Ben Roose"
+	},
+	"user_configs": [ "roose", ],
 	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
     "cudasrv": {
@@ -55,18 +58,21 @@
 	"purpose": "teaching",
         "role": "cuda_ide",
         "owner": "eecs",
-	"authentication": "local_users_shared_group",
+	"authentication": "local_users_own_group",
 	"users": {
 	    "roose": "Ben Roose",
+	    "r588k227": "Abu Adasazzaman",
+	    "f834g328": "Farshad Mashhadi",
 	},
-	"extra_repository_packages": [ "nvidia-cuda-toolkit", ],
-	"custom_packages": [ "ad_authentication", ]
+	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
+	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
     },
     "roger": {
 	"machine": "server",
-	"purpose": "research",
+	"purpose": "ssh_public_facing",
         "role": "ltspsrv",
         "owner": "eecs",
+	"security": [ "ssh_public", ],
 	"authentication": "local_users_shared_group",
 	"users": {
             "d693f574": "Ben Roose",
@@ -84,7 +90,7 @@
 	"users": {
 	    "bahrami": "Sara Bahrami",
 	},
-	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref", "subversion", "octave" ],
+	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref", "subversion", "octave" ,"skype", "texlive-science", ],
 	"custom_packages": [ "pip_gensim" ],
         "printers": [ "oce_copier", "jb247_laserjet", ]
     },

@@ -81,6 +81,7 @@ bundle agent manage_repository_packages
     server.(debian|ubuntu)::
       "server_installs" slist => {
 				   "openssh-server",
+				   "molly-guard",
                                  };
 
     ## Required packages to be REMOVED
@@ -147,19 +148,19 @@ bundle agent manage_custom_packages
       
   packages:
     pip_gensim::
-      "gensim" package_method =>pip(""), package_policy => "add",
+      "gensim" package_method => pip(""), package_policy => "add",
       comment => "install the gensim package using python pip (used by Sara Bahrami)";
 
     pip_theano::
-      "theano" package_method =>pip(""), package_policy => "add",
+      "theano" package_method => pip(""), package_policy => "add",
       comment => "install the theano package using python pip (used by Dr. Kaushik Sinha)";
 
     pip_pattern::
-      "pattern" package_method =>pip(""), package_policy => "add",
+      "pattern" package_method => pip(""), package_policy => "add",
       comment => "install the pattern package using python pip (used by Dr. Kaushik Sinha)";
 
     pip_orange::
-      "orange" package_method =>pip(""), package_policy => "add",
+      "orange" package_method => pip(""), package_policy => "add",
       comment => "install the orange package using python pip (used by Dr. Kaushik Sinha)";
 
   files:
@@ -176,7 +177,13 @@ bundle agent manage_custom_packages
       
     ldap_removal::
       "remove old ldap config files and packages" usebundle => remove_ldap;
-      
+
+    pyrosetta::
+      "install python pyrosetta" usebundle => install_pyrosetta;
+
+    cuda_by_example::
+      "install cuda_by_example code and nvidia cuda toolkit" usebundle => install_cuda_by_example;
+
 #   matlab_research|matlab_classroom::
 #      "install matlab software" usebundle => install_matlab,
 #      comment => "run the set of custom bundles for installing the commercial matlab software. Must specify whether to use the research or classroom license";

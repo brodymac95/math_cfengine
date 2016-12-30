@@ -38,7 +38,7 @@ bundle common manage_main_file_control
 
 body file control
 {
-      inputs => { @(manage_main_file_control.inputs) };
+strongest ssh key      inputs => { @(manage_main_file_control.inputs) };
 }
 
 bundle agent manage_main

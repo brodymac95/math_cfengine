@@ -9,10 +9,10 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-body file control
-{
-      inputs => { "$(sys.libdir)/stdlib.cf" };
-}
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf" };
+#}
 
 ######################################################################
 # Public entry point: config_rc_local bundle
@@ -32,10 +32,16 @@ bundle agent config_rc_local
       "iptables_filter" string => "$(sys.workdir)/cache/security/iptables/filter/cf.iptables.filter.policy";
 
       "autostart[iptables]" string => "
-# CFEngine added line for restoring iptables firewall at boot time
+echo 'Added by CFEngine to restore iptables firewall at boot time'
 /sbin/iptables-restore < $(iptables_filter)";
 
+# acpi_pm_clock is not currently autostarting, but if VM servers start freezing again, uncomment the following lines!
+#      "autostart[acpi_pm_clock]" string => "
+#echo 'Added by CFEngine to set clock source to acpi_pm'
+#echo 'acpi_pm' > /sys/devices/system/clocksource/clocksource0/current_clocksource";
+
       
+    any::
       "insertions" slist => getvalues( "autostart" );
       
   files:

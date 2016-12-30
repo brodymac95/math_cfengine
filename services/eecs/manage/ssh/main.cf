@@ -69,7 +69,4 @@ bundle agent edit_sshd
       service_policy => "reload",
       handle => "sshd_restart",
       comment => "Restart sshd if the configuration file was modified";
-
-
-      
 }

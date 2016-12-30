@@ -8,7 +8,8 @@
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
 body file control
 {
-      inputs => { "$(sys.libdir)/stdlib.cf", "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
 }
 
 ######################################################################

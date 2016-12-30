@@ -39,7 +39,7 @@
             "protocol": "icmp",
 	    "icmp_type": "echo-reply",
             "target": "ACCEPT",
-        },
+        },  
         "1021":
         {
 	    "comment": "allow incoming SSH from WSU wired public network"
@@ -48,6 +48,16 @@
             "destination_port": "22",
             "target": "ACCEPT",
         },
+        "1022":
+        {
+	    "comment": "allow incoming SSH from any network, WIDE OPEN"
+            "chain": "INPUT"
+            "destination_port": "22",
+            "target": "ACCEPT",
+	    "context": "ssh_public",
+        },
+        "3000":
+        {}
         "1101":
         {
 	    "comment": "allow incoming CFEngine connections for policy_server only"

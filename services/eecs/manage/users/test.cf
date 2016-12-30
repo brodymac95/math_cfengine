@@ -23,8 +23,32 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
-
 bundle agent main
+{
+  vars:
+      "empty_set" string => "";
+      "test_file" string => "/tmp/test.txt";
+      "test_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/$(empty_set)";
+       
+  files:
+      "$(empty_set)"
+      perms => mo("600","root"),
+      copy_from => secure_cp( $(test_dist), $(sys.policy_hub) ),
+#      action => if_elapsed("60"),
+      comment => "test remote copy";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_testing)::
+#      "Password dist file: $(passwd_dist)";
+        
+}
+
+
+
+bundle agent group_test
 # @description: 
 {
 
