@@ -19,6 +19,88 @@
 # 1. Write removal bundles for each installation
 # 2. Write a bundle for removal of matlab: check if installed in installed_matlab (if installed and want removed, then delete directory /opt/matlab and /usr/local/bin/mtlab symlink to "repair state")
 
+bundle agent install_linux_show_player
+# @decription: manual installer for linux-show-player
+{
+  vars:
+      "download_server"  string => "$(sys.policy_hub)",
+        policy => "overridable";
+      "download_dir"  string => "/srv/cfengine/packages/",
+        policy => "overridable";
+      "install_dir" string => "/root/",
+        policy => "overridable";
+
+      "executable_file" string => "/usr/bin/linux-show-player";
+
+    debian::
+      "python3_rtmidi_deb" string => "python3-rtmidi_1.0.0rc1-debian1_amd64.deb";
+      "linux_show_player_deb" string => "linux-show-player_0.4.1-debian1_all.deb";
+      "dependent_package" string => "python3-all";
+      
+      "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
+
+  classes:
+      "python3_rtmidi_deb_is_present"
+        expression => fileexists("$(install_dir)$(python3_rtmidi_deb)");
+
+      "linux_show_player_deb_is_present"
+        expression => fileexists("$(install_dir)$(linux_show_player_deb)");
+
+      "linux_show_player_installed"
+        expression => fileexists("$(executable_file)");
+      
+
+  methods:
+    debian_stretch.64_bit::
+      "install dependent packages" usebundle => package_latest("$(dependent_package)"),
+        classes => results("bundle", "dependent_packages_installed");
+      
+  files:
+    (debian_stretch.64_bit).!linux_show_player_installed::
+      "$(install_dir)$(python3_rtmidi_deb)"
+        copy_from => secure_cp("$(download_dir)$(python3_rtmidi_deb)", "$(download_server)"),
+        comment => "Copying installer .deb file from source server";
+
+    (debian_stretch.64_bit).!linux_show_player_installed::
+      "$(install_dir)$(linux_show_player_deb)"
+        copy_from => secure_cp("$(download_dir)$(linux_show_player_deb)", "$(download_server)"),
+        comment => "Copying installer .deb file from source server";
+
+  commands:
+    debian_stretch.64_bit.python3_rtmidi_deb_is_present.dependent_packages_installed_kept.!linux_show_player_installed::
+      "$(install_command) $(python3_rtmidi_deb)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "python3_rtmidi"),
+        comment => "install python3_rtmidi dependency from local .deb package";
+
+    debian_stretch.64_bit.linux_show_player_deb_is_present.python3_rtmidi_kept.!linux_show_player_installed::
+      "$(install_command) $(linux_show_player_deb)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "linux_show_player"),
+        comment => "install linux-show-player from local .deb package";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+    (inform_mode|verbose_mode).(!debian_stretch|!64_bit)::
+      "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
+
+    DEBUG.python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
+      "$(this.bundle): .deb installer files downloaded";
+
+    DEBUG.python3_rtmidi_repaired::
+      "$(this.bundle): python3_rtmidi_installed";
+      
+    DEBUG.linux_show_player_repaired::
+      "$(this.bundle): linux_show_player_installed";
+      
+    DEBUG.linux_show_player_installed::
+      "$(this.bundle): linux-show-player has already been installed";
+
+}
+
+#############################################
+
 bundle agent install_cuda_by_example
 {
 # @decription: manual installer for cuda_by_example
@@ -342,3 +424,4 @@ body file_select minutes_old(min)
 }
 
 #############################################
+

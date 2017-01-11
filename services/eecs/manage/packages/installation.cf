@@ -64,11 +64,13 @@ bundle agent manage_repository_packages
     workstation.(debian|ubuntu):: 
       # libvte9 is needed by geany to show a terminal window inside
       "workstation_installs" slist => {
+					"network-manager-openconnect-gnome",
 					"arandr",
 					"libreoffice",
-					"chromium-browser",
+					"chromium",
 					"firefox",
 					"filezilla",
+					"terminator",
 					"default-jre",
 					"default-jdk",
 					"eclipse",
@@ -76,6 +78,7 @@ bundle agent manage_repository_packages
 					"geany",
 					"libvte9",
 					"texmaker",
+					"git",
                                  };
       
     server.(debian|ubuntu)::
@@ -92,6 +95,7 @@ bundle agent manage_repository_packages
     workstation.(debian|ubuntu)::      
       "workstation_removals" slist => {
 					"openssh-server",
+					"openssh-sftp-server",
                                  };
       
     server.(debian|ubuntu)::
@@ -177,6 +181,9 @@ bundle agent manage_custom_packages
       
     ldap_removal::
       "remove old ldap config files and packages" usebundle => remove_ldap;
+
+    linux_show_player::
+      "install linux-show-player" usebundle => install_linux_show_player;
 
     pyrosetta::
       "install python pyrosetta" usebundle => install_pyrosetta;

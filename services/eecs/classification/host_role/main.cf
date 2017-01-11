@@ -151,7 +151,12 @@ bundle common classify_host
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       comment => "Add class security_rules if found for host from external data file.";
 
-      "install_extra_packages"
+    "install_user_configs"
+      expression => isvariable("user_configs"),
+      meta => { "derived-from=sys.host,hardclass and host_data file" },
+      comment => "Add class install_user_configs if found for host from external data file.";
+
+    "install_extra_packages"
       expression => isvariable("extra_packages"),
       meta => { "derived-from=sys.host,hardclass and host_data file" },
       comment => "Add class install_extra_packages if found for host from external data file.";
@@ -185,11 +190,11 @@ bundle common classify_host
       "$(this.bundle): Found users: $(user_list)";
       
 #       "Contents of 'external file' data container: '$(hosts_json_str)'";
-       "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
-       "Contents of 'wsu_users' data container: '$(users_json_str)'";
-       "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
-       "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
-       "Contents of 'printers' data container: '$(printers_json_str)'";
+#       "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
+#       "Contents of 'wsu_users' data container: '$(users_json_str)'";
+#       "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
+#       "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
+#       "Contents of 'printers' data container: '$(printers_json_str)'";
 
 #    (DEBUG|DEBUG_classify_host).server::
 #      "$(this.bundle): Host found in host_roles.json, so server class defined";

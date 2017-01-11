@@ -383,67 +383,6 @@ bundle agent home_skel(user, group, skel)
 }
 
 ########################################################
-
-bundle agent manage_ssh_authorized_keys(settings, user)
-# @description: copies ssh public key for user login from policy server to authorized_keys file on system
-# does not work yet!!
-{
-  vars:
-      "ssh_key_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/ssh_keys/$(user).pub";
-      "ssh_key_cache"       string => "$($(settings).ssh_key_cache)";
-      "ssh_key_cache_dir" string => dirname("$(ssh_key_cache)");
-
-      "authorized_keys_file" string => "/home/$(user)/.ssh/authorized_keys";
-
-  files:
-
-      "$(ssh_key_cache_dir)/"
-      create => "true";
-
-    policy_server::
-      "$(ssh_key_cache)"
-      perms => mo("600","root"),
-      copy_from => local_dcp( $(ssh_key_dist) ),
-      action => if_elapsed("60"),
-      comment => "Copy public keys from authorized location on into a cache on localhost";
-
-    !policy_server::
-      "$(ssh_key_cache)"
-      perms => mo("600","root"),
-      copy_from => secure_cp( $(ssh_key_dist), $(sys.policy_hub) ),
-      action => if_elapsed("60"),
-      comment => "Copy public keys from authorized location on policy server into a cache on localhost";
-
-    any::
-      "$(authorized_keys_file)"
-      edit_line => insert_file_if_no_line_matching("$(user)","$(ssh_key_cache)"),
-      action => if_elapsed("60"),
-      comment => "Edit the authorized keys file and add public key to the user's personal ssh keyring";
-
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-
-    (DEBUG|DEBUG_manage_ssh_authorized_keys)::
-      "ssh key dist file: $(ssh_key_dist)";
-      "ssh key cached file: $(ssh_key_cache)";
-
-}
-
-########################################################
-
-bundle edit_line insert_file_if_no_line_matching(user,file)
-{
-  classes:
-      "have_user" expression => regline("$(user).*","$(this.promiser)");
-
-  insert_lines:
-    !have_user::
-      "$(file)"
-      insert_type => "file";
-}
-
-########################################################
 # NO LONGER USED
 ########################################################
 

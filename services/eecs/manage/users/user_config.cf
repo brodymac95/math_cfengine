@@ -11,14 +11,14 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-body file control
-{
-      inputs => { "$(sys.libdir)/stdlib.cf",
-		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-}
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf",
+#		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+#}
 
 ######################################################################
-# Public entry point: bundle
+# Public entry point: install_user_configs
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -27,24 +27,17 @@ body file control
 
 bundle agent install_user_configs
 {
-      # @decription: manual installer for matlab including a fully silent install
+# @decription:
 
   vars:
       "username" slist => getvalues( "classify_host.user_configs" ),
         comment => "List of username with custom config files stored in host_by_key directory";
       "json_str_username" string => format("%S", "classify_host.user_configs");
-      
-  classes:
-#      "matlab_dir_is_present"
-#        expression => fileexists("$(matlab_dir)");
-#      "executable_link_is_present"
-#        expression => fileexists("$(executable_link)");
-      
+            
   methods:
       "user configuration settings"  usebundle => user_config_vars;
       "configure user files"  usebundle => config_user_files("user_config_vars.conf");
 
-#    "$(username)_have_ssh_key_pair"|"$(username)_have_ssh_pub_key_only"::
       "copy ssh keys into user profile"
 	usebundle => manage_ssh_keys("user_config_vars.conf"),
 	ifvarclass => or( "$(username)_have_ssh_key_pair", "$(username)_have_ssh_pub_key_only" );
@@ -148,7 +141,7 @@ bundle agent config_user_files(settings)
 {
   vars:
       "username" string => "$($(settings)[username])";
-      
+      "user_config_dir" string => "/home/$($(settings)[username])/$($(settings)[config_dir])";
   classes:    
 
   files:
@@ -171,10 +164,10 @@ bundle agent config_user_files(settings)
       action => if_elapsed("60"),
       comment => "if host is any other client then perform a secure remote recursive copy of entire user_config directory";
 
-    have_user_config_dir::
-      "/home/$($settings)[username])/$($(settings)[config_dir])"
+    "$($(settings)[username])_have_user_config_dir"::
+      "$(user_config_dir)"
       perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      copy_from => local_dcp( "$($(settings)[cache])$($(settings)[config_dir])" ),
+      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
       depth_search => recurse("inf"),
       comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
       

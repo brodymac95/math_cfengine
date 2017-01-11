@@ -17,14 +17,14 @@
         },
         "1001":
         {
-	    "comment": "allow all incoming connections from CS network in data center"
+	    "comment": "allow all incoming connections from CS network in data center for any server host"
             "chain": "INPUT"
-            "source_ip": "156.26.250.0/25",
+            "source_ip": "156.26.250.0/26",
             "target": "ACCEPT",
         },
         "1011":
         {
-	    "comment": "allow incoming ping requests (type 8) from WSU wired public network"
+	    "comment": "allow incoming ping requests (type 8) from WSU wired public network for any server host"
             "chain": "INPUT"
             "source_ip": "156.26.0.0/16",
             "protocol": "icmp",
@@ -33,7 +33,7 @@
         },
         "1012":
         {
-	    "comment": "allow incoming ping replies (type 0) from WSU wired public network"
+	    "comment": "allow incoming ping replies (type 0) from WSU wired public network for any server host"
             "chain": "INPUT"
             "source_ip": "156.26.0.0/16",
             "protocol": "icmp",
@@ -42,25 +42,49 @@
         },  
         "1021":
         {
-	    "comment": "allow incoming SSH from WSU wired public network"
+	    "comment": "allow incoming SSH from WSU wired public network for any server host"
             "chain": "INPUT"
             "source_ip": "156.26.0.0/16",
             "destination_port": "22",
             "target": "ACCEPT",
         },
-        "1022":
+        "1025":
         {
-	    "comment": "allow incoming SSH from any network, WIDE OPEN"
+	    "comment": "--WIDE OPEN-- allow incoming SSH from any network for ssh_public class"
             "chain": "INPUT"
             "destination_port": "22",
             "target": "ACCEPT",
 	    "context": "ssh_public",
         },
-        "3000":
-        {}
+        "1035":
+        {
+	    "comment": "--WIDE OPEN-- allow incoming RDP TCP from any network for rdp_public class"
+            "chain": "INPUT"
+            "destination_port": "3389",
+            "protocol": "tcp",
+            "target": "ACCEPT",
+	    "context": "rdp_public",
+        },
+        "1036":
+        {
+	    "comment": "--WIDE OPEN-- allow incoming RDP UDP from any network for rdp_public class"
+            "chain": "INPUT"
+            "destination_port": "3389",
+            "protocol": "udp",
+            "target": "ACCEPT",
+	    "context": "rdp_public",
+        },
+        "1051":
+        {
+	    "comment": "allow any incoming connections on private network for ltsp_private class"
+            "chain": "INPUT"
+            "source_ip": "192.168.1.0/24",
+            "target": "ACCEPT",
+	    "context": "ltsp_private",
+        },
         "1101":
         {
-	    "comment": "allow incoming CFEngine connections for policy_server only"
+	    "comment": "allow incoming CFEngine connections from WSU wired subnet for policy_server only"
             "chain": "INPUT"
             "source_ip": "156.26.0.0/16",
             "destination_port": "5308",
@@ -69,7 +93,16 @@
         },
         "1102":
         {
-	    "comment": "allow all incoming connections for roger LTSP on bluenet"
+	    "comment": "allow incoming CFEngine connections from WSU VPN subnet for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "10.1.1.0/24",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
+        "1111":
+        {
+	    "comment": "allow any incoming connections on bluenet for roger LTSP only"
             "chain": "INPUT"
             "source_ip": "156.26.10.0/25",
             "target": "ACCEPT",

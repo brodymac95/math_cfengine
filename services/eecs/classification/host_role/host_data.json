@@ -19,6 +19,11 @@
 	"purpose": "infrastructure",
         "role": "policysrv",
         "owner": "roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+            "roose": "Ben Roose",
+	   },
+	"user_configs": [ "roose", ],
     },
     "oldtesting": {
 	"machine": "server",
@@ -67,17 +72,70 @@
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
 	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
     },
+
     "roger": {
 	"machine": "server",
-	"purpose": "ssh_public_facing",
+	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", ],
-	"authentication": "local_users_shared_group",
-	"users": {
-            "d693f574": "Ben Roose",
-	   },
-	"custom_packages": [ "ldap_removal", "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "kira": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "kirk": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private" ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "mccoy": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "riker": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "sisko": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "spock": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "ltspsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "ltsp_private", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "scotty": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "rdpsrv",
+        "owner": "eecs",
+	"security": [ "ssh_public", "rdp_public", ],
+	"custom_packages": [ "ad_authentication", ],
     },
     
     "WORKSTATIONS": {},
@@ -90,7 +148,7 @@
 	"users": {
 	    "bahrami": "Sara Bahrami",
 	},
-	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref", "subversion", "octave" ,"skype", "texlive-science", ],
+	"extra_repository_packages": [ "virtualbox", "python2.7","idle-python2.7", "jabref", "subversion", "octave", "skype", "texlive-science", ],
 	"custom_packages": [ "pip_gensim" ],
         "printers": [ "oce_copier", "jb247_laserjet", ]
     },
@@ -115,9 +173,24 @@
 	    "p862d927": "Kaushik Sinha",
 	    "p377z922": "Omid Keivani",
 	},
-	"extra_repository_packages": [ "chromium-browser", "r-base", "git", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
+	"extra_repository_packages": [ "r-base", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
 	"custom_packages": [ "matlab_research", "pip_theano", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
         "printers": [ "jb258_laserjet" ]
     },
-    
+
+    "jb_223_3432_lt1": {
+	"machine": "workstation",
+	"purpose": "personal",
+        "role": "laptop",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	},
+	"user_configs": [ "roose", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "network-manager-applet", "keychain", "thunar", "octave", "skype", "xdotool", "wine", ],
+	"custom_packages": [ "linux_show_player", ],
+
+    },
+
 }

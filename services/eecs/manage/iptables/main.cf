@@ -19,8 +19,8 @@
 ######################################################################
 
 # NOTES for future development of iptables configuration:
-# a) looks like it fully restores the policy file every time it runs. We need to find a better way to compare the policy files than local_dcp(), since the "saved" file from iptables will always be slightly different than the created policy file
-# b) the iptables rules will only come into existence the first time cf-agent runs (up to 5mins after boot). Before this time, there is a window when the host firewall is wide open. This is not too much of a problem for servers with long uptimes, but more serious for heavy use servers in dmz or for workstations which boot often. Could look into using some pre-up post-down edits to /etc/network/interfaces, as here: https://help.ubuntu.com/community/IptablesHowTo#Tips
+# DONE a) looks like it fully restores the policy file every time it runs. We need to find a better way to compare the policy files than local_dcp(), since the "saved" file from iptables will always be slightly different than the created policy file
+# DONE with manage/autostart policy file b) the iptables rules will only come into existence the first time cf-agent runs (up to 5mins after boot). Before this time, there is a window when the host firewall is wide open. This is not too much of a problem for servers with long uptimes, but more serious for heavy use servers in dmz or for workstations which boot often. Could look into using some pre-up post-down edits to /etc/network/interfaces, as here: https://help.ubuntu.com/community/IptablesHowTo#Tips
 # c) iptables_dump is odd, would it be good to use "iptables -P INPUT ACCEPT iptables -P OUTPUT ACCEPT iptables -P FORWARD ACCEPT iptables -F to flush iptables directly as here: https://help.ubuntu.com/community/IptablesHowTo#Disabling_the_firewall
 
 # FIXES
@@ -28,7 +28,7 @@
 # 2. generate policy file and test hash
 # 3. if hashes repair then restore policy and save as backup!
 # 4. cp backup as current
-# add a line to /etc/rc.local for running iptables restore of the backup dump file at startup
+# 5. add a line to /etc/rc.local for running iptables restore of the backup dump file at startup
 
 bundle agent config_iptables
 # @description: takes in iptables filter rules from external json file (either server or workstation) and resets iptables firewall using save/restore commands

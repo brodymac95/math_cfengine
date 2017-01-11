@@ -19,6 +19,7 @@ bundle common manage_main_file_control
       "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
+      "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
 
     #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
     #"input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
@@ -61,9 +62,11 @@ bundle agent manage_main
       "configure_sshd" usebundle => sshd_config;
       "use_custom_network_interfaces" usebundle => config_net_interfaces;
 
-
     install_printers::
       "printer_management" usebundle => manage_printers;
+
+    install_user_configs::
+      "user_config_installation" usebundle => install_user_configs;
 
     #nickanderson_thinkpad_w520::
     #  "emacs"
