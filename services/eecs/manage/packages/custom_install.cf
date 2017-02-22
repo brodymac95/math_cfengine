@@ -6,10 +6,10 @@
 ###############################################################################
 
 # TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf" };
-#}
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf" };
+}
 
 ######################################################################
 # Public entry point: install_matlab bundle
@@ -35,7 +35,9 @@ bundle agent install_linux_show_player
     debian::
       "python3_rtmidi_deb" string => "python3-rtmidi_1.0.0rc1-debian1_amd64.deb";
       "linux_show_player_deb" string => "linux-show-player_0.4.1-debian1_all.deb";
-      "dependent_package" string => "python3-all";
+      "dependent_packages"  slist => { "python3-all", "python3-jack-client", "python3-mido", "python3-sortedcontainers", "python-pyqt5", "python3-pyqt5.qtsvg", "gstreamer1.0-plugins-ugly", "gstreamer1.0-plugins-bad", "gstreamer1.0-alsa", "gstreamer1.0-pulseaudio", "gstreamer1.0-fluendo-mp3", "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", },
+      comment => "list of all needed packages for linux-show-player";
+
       
       "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
 
@@ -51,29 +53,29 @@ bundle agent install_linux_show_player
       
 
   methods:
-    debian_stretch.64_bit::
-      "install dependent packages" usebundle => package_latest("$(dependent_package)"),
+    (debian_stretch|debian_9).64_bit::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_installed");
       
   files:
-    (debian_stretch.64_bit).!linux_show_player_installed::
+    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
       "$(install_dir)$(python3_rtmidi_deb)"
         copy_from => secure_cp("$(download_dir)$(python3_rtmidi_deb)", "$(download_server)"),
         comment => "Copying installer .deb file from source server";
 
-    (debian_stretch.64_bit).!linux_show_player_installed::
+    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
       "$(install_dir)$(linux_show_player_deb)"
         copy_from => secure_cp("$(download_dir)$(linux_show_player_deb)", "$(download_server)"),
         comment => "Copying installer .deb file from source server";
 
   commands:
-    debian_stretch.64_bit.python3_rtmidi_deb_is_present.dependent_packages_installed_kept.!linux_show_player_installed::
+    (debian_stretch|debian_9).64_bit.python3_rtmidi_deb_is_present.!linux_show_player_installed::
       "$(install_command) $(python3_rtmidi_deb)"
         contain => in_dir_shell("$(install_dir)"),
         classes => results("bundle", "python3_rtmidi"),
         comment => "install python3_rtmidi dependency from local .deb package";
 
-    debian_stretch.64_bit.linux_show_player_deb_is_present.python3_rtmidi_kept.!linux_show_player_installed::
+    (debian_stretch|debian_9).64_bit.linux_show_player_deb_is_present.python3_rtmidi_repaired.!linux_show_player_installed::
       "$(install_command) $(linux_show_player_deb)"
         contain => in_dir_shell("$(install_dir)"),
         classes => results("bundle", "linux_show_player"),
@@ -82,7 +84,7 @@ bundle agent install_linux_show_player
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
-    (inform_mode|verbose_mode).(!debian_stretch|!64_bit)::
+    (inform_mode|verbose_mode).(!debian_stretch.!debian_9)|!64_bit::
       "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
 
     DEBUG.python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
@@ -96,6 +98,64 @@ bundle agent install_linux_show_player
       
     DEBUG.linux_show_player_installed::
       "$(this.bundle): linux-show-player has already been installed";
+
+}
+
+#############################################
+
+bundle agent install_etc_offline_editor
+# @decription: manual installer for etc_offline_editor
+{
+  vars:
+      "download_server"  string => "$(sys.policy_hub)",
+        policy => "overridable";
+      "download_dir"  string => "/srv/cfengine/packages/",
+        policy => "overridable";
+      "install_dir" string => "/usr/local/bin/",
+        policy => "overridable";
+      "download_file" string => "etcoffline.sh";
+
+      "executable_file" string => "/usr/local/bin/etcoffline.sh";
+
+    debian::
+      "add_arch_i386" string => "dpkg --add-architecture i386 && apt-get update";
+      "dependent_packages"  slist => { "wine32", "xdotool", },
+        comment => "etcoffline.sh requires wine32 and xdotool",
+        policy => "overridable";
+
+  classes:
+      "etc_offline_script_installed"
+        expression => fileexists("$(executable_file)");      
+
+  commands:
+    debian.!etc_offline_script_installed::
+      "$(add_arch_i386)" 
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "add_arch"),
+        comment => "update dpkg with i386 architecture for wine32 installation";
+
+  methods:
+    debian::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_installed");
+      
+  files:
+    debian.!etc_offline_script_installed::
+      "$(install_dir)$(download_file)"
+      	perms => mog("755","root","root"),
+        copy_from => secure_cp("$(download_dir)$(download_file)", "$(download_server)"),
+        comment => "Copying etc_offline_script file from source server";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+    (inform_mode|verbose_mode).(!debian)::
+      "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
+      
+    DEBUG.dependent_package_installed_kept::
+      "$(this.bundle): $(dependent_package) has been installed";
+    DEBUG.etc_offline_script_installed::
+      "$(this.bundle): $(download_file) has been installed in $(install_dir)";
 
 }
 

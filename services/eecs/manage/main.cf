@@ -48,12 +48,12 @@ bundle agent manage_main
   methods:
 
     any::
+      "package_management" usebundle => manage_packages;
+      "user_management" usebundle => manage_users;
       "configure_rc_local" usebundle => config_rc_local;
       "configure_motd" usebundle => config_login_banner;
       "configure_login_defs" usebundle => config_login_defs;
       "configure_firewall" usebundle => config_iptables;
-      "package_management" usebundle => manage_packages;
-      "user_management" usebundle => manage_users;
 
 #    !testing::
 #    testing::

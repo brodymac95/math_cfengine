@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   manage/packages/ad.cf - EECS installer for AD user authentication
-#   Maintained: Ben Roose, ver 0.3
+#   Maintained: Ben Roose, ver 0.4
 #
 ###############################################################################
 
@@ -55,7 +55,7 @@ bundle agent join_host_to_ad
       "install and configure host for joining ad"  usebundle => install_ad_client;
 
   services:
-    !policy_server.debian_8::
+    !policy_server.(debian_8|debian_jessie)::
       "sssd"
       service_policy => "start",
       comment => "make sure sssd is running on debian 8 host";
@@ -106,7 +106,7 @@ bundle agent install_ad_client
       "default_tgs_enctypes" string => "default_tgs_enctypes = arcfour-hmac-md5 des-cbc-crc des-cbc-md5";
       "deb7_ad_join" string => "$(this.promise_dirname)/data/deb7_ad.join";
 
-    debian_8::
+    (debian_8|debian_jessie)::
       "default_tkt_enctypes" string => "";
       "default_tgs_enctypes" string => "";
       
@@ -119,7 +119,7 @@ bundle agent install_ad_client
       
   files:
 
-    debian_8.ad_packages_kept::
+    (debian_8|debian_jessie).ad_packages_kept::
       "$(sssd_dir)$(sssd_conf_file)"
       copy_from => local_cp( $(sssd_template_file) ),
       perms => mog("600", "root", "root"),
@@ -159,13 +159,13 @@ bundle agent install_ad_client
       "/usr/sbin/ntpdate -u $(ntp_server)"
       contain => in_dir_shell("/root");
 
-    !host_joined_to_ad.debian_7.have_cached_password.krb5_config_kept::
+    debian_7.!host_joined_to_ad.have_cached_password.krb5_config_kept::
       "net ads join -s $(deb7_ad_join) -U $(ad_user)%$(ad_password) createcomputer='$(domain_ou)'"
       contain => in_dir_shell("/root"),
       classes => results("bundle", "ads_join"),
       comment => "if host is debian 7, run the net ads join command to link client to ad domain";
 
-    !host_joined_to_ad.debian_8.have_cached_password.sssd_config_kept.krb5_config_kept::
+    (debian_8|debian_jessie).!host_joined_to_ad.have_cached_password.sssd_config_kept.krb5_config_kept::
       "/bin/echo -n $(ad_password) | /usr/sbin/adcli join $(ad_domain) --stdin-password -U $(ad_user) -O '$(domain_ou)'"
       contain => in_dir_shell("/root"),
       classes => results("bundle", "adcli_join"),
@@ -173,7 +173,7 @@ bundle agent install_ad_client
 
   services:
 
-    !policy_server.!no_restarts.debian_8.(sssd_config_repaired|kbr5_config_repaired)::
+    !policy_server.!no_restarts.(debian_8|debian_jessie).(sssd_config_repaired|kbr5_config_repaired)::
       "sssd"
       service_policy => "enable",
       comment => "enable sssd service upon boot for Debian 8 host";
@@ -217,7 +217,7 @@ bundle agent ad_packages_installation
 				    "ntpdate",
       };
 
-    debian_8::
+    (debian_8|debian_jessie)::
       "package_installs" slist => { 
 				    "sssd-krb5",
 				    "sssd-tools",

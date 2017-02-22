@@ -33,7 +33,7 @@ bundle agent remove_ldap
 
   classes:
       "ldap_files_found"
-      expression => fileexists( $(files[conf_file]) );
+      expression => fileexists( "$(ldap_files)" );
       
   files:
     ldap_files_found::
@@ -43,7 +43,7 @@ bundle agent remove_ldap
       comment => "remove listed files related to LDAP configuration";
       
   methods:
-    file_remove_repaired::
+    file_remove_kept::
       "ldap_pkgs"  usebundle => ldap_packages_removal;
 
   reports:

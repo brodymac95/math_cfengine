@@ -12,7 +12,5 @@
 #
 # By default this script does nothing.
 
-$(config_rc_local.insertions)
-
 exit 0
 

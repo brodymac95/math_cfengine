@@ -92,11 +92,13 @@ bundle agent config_iptables
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_main)::
+    (DEBUG|DEBUG_testing)::
+      "=== $(this.bundle) ===";
+      
       # "Contents of 'json_input' data container: '$(json_str)'";  
 
     (DEBUG|DEBUG_testing).security_rules::
-      "$(this.bundle): Security rule found $(security_classes)";
+      "Security rule found $(security_classes)";
 }
 
 bundle agent iptables_restore_on_boot(cdir)
@@ -144,7 +146,8 @@ bundle agent iptables_generate_policy(cdir, chain_policies, filter_rules)
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_testing)::      
+    (DEBUG|DEBUG_testing)::
+      "=== $(this.bundle) ===";
       # "Contents of 'json_input' data container: '$(json_str)'";  
 
     (DEBUG|DEBUG_testing).iptables_restore_repaired::
@@ -171,6 +174,9 @@ bundle agent iptables_check(cdir)
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
+    (DEBUG|DEBUG_testing)::
+      "=== $(this.bundle) ===";
+      
     (DEBUG|DEBUG_testing).iptables_save_reached::
        "iptables_save reached";
 
@@ -349,7 +355,10 @@ bundle edit_line iptables_write_policy(p, r)
       
   reports:      
     (DEBUG|DEBUG_main)::
-      "$(this.bundle): Comment for filter rule $(i) = $(comment[$(i)])";
+      "=== $(this.bundle) ===";
+      "Comment for filter rule $(i) = $(comment[$(i)])"
+        ifvarclass => and("$(cmnd[context][$(i)])");
+
       #"$(this.bundle): $(i) icmp_type = $(r[$(i)][icmp_type])";
       #"$(this.bundle): $(i) cmnd[icmp_type] = $(cmnd[icmp_type][$(i)])";
 }

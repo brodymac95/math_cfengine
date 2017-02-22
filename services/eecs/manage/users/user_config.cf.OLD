@@ -38,10 +38,9 @@ bundle agent install_user_configs
       "user configuration settings"  usebundle => user_config_vars;
       "configure user files"  usebundle => config_user_files("user_config_vars.conf");
 
-  
-      # "copy ssh keys into user profile"
-	# usebundle => manage_ssh_keys("user_config_vars.conf"),
-	# ifvarclass => and( "$(username)_have_ssh_key_pair", "$(username)_has_ssh_pub_key_only" );
+      "copy ssh keys into user profile"
+	usebundle => manage_ssh_keys("user_config_vars.conf"),
+	ifvarclass => or( "$(username)_have_ssh_key_pair", "$(username)_have_ssh_pub_key_only" );
       
   reports:
     (inform_mode|verbose_mode)::
@@ -84,9 +83,7 @@ bundle agent user_config_vars(settings)
       "conf[ssh_pub_key]" string => "id_rsa.pub";
       "conf[emacs_template]" string => "emacs.mustache";
       "conf[emacs_path]" string => "/home/$(conf[username])/.emacs";
-      "conf[ssh_dir]" string => ".ssh/";
       "conf[config_dir]" string => ".config/";
-      "conf[bash_profile]" string => ".bash_profile";
 
       
 #      "i3_config" string => "i3/config";
@@ -99,34 +96,29 @@ bundle agent user_config_vars(settings)
 	policy => "overridable";
 
   classes:
+      "$(conf[username])_have_ssh_key_pair"
+	and => { fileexists("$(conf[cache])/$(conf[ssh_pri_key])"), fileexists("$(conf[cache])/$(conf[ssh_pub_key])") },
+	scope => "namespace";
 
-#      "$(conf[username])_have_ssh_key_pair"
-#	and => { fileexists("$(conf[cache])/$(conf[ssh_pri_key])"), fileexists("$(conf[cache])/$(conf[ssh_pub_key])") },
-#	scope => "namespace";
-
-        "$(conf[username])_has_ssh_pub_key"
+        "$(conf[username])_have_ssh_pub_key"
 	expression => fileexists( "$(conf[cache])/$(conf[ssh_pub_key])" ),
 	scope => "namespace";
 
-      "$(conf[username])_has_emacs_config"
+      "$(conf[username])_have_emacs_config"
 	expression => fileexists( "$(conf[cache])/$(conf[emacs_config])" ),
 	scope => "namespace";
 
-      "$(conf[username])_has_ssh_dir"
+      "$(conf[username])_have_user_config_dir"
 	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
 	scope => "namespace";
 
-      "$(conf[username])_has_user_config_dir"
-	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
-	scope => "namespace";
-
-      "$(conf[username])_has_i3_config"
+      "$(conf[username])_have_i3_config"
       and => { fileexists( "$(conf[i3_config])" ), fileexists( "$(conf[i3_status])" ) };
     
       
   reports:
     (DEBUG|DEBUG_config)::
-      "=== $(this.bundle) ===";
+      "-== $(this.bundle) ==-";
       "username listed with configs: $(conf[username])";
       "Contents of 'user_configs' data container: '$(conf[json_str_username])'";
 
@@ -149,9 +141,7 @@ bundle agent config_user_files(settings)
 {
   vars:
       "username" string => "$($(settings)[username])";
-      "user_ssh_dir" string => "/home/$($(settings)[username])/$($(settings)[ssh_dir])";
       "user_config_dir" string => "/home/$($(settings)[username])/$($(settings)[config_dir])";
-
   classes:    
 
   files:
@@ -174,32 +164,13 @@ bundle agent config_user_files(settings)
       action => if_elapsed("60"),
       comment => "if host is any other client then perform a secure remote recursive copy of entire user_config directory";
 
-    "$(username)_has_ssh_dir"::
-      "$(user_ssh_dir)"
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
-      depth_search => recurse_with_base("inf"),
-      comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
-
-      "$(user_ssh_dir)/."
-      perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      comment => "set correct permissions for .ssh directory";
-
-      "$(user_ssh_dir)"
-      perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      depth_search => recurse_ignore("inf", ".pub"),
-      comment => "set correct permissions for .ssh files";
-
-      "$(user_ssh_dir)/*.pub"
-      perms => mog( "644","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      comment => "set correct permissions for ssh public key files";
-
-    "$(username)_has_user_config_dir"::
+    "$($(settings)[username])_have_user_config_dir"::
       "$(user_config_dir)"
       perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
       copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
-      depth_search => recurse_with_base("inf"),
+      depth_search => recurse("inf"),
       comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
-     
+      
   methods:
       
   reports:
@@ -207,13 +178,9 @@ bundle agent config_user_files(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config)::
-      "=== $(this.bundle) ===";
-      "username listed with configs: '$(username)'";
-      "Contents of 'user_configs' data container: '$($(settings)[json_str_username])'";
-      "user home path:   $($(settings)[home_path])";
-      "user home UID:    $($(settings)[path_owner])";
-      "user home GID:    $($(settings)[path_group])";
-     
+#            "-== $(this.bundle) ==-";
+#      "username listed with configs: '$(username)'";
+#      "Contents of 'user_configs' data container: '$($(settings)[json_str_username])'";
 }
 
 ########################################################
@@ -261,7 +228,7 @@ bundle agent manage_ssh_keys(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_ssh_authorized_keys)::
-      "=== $(this.bundle) ===";
+            "-== $(this.bundle) ==-";
       "ssh public key in authorized key file: $(authorized_keys_file)";
       "ssh files copied: $(ssh_pri_key_location) and $(ssh_pub_key_location)"
       	ifvarclass => "$(username)_have_ssh_key_pair";
@@ -309,7 +276,7 @@ bundle agent emacs_config(settings)
 
   reports:
     DEBUG|DEBUG_emacs_config::
-      "=== $(this.bundle) ===";
+      "-== $(this.bundle) ==-";
       "Template: $(template)";
       "Config:   $(path)";
 }

@@ -268,3 +268,46 @@ bundle agent unattended_upgrades_config
 }
 
 ######################################################################
+
+bundle agent reboot_required(time_of_reboot)
+# @description: uses update-notifier to evaluate whether system needs to reboot, then reboots system at a defined time
+# BE CAREFUL TO USE THIS PACKAGE SPARINGLY!!
+{
+
+  vars:
+      "reboot_required_file" string => "/var/run/reboot-required";
+      "reboot_delay_time" string => "3";
+      "reboot_system_message" string => "CFEngine: scheduled maintenance reboot due to package updates";
+
+  classes:
+      "reboot_required"
+      expression => fileexists($(reboot_required_file)),
+      comment => "the update-notifier will create this file if a reboot is needed after package updates are done";
+
+  methods:
+    reboot_required::
+      "fully reboot system if required AND it is the time to reboot"
+      usebundle => reboot( $(reboot_delay_time), $(reboot_system_message) ),
+      ifvarclass => "$(time_of_reboot)";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_manage_packages).reboot_required::
+      "$(this.bundle): Reboot is required";   
+}
+
+######################################################################
+
+bundle agent reboot(time, message)
+# @description: generic reboot bundle with definable variables for delay time before reboot and a system wide message prior to reboot
+{
+  commands:
+    linux.!no_restarts::
+      "/sbin/shutdown -r $(time) $(message)";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}

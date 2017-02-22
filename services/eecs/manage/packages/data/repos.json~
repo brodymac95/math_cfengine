@@ -1,0 +1,32 @@
+{
+    "repos_to_ensure":
+    {
+	"1001": {
+	    comment: "debian 8 jessie standard repository",
+	    context: "debian_8",
+	    url: "http://ftp.us.debian.org/debian/",
+	    distribution: "jessie",
+	    components: [ "main", "contrib", "non-free" ],
+	    types: ["deb", "deb-src"],
+	},
+	"1002": {
+	    comment: "debian 8 jessie security repository",
+	    context: "debian_8",
+	    url: "http://security.debian.org/",
+	    distribution: "jessie",
+	    components: [ "main", "contrib", "non-free" ],
+	    types: ["deb", "deb-src"],
+	},
+    	"1003": {
+	    comment: "debian 8 jessie-updates repository",
+	    context: "debian_8",
+	    url: "http://ftp.us.debian.org/debian/",
+	    distribution: "jessie",
+	    components: [ "main", "contrib", "non-free" ],
+	    types: ["deb", "deb-src"],
+	},
+    },
+    "repos_to_wipe":
+    {
+    },
+}

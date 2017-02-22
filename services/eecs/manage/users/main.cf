@@ -168,6 +168,7 @@ bundle agent manage_root_passwd(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_root_passwd)::
+      "=== $(this.bundle) ===";
       "Password dist file: $(passwd_dist)";
       "Password cached file: $(passwd_cache)";
 #      "root hash: $(root_hash)";
@@ -181,15 +182,31 @@ bundle agent manage_local_users_shared_group(settings)
 # SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
-      
+      "user" slist => getindices( "classify_host.wsu_users" );
+      "json_str_users" string => format("%S", "classify_host.wsu_users");
+
   users:
-    linux.shared_group_exists_kept::
-      "$($(settings).user)"
+    linux.shared_group_exists_kept.!crypto_ltsp::
+      "$(user)"
       policy => "present",
-      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      description => "$(classify_host.wsu_users[$(user)])",
       shell => "/bin/bash",
-      home_dir => "/home/$($(settings).user)",
-      home_bundle => home_skel( "$($(settings).user)","$($(settings).shared_group_primary)", "$($(settings).home_skeleton)" ),
+      home_dir => "/home/$(user)",
+      home_bundle => home_skel( "$(user)","$($(settings).shared_group_primary)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).shared_group_primary)",
+      groups_secondary => { "$($(settings).group_secondary)" },
+#      password => hashed_password( "!##lockedpassword##" ),
+      comment => "add local user with shared group from wsu_users dataset gained via external host file
+                  user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (set in description)
+                 NOTE: local user password is not set by CFEngine, but can be authenticated from AD domain via sssd";
+
+    linux.shared_group_exists_kept.crypto_ltsp::
+      "$(user)"
+      policy => "present",
+      description => "$(classify_host.wsu_users[$(user)])",
+      shell => "/bin/bash",
+      home_dir => "/home/users/$(user)",
+      home_bundle => home_skel( "$(user)","$($(settings).shared_group_primary)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).shared_group_primary)",
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
@@ -208,10 +225,11 @@ bundle agent manage_local_users_shared_group(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "Local user: $($(settings).user)";
-      "Username: $(classify_host.wsu_users[$($(settings).user)])";
+      "=== $(this.bundle) ===";
+      "Local user set on this system: $(user)";
+      "Username: $(classify_host.wsu_users[$(user)])";
       "Shared group: $($(settings).shared_group_primary)";
-      "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
+      "Contents of 'wsu_users' data container: $(json_str_users)";    
 }
 
 ########################################################
@@ -222,15 +240,17 @@ bundle agent manage_local_users_own_group(settings)
 # SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
+      "user" slist => getindices( "classify_host.wsu_users" );
+      "json_str_users" string => format("%S", "classify_host.wsu_users");
       
   users:
     linux::
-      "$($(settings).user)"
+      "$(user)"
       policy => "present",
-      description => "$(classify_host.wsu_users[$($(settings).user)])",
+      description => "$(classify_host.wsu_users[$(user)])",
       shell => "/bin/bash",
-      home_dir => "/home/$($(settings).user)",
-      home_bundle => home_skel( "$($(settings).user)","$($(settings).user)", "$($(settings).home_skeleton)" ),
+      home_dir => "/home/$(user)",
+      home_bundle => home_skel( "$(user)","$(user)", "$($(settings).home_skeleton)" ),
       groups_secondary => { "$($(settings).group_secondary)" },
       comment => "add local user (with group = user) from wsu_users dataset gained via external host file
                   user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (set in description)
@@ -241,8 +261,9 @@ bundle agent manage_local_users_own_group(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
-      "Local user: $($(settings).user) - $(classify_host.wsu_users[$($(settings).user)])";
-      "Contents of 'wsu_users' data container: $($(settings).json_str_users)";    
+      "=== $(this.bundle) ===";
+      "Local user set on this system: $(user) - $(classify_host.wsu_users[$(user)])";
+      "Contents of 'wsu_users' data container: $(json_str_users)";    
 }
 
 ########################################################
@@ -260,7 +281,7 @@ bundle agent manage_local_users_custom_groups(settings)
       "user_$(group)" slist => getindices( "userdata_$(group)" );
       "grader_user" slist => getindices("classify_host.wsu_users[grader]");
 
-      "group_parent_dir" string => "/tmp/";
+      "group_parent_dir" string => "/srv/";
       "group_dir" string => concat ("$(group_parent_dir)", "$(group)");
       
   users:
@@ -299,8 +320,9 @@ bundle agent manage_local_users_custom_groups(settings)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_manage_local_users)::
+      "=== $(this.bundle) ===";
 #      "local user: $(classify_host.wsu_users[$(group)])";
-      "Local users in $(group): $(user_$(group)) - $(userdata_$(group)[$(user_$(group))])";
+      "Local users user set on this system in $(group): $(user_$(group)) - $(userdata_$(group)[$(user_$(group))])";
       "Grader user: $(grader_user)";
       
 #      "Username: $(classify_host.wsu_users[$(group)][$(user)])";
@@ -375,9 +397,11 @@ bundle agent home_skel(user, group, skel)
       copy_from => seed_cp( $(skel) ),
       perms => mog("600", "$(user)", "$(group)"),
       depth_search => recurse_with_base( "inf" );
+
   reports:
 
     (DEBUG|DEBUG_home_skel)::
+      "=== $(this.bundle) ===";
       "Creating home for user and group: $(user):$(group)";
       "Using skeleton path: $(skel)";
 }

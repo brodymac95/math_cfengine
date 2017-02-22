@@ -12,18 +12,31 @@
 	"printers": [ "printer1", "printer2" ],
 	"NOT IMPLEMENTED-network_interfaces": { "eth0": "ip_address", "eth1": "ip_address" }
     },
-    
-    "SERVERS": {},
-    "policyhub_full": {
+
+    "TESTING": {},
+    "cstesting": {
 	"machine": "server",
-	"purpose": "infrastructure",
-        "role": "policysrv",
-        "owner": "roose",
+	"purpose": "testing",
+        "role": "testingsystem",
+        "owner": "eecs",
 	"authentication": "local_users_shared_group",
 	"users": {
-            "roose": "Ben Roose",
-	   },
+            "d693f574": "Ben Roose",
+	    "roose": "Ben Roose"
+	},
 	"user_configs": [ "roose", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
+    "cs_ubuntu_testing": {
+	"machine": "server",
+	"purpose": "testing",
+        "role": "testingsystem",
+        "owner": "eecs",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose"
+	},
+	"custom_packages": [ "deep_learning", ],
     },
     "oldtesting": {
 	"machine": "server",
@@ -45,18 +58,19 @@
 	},
 	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
-    "cstesting": {
+    
+    
+    "SERVERS": {},
+    "policyhub_full": {
 	"machine": "server",
-	"purpose": "testing",
-        "role": "testingsystem",
-        "owner": "eecs",
+	"purpose": "infrastructure",
+        "role": "policysrv",
+        "owner": "roose",
 	"authentication": "local_users_shared_group",
 	"users": {
-            "d693f574": "Ben Roose",
-	    "roose": "Ben Roose"
-	},
+            "roose": "Ben Roose",
+	   },
 	"user_configs": [ "roose", ],
-	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
     "cudasrv": {
 	"machine": "server",
@@ -72,7 +86,6 @@
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
 	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
     },
-
     "roger": {
 	"machine": "server",
 	"purpose": "teaching",
@@ -137,6 +150,52 @@
 	"security": [ "ssh_public", "rdp_public", ],
 	"custom_packages": [ "ad_authentication", ],
     },
+    "turing": {
+	"machine": "server",
+	"purpose": "research",
+        "role": "rdpsrv",
+        "owner": "kaushik_sinha",
+	"security": [ "ssh_public", "rdp_public", ],
+	"custom_packages": [ "ad_authentication", "deep_learning", ],
+	"authentication": "local_users_own_group",
+	"users": {
+	    "roose": "Ben Roose",
+	    "d693f574": "Ben Roose",
+	    "p862d927": "Kaushik Sinha",
+	    "e763t897": "Vinay Vittal Karagod",
+	    "j779h288": "Kok-Leong Seow",
+	    "c489a553": "Drew Lindsey",
+	    "g666t362": "Jerret Ross",
+	    "z847x563": "Tara Eicher",
+	    "p377z922": "Omid Keivani",
+	    "v457h628": "Andrew Elkouri",
+	    "q647m988": "Hui Li",
+	    "v252v594": "Yashar Zargari Zonouz",
+	    "a767p375": "Nathan Baker",
+	},
+    },
+    "crypto_ltsp": {
+	"machine": "server",
+	"purpose": "research",
+        "role": "filesrv_ldapsrv",
+        "owner": "murtuza_jadliwala",
+	"security": [ "ssh_public", "ssl_public", "ltsp_wh312", ],
+	"custom_packages": [ "ad_authentication", "scmmanager", ],
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	    "d693f574": "Ben Roose",
+	    "s767f543": "Anindya Maiti",
+	    "x387v323": "Murtuza Jadliwala",
+	    "f384b848": "Chase Weber",
+	    "j969z457": "Oscar Armbruster",
+	    "c735c243": "Ryan Heard",
+	    "f764y728": "Mohd Amjad Sabra",
+	    "z535c278": "Arash Boustani",
+	    "f862j474": "Jeffrey Weide",
+	    "z896y529": "Nisha Vinayaga Sureshkanth",
+	},
+    },
     
     "WORKSTATIONS": {},
     "jb_247_3918_lt1": {
@@ -173,8 +232,8 @@
 	    "p862d927": "Kaushik Sinha",
 	    "p377z922": "Omid Keivani",
 	},
-	"extra_repository_packages": [ "r-base", "python", "python-pip", "python-numpy", "python-scipy", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-nose", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
-	"custom_packages": [ "matlab_research", "pip_theano", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
+	"extra_repository_packages": [ "r-base", "python", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
+	"custom_packages": [ "matlab_research", "deep_learning","pip_pattern", "pip_orange", "texworks_dictionaries" ],
         "printers": [ "jb258_laserjet" ]
     },
 
@@ -188,9 +247,22 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configs": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "network-manager-applet", "keychain", "thunar", "octave", "skype", "xdotool", "wine", ],
-	"custom_packages": [ "linux_show_player", ],
-
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", "git", ],
+	"custom_packages": [ "linux_show_player", "etc_offline_editor", ],
     },
+   "jb_223_3432_lt2": {
+	"machine": "workstation",
+	"purpose": "personal",
+        "role": "laptop",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	},
+	"user_configs": [ "roose", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", ],
+	"custom_packages": [ "linux_show_player", ],
+    },
+
 
 }

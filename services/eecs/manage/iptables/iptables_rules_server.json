@@ -74,13 +74,38 @@
             "target": "ACCEPT",
 	    "context": "rdp_public",
         },
+        "1045":
+        {
+	    "comment": "--WIDE OPEN-- allow incoming SSL (HTTPS) TCP from any network for ssl_public class"
+            "chain": "INPUT"
+            "destination_port": "443",
+            "target": "ACCEPT",
+	    "context": "ssl_public",
+        },
         "1051":
+        {
+	    "comment": "allow incoming port 8080 TCP from localhost only for local_scmmanager class. is this needed"
+            "chain": "INPUT"
+            "destination_port": "8080",
+            "source_ip": "lo",
+            "target": "ACCEPT",
+	    "context": "local_scmmanager",
+        },
+        "1091":
         {
 	    "comment": "allow any incoming connections on private network for ltsp_private class"
             "chain": "INPUT"
             "source_ip": "192.168.1.0/24",
             "target": "ACCEPT",
 	    "context": "ltsp_private",
+        },
+	"1092":
+        {
+	    "comment": "allow any incoming connections from WH-312 ltsp clients for ltsp_wh312 class"
+            "chain": "INPUT"
+            "source_ip": "156.26.32.0/24,156.26.35.0/24",
+            "target": "ACCEPT",
+	    "context": "ltsp_wh312",
         },
         "1101":
         {

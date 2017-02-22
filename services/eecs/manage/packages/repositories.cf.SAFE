@@ -39,8 +39,7 @@ bundle agent config_apt_sources
       "json_str" string => format("%S", repositories_data);
 
       "repos_ensure" data => mergedata("iptables_data[repos_to_ensure]");
-      "repos_wipe" data => mergedata("iptables_data[repos_to_wipe]");      
-     "json_str_ensure" string => format("%S", repos_ensure);
+      "repos_wipe" data => mergedata ("iptables_data[repos_to_wipe]");      
 
       "i_unsorted" slist => getindices("repos_ensure");
       "index_ensure" slist => sort("i_unsorted",int),
@@ -54,12 +53,12 @@ bundle agent config_apt_sources
       
       
   methods:
-
-      "call it" usebundle => testing(@(repos_ensure));
-      # "ensure all required repos are inserted into sources.list as specified in repos.json"
-      # 	usebundle => ensure( "$(sources_file)", "$(repos_ensure[$(index_ensure)][url])", "$(repos_ensure[$(index_ensure)][distribution])", "$(repos_ensure[$(index_ensure)][components])", "$(repos_ensure[$(index_ensure)][types])", "$(options)" ),
-      #   inherit => "true",
-      #   ifvarclass => and( "$(context_ensure)" );
+      
+    "$(repos_ensure)"::
+      "ensure all required repos are inserted into sources.list as specified in repos.json"
+    	usebundle => ensure( $(sources_file), $(repos_ensure[$(index_ensure)][url]), $(repos_ensure[$(index_ensure)][distribution]), $(repos_ensure[$(index_ensure)][components]), $(repos_ensure[$(index_ensure)][types]), $(options)),
+        inherit => "true",
+        ifvarclass => and( "$(context_ensure)" );
 
       # "remove all required repos from sources.list as specified in repos.json"
       # 	usebundle => wipe( $(sources_file), $(repos_wipe[url]), $(repos_wipe[distribution]), $(repos_wipe[components]), $(repos_wipe[types]), $(options)),
@@ -69,43 +68,16 @@ bundle agent config_apt_sources
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-
     (DEBUG|DEBUG_testing)::
       "=== $(this.bundle) ===";
-      "$(this.bundle): $(index_ensure) [context] = $(repos_ensure[comment][$(index_ensure)])";
-      "$(i_unsorted) [context]";
-
-      "Comment for ensured repo $(repos_ensure[$(index_ensure)][comment])";
-#        ifvarclass => and( "$(context_ensure)" );
+      "Comment for ensured repo $(repos_ensure[$(index_ensure)][comment])"
+        ifvarclass => and( "$(context_ensure)" );
    #BEN FIX   
       #"Contents of 'json_input' data container: '$(json_str)'";  
-      "Contents of 'json_input_ensure' data container: '$(json_str_ensure)'";  
 
 }
 
 ######################################################################
-
-bundle agent testing(repo)
-{
-  vars:
-      "i_unsorted" slist => getindices("repo");
-      "index_ensure" slist => sort("i_unsorted",int),
-      comment => "build a sorted index list of all ensured repos";
-
-  reports:
-   (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-
-    (DEBUG|DEBUG_testing)::
-      "=== $(this.bundle) ===";
-      "$(this.bundle): $(index_ensure) [context] = $(repo[comment][$(index_ensure)])";
-      "$(i_unsorted) [context]";
-
-      "Comment for ensured repo $(repos[$(index_ensure)][comment])";
-
-}
-
-
 
 bundle agent ensure(given_file, url, distribution, components, types, options)
 # @description: enforcing entries in /etc/apt/sources.list or /etc/apt/sources.list.d/*.list
@@ -131,8 +103,8 @@ bundle agent ensure(given_file, url, distribution, components, types, options)
         policy => "free";
 
       "entries" slist => maplist("$(this) $(options) $(url) $(distribution) $(components_str)", "types");
-
-      # methods:
+      
+  # methods:
   #     "utils" usebundle => default:eu($(runenv));
 
     # verbose::
