@@ -41,6 +41,9 @@ bundle agent install_deep_learning_packages
 				"python-scipy",
 				"python-nose",
 				"python-yaml",
+				"python-docopt",
+				"python-matplotlib",
+				"python-biopython",
       };
 
       # deep learning software required - reverse order for installation?

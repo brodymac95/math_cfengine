@@ -26,11 +26,10 @@ body file control
 
 bundle agent config_apt_sources
 # @description: takes in repository info from external json file and adds or removes repository within /etc/apt/sources
-# WORKING ON IT
 {
   vars:
     # server::
-      "sources_file" string => "/tmp/sources.list";
+      "sources_file" string => "/etc/apt/sources.list";
       
       "options" string => "";
 
@@ -38,32 +37,22 @@ bundle agent config_apt_sources
       "repositories_data" data => readjson( $(repositories_file), 10M );
       "json_str" string => format("%S", repositories_data);
 
-      "repos_ensure" data => mergedata("iptables_data[repos_to_ensure]");
-      "repos_wipe" data => mergedata("iptables_data[repos_to_wipe]");      
+      "repos_ensure" data => mergedata("repositories_data[repos_to_ensure]");
+      "repos_wipe" data => mergedata("repositories_data[repos_to_wipe]");      
      "json_str_ensure" string => format("%S", repos_ensure);
 
-      "i_unsorted" slist => getindices("repos_ensure");
-      "index_ensure" slist => sort("i_unsorted",int),
-      comment => "build a sorted index list of all ensured repos";
-      
-      "context_ensure" string => "any", policy => "free",
-        ifvarclass => not(isvariable("repos_ensure[$(index_ensure)][context]"));
-      "context_ensure" string => "$(repos_ensure[$(index_ensure)][context])", policy => "free",
-        ifvarclass => and(isvariable("repos_ensure[$(index_ensure)][context]")),
+
+      "context[$(i)]" string => "any",
+        ifvarclass => not(isvariable("repo[$(i)][context]"));
+      "context[$(i)]" string => "$(repo[$(i)][context])",
+        ifvarclass => and(isvariable("repo[$(i)][context]")),
       comment => "set context class for each ensure entry or set as any if not defined";
-      
+
       
   methods:
-
-      "call it" usebundle => testing(@(repos_ensure));
-      # "ensure all required repos are inserted into sources.list as specified in repos.json"
-      # 	usebundle => ensure( "$(sources_file)", "$(repos_ensure[$(index_ensure)][url])", "$(repos_ensure[$(index_ensure)][distribution])", "$(repos_ensure[$(index_ensure)][components])", "$(repos_ensure[$(index_ensure)][types])", "$(options)" ),
-      #   inherit => "true",
-      #   ifvarclass => and( "$(context_ensure)" );
-
-      # "remove all required repos from sources.list as specified in repos.json"
-      # 	usebundle => wipe( $(sources_file), $(repos_wipe[url]), $(repos_wipe[distribution]), $(repos_wipe[components]), $(repos_wipe[types]), $(options)),
-      #   inherit => "true";
+        "ensure all required repos are inserted into sources.list as specified in repos.json"
+        	usebundle => ensure_repos( $(sources_file), @(repos_ensure), $(options) ),
+          inherit => "true";
 
   reports:
    (inform_mode|verbose_mode)::
@@ -72,108 +61,84 @@ bundle agent config_apt_sources
 
     (DEBUG|DEBUG_testing)::
       "=== $(this.bundle) ===";
-      "$(this.bundle): $(index_ensure) [context] = $(repos_ensure[comment][$(index_ensure)])";
-      "$(i_unsorted) [context]";
-
-      "Comment for ensured repo $(repos_ensure[$(index_ensure)][comment])";
-#        ifvarclass => and( "$(context_ensure)" );
-   #BEN FIX   
-      #"Contents of 'json_input' data container: '$(json_str)'";  
-      "Contents of 'json_input_ensure' data container: '$(json_str_ensure)'";  
+      # "Contents of 'json_input' data container: '$(json_str)'";  
+      # "Contents of 'json_input_ensure' data container: '$(json_str_ensure)'";  
 
 }
 
 ######################################################################
 
-bundle agent testing(repo)
-{
-  vars:
-      "i_unsorted" slist => getindices("repo");
-      "index_ensure" slist => sort("i_unsorted",int),
-      comment => "build a sorted index list of all ensured repos";
-
-  reports:
-   (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-
-    (DEBUG|DEBUG_testing)::
-      "=== $(this.bundle) ===";
-      "$(this.bundle): $(index_ensure) [context] = $(repo[comment][$(index_ensure)])";
-      "$(i_unsorted) [context]";
-
-      "Comment for ensured repo $(repos[$(index_ensure)][comment])";
-
-}
-
-
-
-bundle agent ensure(given_file, url, distribution, components, types, options)
+bundle agent ensure_repos(file, repo, options)
 # @description: enforcing entries in /etc/apt/sources.list or /etc/apt/sources.list.d/*.list
 {
-#  classes:
-#      "$(vars)" expression => "default:runenv_$(runenv)_$(vars)"
-#      "not_$(vars)" expression => "!default:runenv_$(runenv)_$(vars)";
-
   vars:
-#      "vars" slist => { "@(default:$(runenv).env_vars)" };
-#      "$(vars)" string => "$(default:$(runenv).$(vars))";
-
       "CFEnotice"
         string  => "# This file is managed by CFEngine, manual edits will be reverted",
         comment => "It's nice to let people know why the file keep magically reverting on them";
 
-      "components_str" string => join(" ", "components");
-
-      "file" string => "$(default:eu.path_prefix)$(given_file)",
-        policy => "free";
-
       "class_prefix" string => canonify($(file)),
         policy => "free";
 
-      "entries" slist => maplist("$(this) $(options) $(url) $(distribution) $(components_str)", "types");
-
-      # methods:
-  #     "utils" usebundle => default:eu($(runenv));
-
-    # verbose::
-    #   "metadata" usebundle => default:report_metadata($(this.bundle), $(metadata)),
-    #     inherit => "true";
-
   files:
-    activated::
+#    activated::
       "$(file)"
         create        => "true",
-        perms         => default:m("0644"),
-        edit_defaults => default:empty,
-        edit_line     => sources_list($(CFEnotice), @(cfdc_aptrepo:ensure.entries)),
-        classes       => default:classes_generic("$(class_prefix)_ensure"),
+        perms         => m("0644"),
+        edit_defaults => empty,
+        edit_line     => sources_list( $(CFEnotice), @(repo), $(options) ),
+        classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "Create $(file) and note that the file is managed by CFEngine";
 
   reports:
-    verbose::
-      "$(this.bundle): imported environment '$(runenv)' var '$(vars)' with value '$($(vars))'";
-      "$(this.bundle): imported environment '$(runenv)' class '$(vars)' because 'default:runenv_$(runenv)_$(vars)' was defined"
-        ifvarclass => "$(vars)";
+   (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 
-      "$(this.bundle): file $(file); ensuring line $(entries)";
-
-    cfengine::
-      "$(file)" bundle_return_value_index => "file",
-        ifvarclass => canonify("$(class_prefix)_ensure_ok");
-
-      "" bundle_return_value_index => "file",
-        ifvarclass => canonify("$(class_prefix)_ensure_not_ok");
+    (DEBUG|DEBUG_testing)::
+      "=== $(this.bundle) ===";
+#      "sources file $(file)";
 }
 
 ######################################################################
 
-bundle edit_line sources_list( header, lines )
+bundle edit_line sources_list(header, repo, options)
 {
-  delete_lines:
-      ".*";
+  vars:
+      "i_unsorted" slist => getindices("repo");
+      "i" slist => sort("i_unsorted",int),
+	comment => "build a sorted index list of all ensured repos";
+      
+      "components_str[$(i)]" string => join(" ", "repo[$(i)][components]");
+
+      "context[$(i)]" string => "any",
+        ifvarclass => not(isvariable("repo[$(i)][context]"));
+      "context[$(i)]" string => "$(repo[$(i)][context])",
+        ifvarclass => and(isvariable("repo[$(i)][context]")),
+      comment => "set context class for each ensure entry or set as any if not defined";
+
+      "comment[$(i)]" string => "No comment supplied in json file",
+        ifvarclass => not(isvariable("repo[$(i)][comment]"));
+      "comment[$(i)]" string => "$(repo[$(i)][comment])",
+        ifvarclass => and(isvariable("repo[$(i)][comment]"));
+      
+      "entries[$(i)]" slist => maplist( "$(this) $(options) $(repo[$(i)][url]) $(repo[$(i)][distribution]) $(components_str[$(i)])", "repo[$(i)][types]" );
+
+#  delete_lines:
+#      ".*";
+
   insert_lines:
-      "$(header)";
-      "$(lines)";
+      "$(header)$(const.n)";
+      "# COMMENTS$(const.n)";
+      "# [$(i)] $(comment[$(i)])"
+        ifvarclass => and("$(context[$(i)])");
+      "# SOURCES$(const.n)";
+      "$(entries[$(i)])"
+        ifvarclass => and("$(context[$(i)])");
+
+  reports:
+    (DEBUG|DEBUG_apt_sources)::
+      "=== $(this.bundle) ===";
+      "Comment for ensured repository $(i) = $(comment[$(i)])"
+              ifvarclass => and("$(context[$(i)])");
 }
 
 ######################################################################
@@ -219,3 +184,4 @@ bundle agent wipe(runenv, metadata, wipe, given_file)
     cfengine::
       "$(file)" bundle_return_value_index => "file";
 }
+

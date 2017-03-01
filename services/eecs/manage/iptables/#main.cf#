@@ -354,7 +354,11 @@ bundle edit_line iptables_write_policy(p, r)
       "second_pass" expression => "any";
       
   reports:      
-    (DEBUG|DEBUG_iptables)::
+      (DEBUG|DEBUG_iptables  reports:
+    (DEBUG|DEBUG_main)::
+       "=== $(this.bundle) ===";
+       "Comment for filter rule $(i) = $(comment[$(i)])"
+            ifvarclass => and("$(cmnd[context][$(i)])");)::
       "=== $(this.bundle) ===";
       "Comment for filter rule $(i) = $(comment[$(i)])"
         ifvarclass => and("$(cmnd[context][$(i)])");

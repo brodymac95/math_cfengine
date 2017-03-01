@@ -24,6 +24,22 @@
             "target": "ACCEPT",
 	    "context": "jb_257_3432_res1"
         },
+        "201":
+        {
+	    "comment": "specific rule to open peer synchronization for linux-show-player"
+            "chain": "INPUT",
+	    "destination_port": "8070",
+            "target": "ACCEPT",
+	    "context": "linux_show_player"
+        },
+        "202":
+        {
+	    "comment": "specific rule to open peer discovery for linux-show-player"
+            "chain": "INPUT",
+	    "destination_port": "50000",
+            "target": "ACCEPT",
+	    "context": "linux_show_player"
+        },
         "1000":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"
