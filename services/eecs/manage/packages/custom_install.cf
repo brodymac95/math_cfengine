@@ -247,7 +247,7 @@ bundle agent cuda_by_example_vars(params)
 
 #############################################
 
-bundle agent install_handin(user,group,home)
+bundle agent install_handin(user, group, home)
 {
 # @decription: manual installer for handin software
       
@@ -256,6 +256,7 @@ bundle agent install_handin(user,group,home)
       #(NOTE: this bundle needs adjusting if we wish these variables to override what is in the ars bundle!
       "handin_bin" string => "$(home)/bin/";
       "handin_dir" string => "$(home)/handin/";
+      "handin_executable" string => "$(handin_bin)handin";
       
   classes: 
       "application_dir_is_present"
@@ -274,14 +275,22 @@ bundle agent install_handin(user,group,home)
 	copy_from => local_dcp( "$(handin_vars.conf[_unrolled_dir_bin])" ),
 	perms => mog("755","$(user)","$(group)"),
 	depth_search => recurse("inf"),
-	comment => "cp files and set permissions for handin executable";
+	comment => "cp files and set permissions for handin";
+
+      "$(handin_executable)"
+	perms => mog("4755","$(user)","$(group)"),
+	comment => "set setuid permissions for handin executable";
+
+      "$(home)/."
+	perms => mog("755","$(user)","$(group)"),
+	comment => "set read permissions for all users on grader user home directory";
 
       "$(handin_dir)"
         create => "true",
-	copy_from => local_dcp( "$(handin_vars.conf[_unrolled_dir])" ),
+	copy_from => seed_cp( "$(handin_vars.conf[_unrolled_dir])" ),
 	perms => mog("600","$(user)","$(group)"),
-	depth_search => recurse("2"),
-	comment => "cp files and set permissions for handin directory";      
+	depth_search => recurse_with_base("2"),
+	comment => "cp files and set permissions for handin directory only if not exists";
       
   reports:
     (inform_mode|verbose_mode)::

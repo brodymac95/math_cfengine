@@ -49,6 +49,7 @@ bundle agent manage_main
 
     !NO_INSTALLS::
       "package_management" usebundle => manage_packages;
+
     any::
       "user_management" usebundle => manage_users;
       "configure_rc_local" usebundle => config_rc_local;

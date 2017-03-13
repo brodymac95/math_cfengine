@@ -19,12 +19,19 @@
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
-	"authentication": "local_users_shared_group",
+	"authentication": "local_users_custom_groups",
 	"users": {
-            "d693f574": "Ben Roose",
-	    "roose": "Ben Roose"
+	    "group1" : {
+		"d693f574": "Ben Roose"
+	    },
+	    "group2" : {
+	        "a123b456": "tester A",
+		"c456d123": "tester B"
+	    },
+	    "grader" : {
+	        "cs697am": "cs697am grader",
+	    },
 	},
-	"user_configs": [ "roose", ],
 	"custom_packages": [ "ad_authentication", ],
     },
     "cs_ubuntu_testing": {
@@ -249,6 +256,7 @@
 	"user_configs": [ "roose", ],
 	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", "git", ],
 	"custom_packages": [ "linux_show_player", "etc_offline_editor", ],
+     	"security": [ "linux_show_player", ],
     },
    "jb_223_3432_lt2": {
 	"machine": "workstation",
@@ -261,7 +269,8 @@
 	},
 	"user_configs": [ "roose", ],
 	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", ],
-	"custom_packages": [ "linux_show_player", ],
+        "custom_packages": [ "linux_show_player", ],
+       	"security": [ "linux_show_player", ],
     },
 
 

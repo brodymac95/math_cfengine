@@ -1,0 +1,12 @@
+# sources.list is managed by CFEngine v$(sys.cf_version), manual edits will be reverted
+
+# SOURCES
+
+# [$(ensure_repos.index)] $(ensure_repos.comment[$(ensure_repos.index)])
+ifvarclass => and("$(ensure_repos.context[$(ensure_repos.index)])")
+
+$(ensure_repos.entries[$(ensure_repos.index)])
+ifvarclass => and("$(ensure_repos.context[$(ensure_repos.index)])");
+
+
+

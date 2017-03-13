@@ -161,7 +161,7 @@ bundle agent config_user_files(settings)
     policy_server::
       "$($(settings)[cache])"
       perms => mo("600","root"),
-      copy_from => local_dcp( "$($(settings)[dist])" ),
+      copy_from => perms_dcp( "$($(settings)[dist])" ),
       depth_search => recurse("inf"),
       action => if_elapsed("60"),
       comment => "if host is the policy server then perform a local recursive copy of entire user_config directory";
@@ -169,29 +169,30 @@ bundle agent config_user_files(settings)
     !policy_server::
       "$($(settings)[cache])"
       perms => mo("600","root"),
-      copy_from => secure_cp( "$($(settings)[dist])",$(sys.policy_hub) ),
+      copy_from => sync_cp( "$($(settings)[dist])",$(sys.policy_hub) ),
       depth_search => recurse("inf"),
       action => if_elapsed("60"),
       comment => "if host is any other client then perform a secure remote recursive copy of entire user_config directory";
 
     "$(username)_has_ssh_dir"::
       "$(user_ssh_dir)"
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
+      copy_from => perms_dcp( "$($(settings)[cache])/$($(settings)[ssh_dir])" ),
       depth_search => recurse_with_base("inf"),
-      comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
+      comment => "locally recursive copy anything in the .ssh directory to user's home if directory exists in the cache";
 
       "$(user_ssh_dir)/."
       perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
       comment => "set correct permissions for .ssh directory";
 
       "$(user_ssh_dir)"
-      perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      depth_search => recurse_ignore("inf", ".pub"),
-      comment => "set correct permissions for .ssh files";
+      perms => og( "$($(settings)[path_owner])","$($(settings)[path_group])" ),
+      depth_search => recurse("inf"),
+      comment => "set only owner and group for .ssh files";
 
-      "$(user_ssh_dir)/*.pub"
-      perms => mog( "644","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      comment => "set correct permissions for ssh public key files";
+      # could use a preserve on copy promise?
+#      "$(user_ssh_dir)/*.pub"
+#      perms => mog( "644","$($(settings)[path_owner])","$($(settings)[path_group])" ),
+#      comment => "set correct permissions for ssh public key files";
 
     "$(username)_has_user_config_dir"::
       "$(user_config_dir)"
@@ -214,6 +215,15 @@ bundle agent config_user_files(settings)
       "user home UID:    $($(settings)[path_owner])";
       "user home GID:    $($(settings)[path_group])";
      
+}
+
+########################################################
+
+body copy_from preserve_local_dcp(from)
+{
+      source      => "$(from)";
+      compare     => "digest";
+      preserve => "true";
 }
 
 ########################################################

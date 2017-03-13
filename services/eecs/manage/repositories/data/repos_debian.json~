@@ -32,6 +32,15 @@
 	    components: [ "main", "contrib", "non-free" ],
 	    types: ["deb", "deb-src"],
 	},
+    	"9101": {
+	    comment: "debian cfengine repository on amazonaws",
+	    context: "debian",
+	    file: "/tmp/sources.list.d/cfengine-community.list",
+	    url: "https://cfengine-package-repos.s3.amazonaws.com/pub/apt/packages",
+	    distribution: "stable",
+	    components: [ "main", ],
+	    types: ["deb", ],
+	},
     },
     "repos_to_wipe": {
     },

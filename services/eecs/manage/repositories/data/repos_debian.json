@@ -1,0 +1,50 @@
+{
+    "repos_to_ensure": {
+	"/tmp/sources.list": {
+	    "1001": {
+		comment: "COMMENTED OUT: debian 8 jessie cdrom",
+		context: "debian_8",
+		url: "cdrom:[Debian GNU/Linux 8.4.0 _Jessie_ - Official amd64 CD Binary-1 20160402-14:46]/",
+		distribution: "jessie",
+		components: [ "main" ],
+		types: ["# deb" ],
+	    },
+	    "1101": {
+		comment: "debian 8 jessie standard repository",
+		context: "debian_8",
+		url: "http://ftp.us.debian.org/debian/",
+		distribution: "jessie",
+		components: [ "main", "contrib", "non-free" ],
+		types: ["deb", "deb-src"],
+	    },
+	    "1102": {
+		comment: "debian 8 jessie security repository",
+		context: "debian_8",
+		url: "http://security.debian.org/",
+		distribution: "jessie",
+		components: [ "main", ],
+		types: ["deb", "deb-src"],
+	    },
+    	    "1103": {
+		comment: "debian 8 jessie updates repository",
+		context: "debian_8",
+		url: "http://ftp.us.debian.org/debian/",
+		distribution: "jessie-updates",
+		components: [ "main", "contrib", "non-free" ],
+		types: ["deb", "deb-src"],
+	    },
+	},
+	"/tmp/sources.list.d/cfengine-community.list": {
+    	    "9101": {
+		comment: "debian cfengine repository on amazonaws",
+		context: "debian",
+		url: "https://cfengine-package-repos.s3.amazonaws.com/pub/apt/packages",
+		distribution: "stable",
+		components: [ "main", ],
+		types: ["deb", ],
+	    },
+	},
+    },
+    "repos_to_wipe": {
+    },
+}

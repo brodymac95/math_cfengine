@@ -110,7 +110,7 @@ CFEngine added line for restoring iptables firewall at boot time
 
   files:
       "/etc/rc.local"
-      create => "true",
+	create => "true",
       edit_line => append_if_no_line("$(restore_command)");
 }
 
@@ -125,10 +125,10 @@ bundle agent iptables_generate_policy(cdir, chain_policies, filter_rules)
       handle => "edit_iptables_filter",
       comment => "generate the new policy file";
 
-      #"$(cdir)/cf.iptables.filter.policy"
-      #changes => detect_content_change,
-      #classes => results("bundle", "iptables_policy_change"),
-      #comment => "NOT USED - check if policy file content has changed and set repaired class if changed";     
+      "$(cdir)/cf.iptables.filter.policy"
+      changes => detect_content_change,
+      classes => results("bundle", "iptables_policy_change"),
+      comment => "NOT USED - check if policy file content has changed and set repaired class if changed";     
 
   commands:
       "/sbin/iptables-restore < $(cdir)/cf.iptables.filter.policy"
@@ -195,10 +195,10 @@ bundle agent edit_iptables_filter(cdir)
       comment => "remove comment lines containing log times from iptables saved file and set repaired class";
 
     comments_remove_repaired::
-      "$(cdir)/cf.iptables.filter.current"
-      changes => detect_content_change,
-      classes => results("namespace", "iptables_current_change"),
-      comment => "check if iptables saved file content has changed and set repaired class if changed";     
+     # "$(cdir)/cf.iptables.filter.current"
+     # changes => detect_content_change,
+     # classes => results("namespace", "iptables_current_change"),
+     #x comment => "check if iptables saved file content has changed and set repaired class if changed";     
 
   reports:
    (inform_mode|verbose_mode)::
@@ -254,7 +254,7 @@ body changes detect_content_change
 {
       hash           => "best";
       report_changes => "content";
-      update_hashes  => "yes";
+      update_hashes  => "true";
 }
 
 bundle edit_line iptables_write_policy(p, r)
@@ -312,6 +312,12 @@ bundle edit_line iptables_write_policy(p, r)
       ifvarclass => not(isvariable("r[$(i)][icmp_type]"));
       "cmnd[icmp_type][$(i)]" string => " --icmp-type $(r[$(i)][icmp_type])", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][icmp_type]"));
+
+      # Format additional custom options if defined in rule
+      "cmnd[options][$(i)]" string => "", policy => "free",
+      ifvarclass => not(isvariable("r[$(i)][custom_options]"));
+      "cmnd[options][$(i)]" string => "$(r[$(i)][custom_options])", policy => "free",
+      ifvarclass => and(isvariable("r[$(i)][custom_options]"));
 
       # Add default chain = INPUT if not defined
       "cmnd[chain][$(i)]" string => "INPUT", policy => "free",

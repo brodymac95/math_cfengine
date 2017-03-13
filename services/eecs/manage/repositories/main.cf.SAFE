@@ -28,30 +28,28 @@ bundle agent config_apt_sources
 # @description: takes in repository info from external json file and adds or removes repository within /etc/apt/sources
 {
   vars:
-    # server::
-      "sources_file" string => "/etc/apt/sources.list";
+      "default_sources_file" string => "/tmp/sources.list";
       
       "options" string => "";
 
-      "repositories_file" string => "$(this.promise_dirname)/data/repos.json";
+    debian::
+      "repositories_file" string => "$(this.promise_dirname)/data/repos_debian.json";
+
+    ubuntu::
+      "repositories_file" string => "$(this.promise_dirname)/data/repos_ubuntu.json";
+
+    any::
       "repositories_data" data => readjson( $(repositories_file), 10M );
       "json_str" string => format("%S", repositories_data);
 
       "repos_ensure" data => mergedata("repositories_data[repos_to_ensure]");
       "repos_wipe" data => mergedata("repositories_data[repos_to_wipe]");      
      "json_str_ensure" string => format("%S", repos_ensure);
-
-
-      "context[$(i)]" string => "any",
-        ifvarclass => not(isvariable("repo[$(i)][context]"));
-      "context[$(i)]" string => "$(repo[$(i)][context])",
-        ifvarclass => and(isvariable("repo[$(i)][context]")),
-      comment => "set context class for each ensure entry or set as any if not defined";
-
       
   methods:
+    debian::
         "ensure all required repos are inserted into sources.list as specified in repos.json"
-        	usebundle => ensure_repos( $(sources_file), @(repos_ensure), $(options) ),
+        	usebundle => ensure_repos( $(default_sources_file), @(repos_ensure), $(options) ),
           inherit => "true";
 
   reports:
@@ -63,12 +61,11 @@ bundle agent config_apt_sources
       "=== $(this.bundle) ===";
       # "Contents of 'json_input' data container: '$(json_str)'";  
       # "Contents of 'json_input_ensure' data container: '$(json_str_ensure)'";  
-
 }
 
 ######################################################################
 
-bundle agent ensure_repos(file, repo, options)
+bundle agent ensure_repos(default_file, repo, options)
 # @description: enforcing entries in /etc/apt/sources.list or /etc/apt/sources.list.d/*.list
 {
   vars:
@@ -76,16 +73,25 @@ bundle agent ensure_repos(file, repo, options)
         string  => "# This file is managed by CFEngine, manual edits will be reverted",
         comment => "It's nice to let people know why the file keep magically reverting on them";
 
-      "class_prefix" string => canonify($(file)),
+      "class_prefix" string => canonify($(default_file)),
         policy => "free";
 
+      "i_unsorted" slist => getindices("repo");
+      "index" slist => sort("i_unsorted",int),
+	comment => "build a sorted index list of all ensured repos";
+
+      "file[$(index)]" string => "$(default_file)",
+        ifvarclass => not(isvariable("repo[$(index)][file]"));
+      "file[$(index)]" string => "$(repo[$(index)][file])",
+        ifvarclass => and(isvariable("repo[$(index)][file]")),
+      comment => "set specific file for each ensure entry or set as default file if not defined in json";
+      
   files:
 #    activated::
-      "$(file)"
+      "$(file[$(index)])"
         create        => "true",
         perms         => m("0644"),
-        edit_defaults => empty,
-        edit_line     => sources_list( $(CFEnotice), @(repo), $(options) ),
+        edit_line     => sources_list( $(CFEnotice), @(repo), $(options), $(index)),
         classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "Create $(file) and note that the file is managed by CFEngine";
 
@@ -100,13 +106,9 @@ bundle agent ensure_repos(file, repo, options)
 
 ######################################################################
 
-bundle edit_line sources_list(header, repo, options)
+bundle edit_line sources_list(header, repo, options, i)
 {
-  vars:
-      "i_unsorted" slist => getindices("repo");
-      "i" slist => sort("i_unsorted",int),
-	comment => "build a sorted index list of all ensured repos";
-      
+  vars:      
       "components_str[$(i)]" string => join(" ", "repo[$(i)][components]");
 
       "context[$(i)]" string => "any",
@@ -127,10 +129,9 @@ bundle edit_line sources_list(header, repo, options)
 
   insert_lines:
       "$(header)$(const.n)";
-      "# COMMENTS$(const.n)";
+      "# SOURCES$(const.n)";
       "# [$(i)] $(comment[$(i)])"
         ifvarclass => and("$(context[$(i)])");
-      "# SOURCES$(const.n)";
       "$(entries[$(i)])"
         ifvarclass => and("$(context[$(i)])");
 
