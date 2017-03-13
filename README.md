@@ -1,7 +1,7 @@
-# policyhub-repo
+# eecs_cfengine
 EECS CFEngine policyhub repo
 
-MASTER CFENGINE POLICY SET
+## PRODUCTION BRANCH - CFENGINE POLICY FULL PRODUCTION ENVIRONMENT
 
-Used for fully managed sysadmin administrated hosts.
+Used for production level policies on fully managed sysadmin administrated hosts.
 Custom policy files for EECS can be found in services/eecs.
