@@ -1,8 +1,7 @@
-# policyhub-repo
+# eecs_cfengine
 EECS CFEngine policyhub repo
 
-MINIMAL CFENGINE POLICY SET
+## MINIMAL BRANCH - CFENGINE POLICY MINIMAL PRODUCTION ENVIRONMENT
 
-Used for end user administrated hosts.
-
-NOTE: Do not push any user management to the minimal branch
+Used for production level policies on end user administrated hosts.
+Custom policy files for EECS can be found in services/eecs.
