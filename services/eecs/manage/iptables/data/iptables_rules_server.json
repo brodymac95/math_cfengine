@@ -135,23 +135,23 @@
         },
         "1201":
         {
-	    "comment": "allow incoming LTSP multiport TCP connections from WSU wired subnet only"
+	    "comment": "allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.46.0/24",
             "protocol": "tcp",
             "destination_ports": "111,6000,9100:9102,9200,9202,9210",
             "target": "ACCEPT",
-	    "context": "ltsp_wsu_only",
+	    "context": "ltsp_geeks_only",
         },
         "1202":
         {
-	    "comment": "allow incoming LTSP multiport UDP connections from WSU wired subnet only"
+	    "comment": "allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.46.0/24",
             "protocol": "udp",
             "destination_ports": "67:69,111,177,1067,1068",
             "target": "ACCEPT",
-	    "context": "ltsp_wsu_only",
+	    "context": "ltsp_geeks_only",
         },
         "1999":
         {
