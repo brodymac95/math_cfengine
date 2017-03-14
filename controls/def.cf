@@ -100,6 +100,7 @@ bundle common def
                    #  "2001:700:700:3.*",
                    #  "217.77.34.18",
                    #  "217.77.34.19",
+		   "10.1.1.0/24",
         },
         comment => "Define an acl for the machines to be granted accesses",
         handle => "common_def_vars_acl",
@@ -119,7 +120,10 @@ bundle common def
       "trustkeysfrom"
         slist => {
                    # COMMENT THE NEXT LINE OUT AFTER ALL MACHINES HAVE BEEN BOOTSTRAPPED.
-                   "0.0.0.0/0", # allow any IP
+                   #"0.0.0.0/0", # allow any IP
+		   
+		   "156.26.10.0/25", # allow only CS bluenet IPs to be trusted for bootstrapping
+		   "156.26.250.0/25", # allow only CS data center IPs to be trusted for bootstrapping
         },
         comment => "Define from which machines keys can be trusted",
         ifvarclass => and(not(isvariable("override_data_trustkeysfrom")),
