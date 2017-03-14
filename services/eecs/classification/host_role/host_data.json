@@ -43,6 +43,7 @@
 	    },
 	},
 	"custom_packages": [ "ad_authentication", ],
+	"security": [ "NOT_USED_ltsp_wsu_only", ],
     },
     "cs_ubuntu_testing": {
 	"machine": "server",

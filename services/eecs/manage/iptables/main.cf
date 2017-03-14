@@ -35,10 +35,10 @@ bundle agent config_iptables
 {
   vars:
     server::
-      "iptables_rules_file" string => "$(this.promise_dirname)/iptables_rules_server.json";
+      "iptables_rules_file" string => "$(this.promise_dirname)/data/iptables_rules_server.json";
 
     workstation::
-      "iptables_rules_file" string => "$(this.promise_dirname)/iptables_rules_workstation.json";
+      "iptables_rules_file" string => "$(this.promise_dirname)/data/iptables_rules_workstation.json";
 
     any::
       "iptables_data"
@@ -295,6 +295,12 @@ bundle edit_line iptables_write_policy(p, r)
       "cmnd[d_port][$(i)]" string => " --dport $(r[$(i)][destination_port])", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][destination_port]"));
 
+      # Format destination ports strings (used with multiport)
+      "cmnd[d_ports][$(i)]" string => "", policy => "free",
+      ifvarclass => not(isvariable("r[$(i)][destination_ports]"));
+      "cmnd[d_ports][$(i)]" string => " --match multiport --dports $(r[$(i)][destination_ports])", policy => "free",
+      ifvarclass => and(isvariable("r[$(i)][destination_ports]"));
+
       # Format source port strings
       "cmnd[s_port][$(i)]" string => "", policy => "free",
       ifvarclass => not(isvariable("r[$(i)][source_port]"));
@@ -313,7 +319,7 @@ bundle edit_line iptables_write_policy(p, r)
       "cmnd[icmp_type][$(i)]" string => " --icmp-type $(r[$(i)][icmp_type])", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][icmp_type]"));
 
-      # Format additional custom options if defined in rule
+      # Format additional custom options if defined in rule (NOT USED YET)
       "cmnd[options][$(i)]" string => "", policy => "free",
       ifvarclass => not(isvariable("r[$(i)][custom_options]"));
       "cmnd[options][$(i)]" string => "$(r[$(i)][custom_options])", policy => "free",
@@ -352,7 +358,7 @@ bundle edit_line iptables_write_policy(p, r)
       ":FORWARD $(p[forward])";
       ":OUTPUT $(p[output])";
       "-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT";
-      "-A $(cmnd[chain][$(i)])$(cmnd[in_iface][$(i)])$(cmnd[s_ip][$(i)])$(cmnd[d_ip][$(i)]) -p $(cmnd[proto][$(i)]) -m $(cmnd[proto][$(i)])$(cmnd[s_port][$(i)])$(cmnd[d_port][$(i)])$(cmnd[icmp_type][$(i)]) -j $(cmnd[target][$(i)])"
+      "-A $(cmnd[chain][$(i)])$(cmnd[in_iface][$(i)])$(cmnd[s_ip][$(i)])$(cmnd[d_ip][$(i)]) -p $(cmnd[proto][$(i)]) -m $(cmnd[proto][$(i)])$(cmnd[s_port][$(i)])$(cmnd[d_ports][$(i)])$(cmnd[d_port][$(i)])$(cmnd[icmp_type][$(i)]) -j $(cmnd[target][$(i)])"
       ifvarclass => and("$(cmnd[context][$(i)])");
       "COMMIT";
 

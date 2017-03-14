@@ -133,13 +133,32 @@
             "target": "ACCEPT",
 	    "context": "roger",
         },
+        "1201":
+        {
+	    "comment": "allow incoming LTSP multiport TCP connections from WSU wired subnet only"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "protocol": "tcp",
+            "destination_ports": "111,6000,9100:9102,9200,9202,9210",
+            "target": "ACCEPT",
+	    "context": "ltsp_wsu_only",
+        },
+        "1202":
+        {
+	    "comment": "allow incoming LTSP multiport UDP connections from WSU wired subnet only"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "protocol": "udp",
+            "destination_ports": "67:69,111,177,1067,1068",
+            "target": "ACCEPT",
+	    "context": "ltsp_wsu_only",
+        },
         "1999":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"
             "chain": "INPUT",
             "target": "REJECT",
         },
-
 	"2000":
         {
 	    "comment": "allow SMTP email sending to WSU hosts only"
