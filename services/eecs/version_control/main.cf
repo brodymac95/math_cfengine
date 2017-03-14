@@ -13,7 +13,7 @@ bundle agent vcs_update
 # @description: periodically pulls newest version of policy files from github user benroose
 {
   vars:
-      "branch" string => "master";
+      "branch" string => "production";
       
   commands:
     policy_server::
