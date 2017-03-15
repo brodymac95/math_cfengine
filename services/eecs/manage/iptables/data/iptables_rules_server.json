@@ -107,6 +107,14 @@
             "target": "ACCEPT",
 	    "context": "ltsp_wh312",
         },
+	"1093":
+        {
+	    "comment": "allow any incoming connections from Geeks ltsp clients in geology 102"
+            "chain": "INPUT"
+            "source_ip": "156.26.32.0/24,156.26.46.0/24",
+            "target": "ACCEPT",
+	    "context": "ltsp_geeks_open",
+        },
         "1101":
         {
 	    "comment": "allow incoming CFEngine connections from WSU wired subnet for policy_server only"
@@ -135,23 +143,23 @@
         },
         "1201":
         {
-	    "comment": "allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
+	    "comment": "NOT WORKING allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
             "chain": "INPUT"
             "source_ip": "156.26.46.0/24",
             "protocol": "tcp",
-            "destination_ports": "111,6000,9100:9102,9200,9202,9210",
+            "destination_ports": "67:69,111,177,1067:1068,2000,2049,6000,9100:9102,9200:9202,9210",
             "target": "ACCEPT",
-	    "context": "ltsp_geeks_only",
+	    "context": "NOT_WORKING_ltsp_ports_only_geeks",
         },
         "1202":
         {
-	    "comment": "allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
+	    "comment": "NOT WORKING allow incoming LTSP multiport TCP connections from GEEKS wired subnet 46 only"
             "chain": "INPUT"
             "source_ip": "156.26.46.0/24",
             "protocol": "udp",
-            "destination_ports": "67:69,111,177,1067,1068",
+            "destination_ports": "67:69,111,177,1067:1068,2000,2049",
             "target": "ACCEPT",
-	    "context": "ltsp_geeks_only",
+	    "context": "NOT_WORKING_ltsp_ports_only_geeks",
         },
         "1999":
         {

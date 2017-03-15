@@ -132,7 +132,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
-	"security": [ "ssh_public", "ltsp_private", ],
+	"security": [ "ssh_public", "ltsp_private", "ltsp_geeks_open", ],
 	"custom_packages": [ "ad_authentication", ],
     },
     "riker": {
