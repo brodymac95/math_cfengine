@@ -274,7 +274,7 @@ bundle agent install_handin(user, group, home)
         create => "true",
 	copy_from => local_dcp( "$(handin_vars.conf[_unrolled_dir_bin])" ),
 	perms => mog("755","$(user)","$(group)"),
-	depth_search => recurse("inf"),
+	depth_search => recurse_with_base("inf"),
 	comment => "cp files and set permissions for handin";
 
       "$(handin_executable)"
