@@ -45,17 +45,20 @@ bundle agent config_login_defs
 {
   vars:
       # files to edit
-      "files[logindefs]"   string => "/etc/login.defs";
+      "files[login_defs]"   string => "/etc/login.defs";
+      "files[common_session]"   string => "/etc/pam.d/common-session";
 
       # login.defs configuration to set
       "login_defs[UMASK]"    string => "0027",
-      policy => "free",
-      ifvarclass => not( isvariable("user_settings.custom_umask") );
+	policy => "free",
+        ifvarclass => not( isvariable("user_settings.custom_umask") );
 
       "login_defs[UMASK]" string => "$(user_settings.custom_umask)",
-      policy => "free",
-      ifvarclass => and( isvariable("user_settings.custom_umask") ),
-      comment => "set the default umask setting to 027 unless custom_umask in user_settings bundle is set";
+	policy => "free",
+	ifvarclass => and( isvariable("user_settings.custom_umask") ),
+	comment => "set the default umask setting to 027 unless custom_umask in user_settings bundle is set";
+
+      "pam_umask_enable" string => "session optional        pam_umask.so";
 
   methods:
       "edit login.defs"    usebundle => edit_login_defs;
@@ -65,7 +68,8 @@ bundle agent config_login_defs
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config_login_defs)::
-      "$(this.bundle): default umask value: $(login_defs[UMASK])";
+      "=== $(this.bundle) ===";
+      "default umask value: $(login_defs[UMASK])";
 
 }
 
@@ -74,9 +78,14 @@ bundle agent config_login_defs
 bundle agent edit_login_defs
 {
   files:
-      "$(config_login_defs.files[logindefs])"
-      handle => "edit_logindefs",
-      comment => "Set desired login.defs parameters",
-      edit_line => set_line_based("config_login_defs.login_defs", " ", "\s+", ".*", "\s*#\s*");
+      "$(config_login_defs.files[login_defs])"
+      handle => "edit_login_defs",
+      edit_line => set_line_based("config_login_defs.login_defs", " ", "\s+", ".*", "\s*#\s*"),
+      comment => "Set desired login.defs parameters";
       #classes => results("bundle", "login_defs");
+
+      "$(config_login_defs.files[common_session])"
+      handle => "edit_pam_common_session",
+      edit_line => append_if_no_line("$(config_login_defs.pam_umask_enable)"),
+      comment => "Set pam to allow for /etc/login.defs to be activated";
 }
