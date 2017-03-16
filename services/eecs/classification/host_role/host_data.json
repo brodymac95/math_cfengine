@@ -79,7 +79,7 @@
     
     
     "SERVERS": {},
-    "policyhub_full": {
+    "policyhub_prod": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "policysrv",
@@ -94,12 +94,7 @@
 	"purpose": "teaching",
         "role": "cuda_ide",
         "owner": "eecs",
-	"authentication": "local_users_own_group",
-	"users": {
-	    "roose": "Ben Roose",
-	    "r588k227": "Abu Adasazzaman",
-	    "f834g328": "Farshad Mashhadi",
-	},
+	"authentication": "local_users_custom_groups",
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
 	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
     },

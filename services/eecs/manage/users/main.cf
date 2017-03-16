@@ -54,23 +54,6 @@ bundle common user_settings
 
     local_users_custom_groups::
       "custom_umask" string => "007";
-
-      "host_data" data => readjson("$(this.promise_dirname)/data/host_custom_groups.json",1M),
-        comment => "pull in external json file containing users in custom groups defined by hostname";
-      
-      "hosts" slist => getindices( group_data );
-
-      "group_data"
-        data => mergedata( "host_data[$(canonified_host)]" ),
-        ifvarclass => isvariable("host_data[$(canonified_host)]"),
-        comment => "create data subset of groups from host_custom_groups.json file";
-
-      "group_json_str" string => format("%S", "group_data"),
-        ifvarclass => isvariable("host_data[$(canonified_host)]");
-
-      "group_list"
-        slist => getindices("group_data"),
-            ifvarclass => isvariable("host_data[$(canonified_host)]");
 }
 
 ########################################################
@@ -290,12 +273,28 @@ bundle agent manage_local_users_custom_groups(settings)
 # SSSD/AD authentication can be used if user is a myWSU ID
 {
   vars:
-      "group_unsorted" slist => getindices( "$(settings).group_data" );
+
+      "canonified_host" string => canonify("$(sys.host)");
+
+      "host_data" data => readjson("$(this.promise_dirname)/data/host_custom_groups.json",1M),
+        comment => "pull in external json file containing users in custom groups defined by hostname";
+      
+      "hosts" slist => getindices( group_data );
+
+      "group_data"
+        data => mergedata( "host_data[$(canonified_host)]" ),
+        ifvarclass => isvariable("host_data[$(canonified_host)]"),
+        comment => "create data subset of groups from host_custom_groups.json file";
+
+      "group_json_str" string => format("%S", "group_data"),
+        ifvarclass => isvariable("host_data[$(canonified_host)]");
+
+      "group_unsorted" slist => getindices( "group_data" );
       "group" slist => sort("group_unsorted",lex);
 
-      "userdata_$(group)" data => mergedata("$(settings).group_data[$(group)]");
+      "userdata_$(group)" data => mergedata("group_data[$(group)]");
       "user[$(group)]" slist => getindices( "userdata_$(group)" );
-      "grader_user" slist => getindices("$(settings).group_data[grader]");
+      "grader_user" slist => getindices("group_data[grader]");
 
       "group_parent_dir" string => "/srv/";
       "group_dir[$(group)]" string => concat ("$(group_parent_dir)", "$(group)");
@@ -357,7 +356,7 @@ bundle agent manage_local_users_custom_groups(settings)
       "Grader user: $(grader_user)";
       
 #      "Username: $(classify_host.wsu_users[$(group)][$(user)])";
-      "Contents of 'groups' data container: $($(settings).group_json_str)";
+      "Contents of 'groups' data container: $(group_json_str)";
 
     # user_exists_kept::
     #   "user_exists_kept";

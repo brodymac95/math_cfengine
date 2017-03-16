@@ -1,4 +1,20 @@
 {
+    "cstesting": {
+	"group1" : {
+	    "d693f574": "Ben Roose"
+	},
+	"group2" : {
+	    "a123b456": "tester A",
+	    "c456d123": "tester B"
+	},
+	"group3" : {
+	    "j555g555": "tester C",
+	    "j666g666": "tester D"
+	},
+	"grader" : {
+	    "cs697am": "cs697am grader",
+	},
+    },
     "cudasrv": {
 	"group1" : {
 	    "z682s966": "Jennifer Duong",
@@ -65,7 +81,8 @@
 	},
 	"group11" : {
 	    "r588k227": "Abu Asaduzzaman",
-	    "f343n742": "Kishore Chidella"
+	    "f343n742": "Kishore Chidella",
+	    "f834g328": "Farshad Mashhadi"
 	},
 	"grader" : {
 	    "cs697am": "cs697am grader",
