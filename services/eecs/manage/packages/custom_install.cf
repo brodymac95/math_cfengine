@@ -88,7 +88,7 @@ bundle agent install_linux_show_player
       "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
 
     (DEBUG|DEBUG_install_linux_show_player)::
-      "===$(this.bundle)==="
+      "===$(this.bundle)===";
 
     (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
       ".deb installer files downloaded";
@@ -155,7 +155,7 @@ bundle agent install_etc_offline_editor
       "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
 
     (DEBUG|DEBUG_install_etc_offline_editor)::
-      "===$(this.bundle)==="
+      "===$(this.bundle)===";
     (DEBUG|DEBUG_install_etc_offline_editor).dependent_package_installed_kept::
       "$(dependent_package) has been installed";
     (DEBUG|DEBUG_install_etc_offline_editor).etc_offline_script_installed::
@@ -214,7 +214,7 @@ bundle agent install_python_graphics
       "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
 
     (DEBUG|DEBUG_install_python_graphics)::
-      "===$(this.bundle)==="
+      "===$(this.bundle)===";
     (DEBUG|DEBUG_install_python_graphics).dependent_package_installed_kept::
       "$(dependent_package) has been installed";
     (DEBUG|DEBUG_install_python_graphics).graphics_py_installed::
@@ -262,7 +262,7 @@ bundle agent install_cuda_by_example
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_install_cuda_by_example)::
-      "===$(this.bundle)==="
+      "===$(this.bundle)===";
     (DEBUG|DEBUG_install_cude_by_example).application_dir_is_present::
       "$(cuda_dir) installed.";
 }
@@ -434,7 +434,7 @@ bundle agent install_pyrosetta
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_install_pyrosetta)::
-      "===$(this.bundle)==="
+      "===$(this.bundle)===";
     (DEBUG|DEBUG_install_pyrosetta).application_dir_is_present::
       "pyrosetta already installed.";
 }
