@@ -87,18 +87,20 @@ bundle agent install_linux_show_player
     (inform_mode|verbose_mode).(!debian_stretch.!debian_9)|!64_bit::
       "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
 
-    DEBUG.python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
-      "$(this.bundle): .deb installer files downloaded";
+    (DEBUG|DEBUG_install_linux_show_player)::
+      "===$(this.bundle)==="
 
-    DEBUG.python3_rtmidi_repaired::
-      "$(this.bundle): python3_rtmidi_installed";
-      
-    DEBUG.linux_show_player_repaired::
-      "$(this.bundle): linux_show_player_installed";
-      
-    DEBUG.linux_show_player_installed::
-      "$(this.bundle): linux-show-player has already been installed";
+    (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
+      ".deb installer files downloaded";
 
+    (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_repaired::
+      "python3_rtmidi_installed";
+      
+    (DEBUG|DEBUG_install_linux_show_player).linux_show_player_repaired::
+      "linux_show_player_installed";
+      
+    (DEBUG|DEBUG_install_linux_show_player).linux_show_player_installed::
+      "linux-show-player has already been installed";
 }
 
 #############################################
@@ -151,11 +153,13 @@ bundle agent install_etc_offline_editor
       "$(this.bundle): Activated";
     (inform_mode|verbose_mode).(!debian)::
       "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
-      
-    DEBUG.dependent_package_installed_kept::
-      "$(this.bundle): $(dependent_package) has been installed";
-    DEBUG.etc_offline_script_installed::
-      "$(this.bundle): $(download_file) has been installed in $(install_dir)";
+
+    (DEBUG|DEBUG_install_etc_offline_editor)::
+      "===$(this.bundle)==="
+    (DEBUG|DEBUG_install_etc_offline_editor).dependent_package_installed_kept::
+      "$(dependent_package) has been installed";
+    (DEBUG|DEBUG_install_etc_offline_editor).etc_offline_script_installed::
+      "$(download_file) has been installed in $(install_dir)";
 }
 
 #############################################
@@ -198,7 +202,7 @@ bundle agent install_python_graphics
         classes => results("bundle", "dependent_packages_installed");
       
   files:
-    debian.!graphics_py_installed::
+    debian::
       "$(library_file)"
       	perms => mog("755","root","root"),
         comment => "make sure the graphics.py file is readable by all users";
@@ -208,11 +212,13 @@ bundle agent install_python_graphics
       "$(this.bundle): Activated";
     (inform_mode|verbose_mode).(!debian)::
       "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
-      
-    DEBUG.dependent_package_installed_kept::
-      "$(this.bundle): $(dependent_package) has been installed";
-    DEBUG.graphics_py_installed::
-      "$(this.bundle): $(download_file) has been installed in $(install_dir)";
+
+    (DEBUG|DEBUG_install_python_graphics)::
+      "===$(this.bundle)==="
+    (DEBUG|DEBUG_install_python_graphics).dependent_package_installed_kept::
+      "$(dependent_package) has been installed";
+    (DEBUG|DEBUG_install_python_graphics).graphics_py_installed::
+      "$(download_file) has been installed in $(install_dir)";
 }
 
 #############################################
@@ -256,9 +262,9 @@ bundle agent install_cuda_by_example
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_install_cuda_by_example)::
-
+      "===$(this.bundle)==="
     (DEBUG|DEBUG_install_cude_by_example).application_dir_is_present::
-      "$(this.bundle): directory already installed.";
+      "$(cuda_dir) installed.";
 }
 
 #############################################
@@ -428,9 +434,9 @@ bundle agent install_pyrosetta
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_install_pyrosetta)::
-
+      "===$(this.bundle)==="
     (DEBUG|DEBUG_install_pyrosetta).application_dir_is_present::
-      "$(this.bundle): pyrosetta already installed.";
+      "pyrosetta already installed.";
 }
 
 #############################################
