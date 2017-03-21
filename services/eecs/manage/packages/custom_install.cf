@@ -276,8 +276,9 @@ bundle agent install_handin(user, group, home)
   methods:
       "handin_vars"  usebundle => handin_vars;
 
-    !application_dir_is_present::      
-      #"install dependent packages"  usebundle => dependent_packages_installed("cuda_by_example_vars.conf");
+    debian.add_arch_repaired::      
+      "install dependent packages"  usebundle => dependent_packages_installed("handin_vars.conf");
+    debian.add_arch_repaired.!application_dir_is_present::      
       "download installation tarball"   usebundle => installation_tarball_is_present("handin_vars.conf");
 
   files:
@@ -311,9 +312,9 @@ bundle agent install_handin(user, group, home)
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_install_handin)::
-
+      "===$(this.bundle)===";
     (DEBUG|DEBUG_install_handin).application_dir_is_present::
-      "$(this.bundle): directory installed.";
+      "$(handin_bin) and $(handin_dir) directories installed.";
 }
 
 #############################################
@@ -343,8 +344,8 @@ bundle agent handin_vars(params)
 #        policy => "overridable";
       
     debian::
-      "conf[_dependent_packages]"  slist => { },
-        comment => "handin does not depend on other packages",
+      "conf[_dependent_packages]"  slist => { "libc6:i386", "libstdc++6:i386", },
+        comment => "handin depends on the 32-bit libc6 libraries",
         policy => "overridable";
 
     any::
