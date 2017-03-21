@@ -257,10 +257,21 @@ bundle agent install_handin(user, group, home)
       "handin_bin" string => "$(home)/bin/";
       "handin_dir" string => "$(home)/handin/";
       "handin_executable" string => "$(handin_bin)handin";
+
+    debian::
+      "add_arch_i386" string => "dpkg --add-architecture i386 && apt-get update",
+        comment => "handin is 32-bit so needs i386 architecture added";
       
   classes: 
       "application_dir_is_present"
-      expression => fileexists("$(handin_bin).");
+        expression => fileexists("$(handin_bin).");
+
+  commands:
+    debian.!application_dir_is_present::
+      "$(add_arch_i386)" 
+        contain => in_dir_shell("/root"),
+        classes => results("bundle", "add_arch"),
+        comment => "update dpkg with i386 architecture for handin";
 
   methods:
       "handin_vars"  usebundle => handin_vars;
@@ -273,9 +284,12 @@ bundle agent install_handin(user, group, home)
       "$(handin_bin)"
         create => "true",
 	copy_from => local_dcp( "$(handin_vars.conf[_unrolled_dir_bin])" ),
-	perms => mog("755","$(user)","$(group)"),
 	depth_search => recurse_with_base("inf"),
-	comment => "cp files and set permissions for handin";
+	comment => "cp executable file for handin";
+
+      "$(handin_bin)."
+	perms => mog("755","$(user)","$(group)"),
+	comment => "set permissions for handin";
 
       "$(handin_executable)"
 	perms => mog("4755","$(user)","$(group)"),
