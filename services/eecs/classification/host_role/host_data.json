@@ -42,7 +42,7 @@
 	        "cs697am": "cs697am grader",
 	    },
 	},
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
 	"security": [ "NOT_USED_ltsp_wsu_only", ],
     },
     "cs_ubuntu_testing": {
@@ -104,7 +104,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "kira": {
 	"machine": "server",
@@ -112,7 +112,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "kirk": {
 	"machine": "server",
@@ -120,7 +120,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private" ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "mccoy": {
 	"machine": "server",
@@ -128,7 +128,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private", "ltsp_geeks_open", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "riker": {
 	"machine": "server",
@@ -136,7 +136,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "sisko": {
 	"machine": "server",
@@ -144,7 +144,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "spock": {
 	"machine": "server",
@@ -152,7 +152,7 @@
         "role": "ltspsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "ltsp_private", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "scotty": {
 	"machine": "server",
@@ -160,7 +160,7 @@
         "role": "rdpsrv",
         "owner": "eecs",
 	"security": [ "ssh_public", "rdp_public", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "turing": {
 	"machine": "server",
