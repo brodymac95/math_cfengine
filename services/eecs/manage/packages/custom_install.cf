@@ -174,9 +174,14 @@ bundle agent install_python_graphics
       #   policy => "overridable";
       # "download_dir"  string => "/srv/cfengine/packages/",
       #   policy => "overridable";
+      "download_file" string => "graphics.py";
+
+      debian_7::
+      "install_dir" string => "/usr/local/lib/python3.2/dist-packages/",
+        policy => "overridable";
+      debian_8::
       "install_dir" string => "/usr/local/lib/python3.4/dist-packages/",
         policy => "overridable";
-      "download_file" string => "graphics.py";
 
       "library_file" string => "$(install_dir)$(download_file)";
 
