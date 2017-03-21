@@ -214,6 +214,9 @@ bundle agent manage_custom_packages
     pyrosetta::
       "install python pyrosetta" usebundle => install_pyrosetta;
 
+    python_graphics_lib::
+      "install python graphics library (for Keenan Jackson)" usebundle => install_python_graphics;
+
     cuda_by_example::
       "install cuda_by_example code and nvidia cuda toolkit" usebundle => install_cuda_by_example;
 
