@@ -183,6 +183,7 @@ bundle agent install_python_graphics
       "install_dir" string => "/usr/local/lib/python3.4/dist-packages/",
         policy => "overridable";
 
+      any::
       "library_file" string => "$(install_dir)$(download_file)";
 
     debian::
