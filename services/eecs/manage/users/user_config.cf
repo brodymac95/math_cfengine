@@ -76,16 +76,19 @@ bundle agent user_config_vars
       "conf[path_group]" string => filestat( "$(conf[home_path])", gid ),
       comment => "assume the group will be the the same as the user home directory";
 
-      "conf[path_mode]" string => "400",
+      "conf[path_mode_rw]" string => "600";
+      "conf[path_mode_r]" string => "400",
       comment => "default restrictive permissions, but CFEngine is managing the
                   file, so why encourage anyone to make local edits?";
 
       "conf[ssh_pri_key]" string => "id_rsa";
       "conf[ssh_pub_key]" string => "id_rsa.pub";
+      "conf[emacs_config]" string => ".emacs";
       "conf[emacs_template]" string => "emacs.mustache";
       "conf[emacs_path]" string => "/home/$(conf[username])/.emacs";
       "conf[ssh_dir]" string => ".ssh/";
       "conf[config_dir]" string => ".config/";
+      "conf[bin_dir]" string => "bin/";
       "conf[bash_profile]" string => ".bash_profile";
 
       
@@ -108,20 +111,24 @@ bundle agent user_config_vars
 	expression => fileexists( "$(conf[cache])/$(conf[ssh_pub_key])" ),
 	scope => "namespace";
 
-      "$(conf[username])_has_emacs_config"
-	expression => fileexists( "$(conf[cache])/$(conf[emacs_config])" ),
-	scope => "namespace";
-
       "$(conf[username])_has_ssh_dir"
 	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
+	scope => "namespace";
+
+      "$(conf[username])_has_emacs_config"
+	expression => fileexists( "$(conf[cache])/$(conf[emacs_config])" ),
 	scope => "namespace";
 
       "$(conf[username])_has_user_config_dir"
 	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
 	scope => "namespace";
 
-      "$(conf[username])_has_i3_config"
-      and => { fileexists( "$(conf[i3_config])" ), fileexists( "$(conf[i3_status])" ) };
+      "$(conf[username])_has_bin_dir"
+	expression => fileexists( "$(conf[cache])/$(conf[bin_dir])." ),
+	scope => "namespace";
+
+#      "$(conf[username])_has_i3_config"
+#      and => { fileexists( "$(conf[i3_config])" ), fileexists( "$(conf[i3_status])" ) };
     
       
   reports:
@@ -151,6 +158,8 @@ bundle agent config_user_files(settings)
       "username" string => "$($(settings)[username])";
       "user_ssh_dir" string => "/home/$($(settings)[username])/$($(settings)[ssh_dir])";
       "user_config_dir" string => "/home/$($(settings)[username])/$($(settings)[config_dir])";
+      "user_emacs_config" string => "/home/$($(settings)[username])/$($(settings)[emacs_config])";
+      "user_bin_dir" string => "/home/$($(settings)[username])/$($(settings)[bin_dir])";
 
   classes:
       "second_pass" expression => "any";
@@ -161,7 +170,7 @@ bundle agent config_user_files(settings)
 
     policy_server::
       "$($(settings)[cache])"
-      perms => mo("600","root"),
+      #perms => mo("600","root"),
       copy_from => perms_cp( "$($(settings)[dist])" ),
       depth_search => recurse("inf"),
       action => if_elapsed("60"),
@@ -175,7 +184,6 @@ bundle agent config_user_files(settings)
       action => if_elapsed("60"),
       comment => "if host is any other client then perform a secure remote recursive copy of entire user_config directory";
 
-      # need to run all of these after user and group have been defined!
     "$(username)_has_ssh_dir"::
       "$(user_ssh_dir)"
       copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[ssh_dir])" ),
@@ -196,12 +204,25 @@ bundle agent config_user_files(settings)
 #      perms => mog( "644","$($(settings)[path_owner])","$($(settings)[path_group])" ),
 #      comment => "set correct permissions for ssh public key files";
 
+    "$(username)_has_emacs_config.second_pass"::
+      "$(user_emacs_config)"
+      perms => mog( "$($(settings)[path_mode_r])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
+      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[emacs_config])" ),
+      comment => "locally copy user emacs config file to user's home if exists in the cache";
+     
     "$(username)_has_user_config_dir.second_pass"::
       "$(user_config_dir)"
-      perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
+      perms => mog( "$($(settings)[path_mode_rw])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
       copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
       depth_search => recurse_with_base("inf"),
       comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
+     
+    "$(username)_has_bin_dir.second_pass"::
+      "$(user_bin_dir)"
+      perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
+      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[bin_dir])" ),
+      depth_search => recurse_with_base("inf"),
+      comment => "locally recursive copy anything in the bin directory to user's home if directory exists in the cache";
      
   methods:
       
@@ -212,7 +233,7 @@ bundle agent config_user_files(settings)
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
       "username listed with configs: '$(username)'";
-      "Contents of 'user_configs' data container: '$($(settings)[json_str_username])'";
+      #"Contents of 'user_configs' data container: '$($(settings)[json_str_username])'";
       "user home path:   $($(settings)[home_path])";
       "user home UID:    $($(settings)[path_owner])";
       "user home GID:    $($(settings)[path_group])";
