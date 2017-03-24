@@ -76,6 +76,48 @@
 	},
 	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
+    "jb_223_3432_lt1": {
+	"machine": "workstation",
+	"purpose": "personal",
+        "role": "laptop",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	},
+	"user_configs": [ "roose", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", ],
+	"custom_packages": [ "linux_show_player", "etc_offline_editor", ],
+     	"security": [ "linux_show_player", ],
+    },
+   "jb_223_3432_lt2": {
+	"machine": "workstation",
+	"purpose": "personal",
+        "role": "laptop",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	},
+	"user_configs": [ "roose", ],
+       "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "git", ],
+        "custom_packages": [ "linux_show_player", "etc_offline_editor", ],
+       	"security": [ "linux_show_player", ],
+    },
+    "jb_223_3432_a": {
+	"machine": "workstation",
+	"purpose": "personal",
+        "role": "acdatech",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "roose": "Ben Roose",
+	},
+	"user_configs": [ "roose", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "git", "vlc", "vlc-plugin-access-extra", ],
+	"custom_packages": [ "linux_show_player", "etc_offline_editor", ],
+     	"security": [ "linux_show_player", ],
+    },
     
     
     "SERVERS": {},
@@ -248,35 +290,4 @@
 	"custom_packages": [ "matlab_research", "deep_learning","pip_pattern", "pip_orange", "texworks_dictionaries" ],
         "printers": [ "jb258_laserjet" ]
     },
-
-    "jb_223_3432_lt1": {
-	"machine": "workstation",
-	"purpose": "personal",
-        "role": "laptop",
-        "owner": "ben_roose",
-	"authentication": "local_users_shared_group",
-	"users": {
-	    "roose": "Ben Roose",
-	},
-	"user_configs": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", "git", ],
-	"custom_packages": [ "linux_show_player", "etc_offline_editor", ],
-     	"security": [ "linux_show_player", ],
-    },
-   "jb_223_3432_lt2": {
-	"machine": "workstation",
-	"purpose": "personal",
-        "role": "laptop",
-        "owner": "ben_roose",
-	"authentication": "local_users_shared_group",
-	"users": {
-	    "roose": "Ben Roose",
-	},
-	"user_configs": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "skype", "asunder", ],
-        "custom_packages": [ "linux_show_player", ],
-       	"security": [ "linux_show_player", ],
-    },
-
-
 }
