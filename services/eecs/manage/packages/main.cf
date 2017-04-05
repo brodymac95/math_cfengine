@@ -11,7 +11,7 @@ bundle common packages_main_file_control
     "input[install]" string => "$(this.promise_dirname)/installation.cf";
     #"input[upgrade]" string => "$(this.promise_dirname)/packages/upgrades.cf";
     "input[ad]" string => "$(this.promise_dirname)/ad.cf";
-    "input[reboot]" string => "$(this.promise_dirname)/reboot.cf";
+    #"input[reboot]" string => "$(this.promise_dirname)/reboot.cf";
     "input[ldap_removal]" string => "$(this.promise_dirname)/ldap_removal.cf";
     "input[custom_install]" string => "$(this.promise_dirname)/custom_install.cf";
     "input[deep_learning]" string => "$(this.promise_dirname)/deep_learning.cf";
@@ -32,16 +32,13 @@ bundle agent manage_packages
 {
 
   vars:
-      "reboot_time" string => "Hr02",
-      comment => "(Current: 2am) time of daily reboot if needed after unattended updates installed packages";
 
   methods:
       "manage standard repository packages" usebundle => manage_repository_packages;
 
-      "check if a reboot is required after upgrades" usebundle => reboot_required( "$(reboot_time)" );
-
       #"package_upgrade" usebundle => manage_upgrades;
 
     install_custom_packages::
-      "manage custom installer packages" usebundle => manage_custom_packages;
+      "manage custom installer packages only if custom packages are specified in host_data.json file"
+	usebundle => manage_custom_packages;
 }

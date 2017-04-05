@@ -17,6 +17,7 @@ bundle common manage_main_file_control
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
       "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
       "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
+      "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
@@ -47,8 +48,9 @@ bundle agent manage_main
 
   methods:
 
-    !NO_INSTALLS::
+    install_software.!NO_INSTALLS::
       "package_management" usebundle => manage_packages;
+
     any::
       "user_management" usebundle => manage_users;
       "configure_rc_local" usebundle => config_rc_local;
@@ -69,6 +71,10 @@ bundle agent manage_main
     install_user_configs::
       "user_config_installation" usebundle => install_user_configs;
 
+    reboot_allowed::
+      "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
+	usebundle => reboot_required;
+      
     #nickanderson_thinkpad_w520::
     #  "emacs"
     #  usebundle => emacs_config("nickanderson_emacs_config_settings");

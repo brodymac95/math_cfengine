@@ -31,9 +31,10 @@ bundle common cron_scheduler
   vars:
 
   classes:
-      # TIME PERIODS (medical abreviations used)
+      # TIME PERIODS (medical abbreviations used)
       "Q3H" or => { "Hr00", "Hr03", "Hr06", "Hr09", "Hr12", "Hr15", "Hr18", "Hr21", };
       "Q6H" or => { "Hr00", "Hr06", "Hr12", "Hr18", };
+      "Q6H_NIGHT_ONLY" or => { "Hr00", "Hr06", };
 
  
       # DEFINE JOBS
@@ -41,7 +42,7 @@ bundle common cron_scheduler
       comment => "install/update software at start of every 6 hours only";
 
       "reboot_allowed" expression => "Hr02",
-      comment => "allow for system auto reboot at 2am if required";
+      comment => "allow for system auto reboot at 2am only";
       
   reports:
     (inform_mode|verbose_mode)::
