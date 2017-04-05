@@ -1,7 +1,7 @@
 ###############################################################################
 #
 #   manage/iptables/main.cf - EECS iptables firewall configuration
-#   Maintained: Ben Roose, ver 0.3
+#   Maintained: Ben Roose, ver 0.4
 #
 ###############################################################################
 
@@ -79,7 +79,7 @@ bundle agent config_iptables
 	usebundle => iptables_check($(_cache_dir)),
         inherit => "true";
             
-    iptables_rules_change_repaired|iptables_current_change_repaired::
+    (iptables_rules_change_repaired|iptables_current_change_repaired)|IPTABLES_REFRESH::
       "if either policy file or iptables has changed, generate new filter policy and restore to iptables"
 	usebundle => iptables_generate_policy($(_cache_dir), @(chain_policies), @(filter_rules)),
         inherit => "true";
@@ -319,10 +319,10 @@ bundle edit_line iptables_write_policy(p, r)
       "cmnd[icmp_type][$(i)]" string => " --icmp-type $(r[$(i)][icmp_type])", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][icmp_type]"));
 
-      # Format additional custom options if defined in rule (NOT USED YET)
+      # Format additional custom options at beginning of input line if defined in rule
       "cmnd[options][$(i)]" string => "", policy => "free",
       ifvarclass => not(isvariable("r[$(i)][custom_options]"));
-      "cmnd[options][$(i)]" string => "$(r[$(i)][custom_options])", policy => "free",
+      "cmnd[options][$(i)]" string => "$(r[$(i)][custom_options]) ", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][custom_options]"));
 
       # Add default chain = INPUT if not defined
@@ -337,6 +337,13 @@ bundle edit_line iptables_write_policy(p, r)
       "cmnd[target][$(i)]" string => "$(r[$(i)][target])", policy => "free",
       ifvarclass => and(isvariable("r[$(i)][target]"));
 
+      # NOT USED (NEED NEW NAT TABLE POLICY) Format redirecting to port at end of input line if defined in rule
+      "cmnd[to_port][$(i)]" string => "", policy => "free",
+      ifvarclass => not(isvariable("r[$(i)][redirect_to_port]"));
+      "cmnd[to_port][$(i)]" string => " --to-port $(r[$(i)][redirect_to_port])", policy => "free",
+      ifvarclass => and(isvariable("r[$(i)][redirect_to_port]"));
+
+      
       # Add default context/class = any (always true) if not defined
       # USE: context will implement iptables rule only if specified class(s) is defined in CFEngine
       "cmnd[context][$(i)]" string => "any", policy => "free",
@@ -358,7 +365,7 @@ bundle edit_line iptables_write_policy(p, r)
       ":FORWARD $(p[forward])";
       ":OUTPUT $(p[output])";
       "-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT";
-      "-A $(cmnd[chain][$(i)])$(cmnd[in_iface][$(i)])$(cmnd[s_ip][$(i)])$(cmnd[d_ip][$(i)]) -p $(cmnd[proto][$(i)]) -m $(cmnd[proto][$(i)])$(cmnd[s_port][$(i)])$(cmnd[d_ports][$(i)])$(cmnd[d_port][$(i)])$(cmnd[icmp_type][$(i)]) -j $(cmnd[target][$(i)])"
+      "$(cmnd[options][$(i)])-A $(cmnd[chain][$(i)])$(cmnd[in_iface][$(i)])$(cmnd[s_ip][$(i)])$(cmnd[d_ip][$(i)]) -p $(cmnd[proto][$(i)]) -m $(cmnd[proto][$(i)])$(cmnd[s_port][$(i)])$(cmnd[d_ports][$(i)])$(cmnd[d_port][$(i)])$(cmnd[icmp_type][$(i)]) -j $(cmnd[target][$(i)])$(cmnd[to_port][$(i)])"
       ifvarclass => and("$(cmnd[context][$(i)])");
       "COMMIT";
 
@@ -368,7 +375,7 @@ bundle edit_line iptables_write_policy(p, r)
   reports:      
     (DEBUG|DEBUG_iptables)::
       "=== $(this.bundle) ===";
-      "Comment for filter rule $(i) = $(comment[$(i)])"
+      "Filter rule $(i) = $(comment[$(i)])"
         ifvarclass => and("$(cmnd[context][$(i)])");
 
       #"$(this.bundle): $(i) icmp_type = $(r[$(i)][icmp_type])";

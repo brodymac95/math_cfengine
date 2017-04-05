@@ -38,7 +38,7 @@ bundle agent config_<service>
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config)::
-
+      "=== $(this.bundle) ===";
 }
 
 ######################################################################
