@@ -28,11 +28,11 @@ bundle agent config_apt_sources
 # @description: takes in repository info from external json file and adds or removes repository within /etc/apt/sources
 {
   vars:
-      "default_sources_file" string => "/tmp/sources.list";
+      "default_sources_file" string => "/etc/apt/sources.list";
       
       "options" string => "";
 
-    debian::
+    debian.!ubuntu::
       "repositories_file" string => "$(this.promise_dirname)/data/repos_debian.json";
 
     ubuntu::
@@ -47,7 +47,7 @@ bundle agent config_apt_sources
      "json_str_ensure" string => format("%S", repos_ensure);
       
   methods:
-    debian::
+    debian.!ubuntu_14::
         "ensure all required repos are inserted into sources.list as specified in repos.json"
         	usebundle => ensure_repos( $(default_sources_file), @(repos_ensure), $(options) ),
           inherit => "true";
@@ -59,7 +59,7 @@ bundle agent config_apt_sources
 
     (DEBUG|DEBUG_testing)::
       "=== $(this.bundle) ===";
-       "Contents of 'json_input' data container: '$(json_str)'";  
+      # "Contents of 'json_input' data container: '$(json_str)'";  
       # "Contents of 'json_input_ensure' data container: '$(json_str_ensure)'";  
 }
 
@@ -117,11 +117,13 @@ bundle agent ensure_repos(file, repo, options)
       "$(file)"
         create        => "true",
         perms         => m("0644"),
-	edit_defaults => empty,
+	edit_defaults => backup_and_empty,
 	edit_line     => sources_list( $(CFEnotice), @(repo), $(options), @(index)),
         classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "Create $(default_file) and note that the file is managed by CFEngine";
 
+
+      
   reports:
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -134,6 +136,7 @@ bundle agent ensure_repos(file, repo, options)
 ######################################################################
 
 bundle edit_line sources_list(header, repo, options, i)
+# @description: inserts entry lines from repo into the file
 {
   vars:      
       "components_str[$(i)]" string => join(" ", "repo[$(i)][components]");
@@ -144,12 +147,14 @@ bundle edit_line sources_list(header, repo, options, i)
         ifvarclass => and(isvariable("repo[$(i)][context]")),
       comment => "set context class for each ensure entry or set as any if not defined";
 
-      "comment[$(i)]" string => "No comment supplied in json file",
+      "comment[$(i)]" string => "$(repro[$(i)][url])",
         ifvarclass => not(isvariable("repo[$(i)][comment]"));
       "comment[$(i)]" string => "$(repo[$(i)][comment])",
-        ifvarclass => and(isvariable("repo[$(i)][comment]"));
+        ifvarclass => and(isvariable("repo[$(i)][comment]")),
+      comment => "set comment for each ensure entry or set as [url] for reporting and logging";
       
-      "entries[$(i)]" slist => maplist( "$(this) $(options) $(repo[$(i)][url]) $(repo[$(i)][distribution]) $(components_str[$(i)])", "repo[$(i)][types]" );
+      "entries[$(i)]" slist => maplist( "$(this) $(options) $(repo[$(i)][url]) $(repo[$(i)][distribution]) $(components_str[$(i)])", "repo[$(i)][types]" ),
+      comment => "use maplist to set up each repo entry defined by index [i] and expand the list using [types]";
 
   # delete_lines:
   #     ".*";
@@ -157,10 +162,8 @@ bundle edit_line sources_list(header, repo, options, i)
   insert_lines:
       "$(header)$(const.n)";
       "# REPOSITORY SOURCES$(const.n)";
-      "# [$(i)] $(comment[$(i)])$(const.n)$(entries[$(i)])"
-        ifvarclass => and("$(context[$(i)])");
-      # "$(entries[$(i)])"
-      #   ifvarclass => and("$(context[$(i)])");
+       "# $(context[$(i)])$(const.n)$(entries[$(i)])"
+         ifvarclass => and("$(context[$(i)])");
 
   reports:
     (DEBUG|DEBUG_apt_sources)::
@@ -168,6 +171,15 @@ bundle edit_line sources_list(header, repo, options, i)
       "Comment for ensured repository $(i) = $(comment[$(i)])"
               ifvarclass => and("$(context[$(i)])");
 }
+
+######################################################################
+
+body edit_defaults backup_and_empty
+{
+        empty_file_before_editing => "true";
+        edit_backup => "true";
+}
+
 
 ######################################################################
 
