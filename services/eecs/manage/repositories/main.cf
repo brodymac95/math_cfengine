@@ -89,7 +89,7 @@ bundle agent ensure_repos(file, repo, options)
         create        => "true",
         perms         => m("0644"),
 	edit_defaults => backup_and_empty,
-	edit_line     => sources_list( $(CFEnotice), @(repo), $(options), @(index)),
+	edit_line     => repo_sources_list( $(CFEnotice), @(repo), $(options), @(index)),
         classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "edit $(file) adding repo entries and note that the file is managed by CFEngine";
       
@@ -99,12 +99,12 @@ bundle agent ensure_repos(file, repo, options)
 
     (DEBUG|DEBUG_testing)::
       "=== $(this.bundle) ===";
-      "sources file: $(file)";
+      "repository sources file: $(file)";
 }
 
 ######################################################################
 
-bundle edit_line sources_list(header, repo, options, i)
+bundle edit_line repo_sources_list(header, repo, options, i)
 # @description: inserts entry lines from repo into the file
 {
   vars:      
@@ -156,21 +156,21 @@ bundle agent wipe(runenv, metadata, wipe, given_file)
 # @description: removing entries in /etc/apt/sources.list or /etc/apt/sources.list.d/*.list
 {
   classes:
-      "$(vars)" expression => "default:runenv_$(runenv)_$(vars)";
-      "not_$(vars)" expression => "!default:runenv_$(runenv)_$(vars)";
+      # "$(vars)" expression => "default:runenv_$(runenv)_$(vars)";
+      # "not_$(vars)" expression => "!default:runenv_$(runenv)_$(vars)";
 
   vars:
-      "vars" slist => { "@(default:$(runenv).env_vars)" };
-      "$(vars)" string => "$(default:$(runenv).$(vars))";
+      # "vars" slist => { "@(default:$(runenv).env_vars)" };
+      # "$(vars)" string => "$(default:$(runenv).$(vars))";
 
-      "file" string => "$(default:eu.path_prefix)$(given_file)",
-        policy => "free";
+      # "file" string => "$(default:eu.path_prefix)$(given_file)",
+      #   policy => "free";
 
       "class_prefix" string => canonify($(file)),
         policy => "free";
 
   methods:
-      "utils" usebundle => default:eu($(runenv));
+#      "utils" usebundle => default:eu($(runenv));
 
 #    verbose::
 #      "metadata" usebundle => default:report_metadata($(this.bundle), $(metadata)),
