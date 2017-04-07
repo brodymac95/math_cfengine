@@ -66,24 +66,33 @@
 	},
 	"2108": {
 	    comment: "COMMENTED OUT: ubuntu 16.04 xenial partner repository - not part of ubuntu",
-	    context: "ubuntu_16_4",
+	    context: "ubuntu-make",
 	    url: "http://archive.canonical.com/ubuntu",
 	    distribution: "xenial",
 	    components: [ "partner" ],
 	    types: [ "# deb", "# deb-src" ],
 	},
+	
+	"7101": {
+	    comment: "ubuntu 16.04 xenial umake repository for development installations",
+	    context: "ubuntu_16_4",
+	    url: "http://ppa.launchpad.net/ubuntu-desktop/ubuntu-make/ubuntu",
+	    distribution: "xenial",
+	    components: [ "main" ],
+	    types: [ "deb", "deb-src" ],
+	},
 
     	"8101": {
-	    comment: "WSU VTW10 Tom Wallis debian repository",
-	    context: "debian",
+	    comment: "NOT WORKING YET: WSU VTW10 Tom Wallis debian repository",
+	    context: "NOT_debian",
 	    url: "http://baley-ext.cs.wichita.edu/wsu",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
 	    types: [ "deb" ],
 	},
     	"9101": {
-	    comment: "cfengine debian repository on amazonaws",
-	    context: "debian",
+	    comment: "NOT USED: cfengine debian repository on amazonaws, added as file in sources.list.d",
+	    context: "NOT_debian",
 	    url: "https://cfengine-package-repos.s3.amazonaws.com/pub/apt/packages",
 	    distribution: "stable",
 	    components: [ "main", ],
