@@ -76,42 +76,10 @@ bundle agent ensure_repos(file, repo, options)
 
       "class_prefix" string => canonify($(file)),
         policy => "free";
-
-      # "files" slist => getindices("repo"),
-      # "files" slist => sort("i_unsorted",lex),
-      # 	comment => "build a sorted index list of all repo files";
-
-      # "file_repo_entries_$(files)" data => mergedata("repositories_data[$(files)]");
-
       
       "i_unsorted" slist => getindices("repo");
       "index" slist => sort("i_unsorted",int),
 	comment => "build a sorted index list of all ensured repo entries in each file";
-
-      # NEED TO ONLY SPECIFY: For each file, not for each index!
-      #  "source[file]" string => "$(default_file)",
-      #   ifvarclass => not(isvariable("repo[$(index)][file]"));
-      # "source[file]" string => "$(default_file)",
-      #   ifvarclass => not(isvariable("repo[$(index)][file]"));
-
-      # "file[$(index)]" string => "$(repo[$(index)][file])",
-      #   ifvarclass => and(isvariable("repo[$(index)][file]")),
-      # comment => "set specific file for each ensure entry or set as default file if not defined in json";
-
-      # "components_str[$(index)]" string => join(" ", "repo[$(index)][components]");
-
-      # "context[$(index)]" string => "any",
-      #   ifvarclass => not(isvariable("repo[$(index)][context]"));
-      # "context[$(index)]" string => "$(repo[$(index)][context])",
-      #   ifvarclass => and(isvariable("repo[$(index)][context]")),
-      # comment => "set context class for each ensure entry or set as any if not defined";
-
-      # "comment[$(index)]" string => "No comment supplied in json file",
-      #   ifvarclass => not(isvariable("repo[$(index)][comment]"));
-      # "comment[$(index)]" string => "$(repo[$(index)][comment])",
-      #   ifvarclass => and(isvariable("repo[$(index)][comment]"));
-      
-      # "entries[$(index)]" slist => maplist( "$(this) $(options) $(repo[$(index)][url]) $(repo[$(index)][distribution]) $(components_str[$(index)])", "repo[$(index)][types]" );
       
   files:
       "$(file)"
@@ -120,9 +88,7 @@ bundle agent ensure_repos(file, repo, options)
 	edit_defaults => backup_and_empty,
 	edit_line     => sources_list( $(CFEnotice), @(repo), $(options), @(index)),
         classes       => classes_generic("$(class_prefix)_ensure"),
-        comment       => "Create $(default_file) and note that the file is managed by CFEngine";
-
-
+        comment       => "edit $(file) adding repo entries and note that the file is managed by CFEngine";
       
   reports:
    (inform_mode|verbose_mode)::
@@ -169,7 +135,7 @@ bundle edit_line sources_list(header, repo, options, i)
     (DEBUG|DEBUG_apt_sources)::
       "=== $(this.bundle) ===";
       "Comment for ensured repository $(i) = $(comment[$(i)])"
-              ifvarclass => and("$(context[$(i)])");
+        ifvarclass => and("$(context[$(i)])");
 }
 
 ######################################################################
