@@ -75,8 +75,8 @@
 	    types: [ "deb" ],
 	},
     	"9101": {
-	    comment: "cfengine debian repository on amazonaws",
-	    context: "debian",
+	    comment: "NOT USED: cfengine debian repository on amazonaws, added as file in sources.list.d",
+	    context: "NOT_debian",
 	    url: "https://cfengine-package-repos.s3.amazonaws.com/pub/apt/packages",
 	    distribution: "stable",
 	    components: [ "main", ],
