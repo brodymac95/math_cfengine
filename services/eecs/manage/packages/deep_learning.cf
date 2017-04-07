@@ -30,8 +30,8 @@ bundle agent install_deep_learning_packages
   vars:
       "pip_package_dir" string => "/usr/local/lib/python2.7/dist-packages/";
       
-    debian|ubuntu::
-      # dependency repository packages
+    debian.!ubuntu::
+      # dependency repository packages for pure debian
       "apt_packages" slist => {
 				"build-essential",
 				"python",
@@ -44,6 +44,23 @@ bundle agent install_deep_learning_packages
 				"python-docopt",
 				"python-matplotlib",
 				"python-biopython",
+      };
+
+    ubuntu::
+      # dependency repository packages for ubuntu
+      "apt_packages" slist => {
+				"build-essential",
+				"python",
+				"python-dev",
+				"python-pip",
+				"python-numpy",
+				"python-scipy",
+				"python-nose",
+				"python-yaml",
+				"python-docopt",
+				"python-matplotlib",
+				"python-biopython",
+				"ubuntu-make",
       };
 
       # deep learning software required - reverse order for installation?
@@ -66,6 +83,15 @@ bundle agent install_deep_learning_packages
 				"Theano",
       };
 
+    ubuntu::
+      "pycharm_install_command" string => "umake ide pycharm",
+      comment => "use ubuntu-make to install the pycharm development suite";
+      
+  classes:
+    ubuntu::
+      "ubuntu_make" scope => "namespace",
+        comment => "set global class of ubuntu_make to add the ubuntu-make special repository";
+      
   files:
     ubuntu::
       "$(pip_package_dir)"
@@ -84,6 +110,14 @@ bundle agent install_deep_learning_packages
       classes => results("bundle", "pip_packages"),
       comment => "install pip package list after dependent packages are installed without dependencies";
 
+  commands:
+    ubuntu::
+      "$(pycharm_install_command)"
+        contain => in_shell,
+        classes => results("bundle", "pycharm_install"),
+        comment => "use ubuntu-make to install the pycharm development suite";
+      
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -94,6 +128,8 @@ bundle agent install_deep_learning_packages
       "Python-pip packages to install: $(pip_packages)";
     (DEBUG|DEBUG_deep_learning).dependent_packages_repaired::
       "Repository packages were installed";
+    (DEBUG|DEBUG_deep_learning).pycharm_install_repaired::
+      "pycharm package was installed";
     (DEBUG|DEBUG_deep_learning).!ubuntu::
       "Deep learning packages cannot be installed on this operating system by CFEngine";
 }
