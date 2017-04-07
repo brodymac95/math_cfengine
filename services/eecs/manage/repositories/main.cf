@@ -1,7 +1,7 @@
 ##############################################################################
 #
-#   manage/packages/repositories.cf - EECS package repository configuration
-#   Maintained: Ben Roose, ver 0.1
+#   manage/repositories/main.cf - EECS package repository configuration
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -11,20 +11,20 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-body file control
-{
-      inputs => { "$(sys.libdir)/stdlib.cf",
-		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-}
+# body file control
+# {
+#       inputs => { "$(sys.libdir)/stdlib.cf",
+# 		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+# }
 
 ######################################################################
-# Public entry point: config_apt_sources
+# Public entry point: manage_repositories
 ######################################################################
 
 # NOTES for future development of configuration:
 # 1.
 
-bundle agent config_apt_sources
+bundle agent manage_repositories
 # @description: takes in repository info from external json file and adds or removes repository within /etc/apt/sources
 {
   vars:

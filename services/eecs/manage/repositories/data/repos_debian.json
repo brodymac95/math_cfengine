@@ -67,7 +67,7 @@
 	},
 	
     	"8101": {
-	    comment: "NOT WORKING YET: WSU VTW10 Tom Wallis debian repository",
+	    comment: "NOT WORKING YET, NEED TO ADD KEY FROM BALEY: WSU VTW10 Tom Wallis debian repository",
 	    context: "NOT_debian",
 	    url: "http://baley-ext.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
