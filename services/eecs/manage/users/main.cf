@@ -376,14 +376,12 @@ bundle agent enforce_group_dirs(directory, grader, group)
 {
 
   vars:
-      "mode" string => "660";
+      "mode" string => "770";
 
   files:
       "$(directory)/."
       create => "true",
       perms => mog( $(mode), $(grader), $(group) );
-      #depth_search => recurse_with_base("inf");
-
 
   reports:
     (inform_mode|verbose_mode)::
