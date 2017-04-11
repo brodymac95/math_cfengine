@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   scheduler/main.cf - EECS scheduling (cron) configuration
-#   Maintained: Ben Roose, ver 0.1
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -38,8 +38,8 @@ bundle common cron_scheduler
 
  
       # DEFINE JOBS
-      "install_software" and => {"Q6H", "Min00_05",},
-      comment => "install/update software at start of every 6 hours only";
+      "install_software" and => { "Q6H", "Min00_05", "loadavg_low", },
+      comment => "install/update software at start of every 6 hours only if system load is low";
 
       "reboot_allowed" expression => "Hr02",
       comment => "allow for system auto reboot at 2am only";

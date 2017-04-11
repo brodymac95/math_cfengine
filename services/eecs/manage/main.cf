@@ -18,6 +18,7 @@ bundle common manage_main_file_control
       "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
       "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
       "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
+      "input[repositories]" string => "$(this.promise_dirname)/repositories/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
@@ -50,6 +51,7 @@ bundle agent manage_main
 
     install_software.!NO_INSTALLS::
       "package_management" usebundle => manage_packages;
+      "repository management" usebundle => manage_repositories;
 
     any::
       "user_management" usebundle => manage_users;

@@ -24,7 +24,17 @@
             "target": "ACCEPT",
 	    "context": "jb_257_3432_res1"
         },
-        "201":
+        "111":
+        {
+	    "comment": "specific rule to redirecting port 80 to port 8000 for jb_223_3432_lt1"
+	    "custom_options": "--table nat",
+            "chain": "PREROUTING",
+	    "destination_port": "80",
+            "target": "REDIRECT",
+	    "redirect_to_port": "8000",
+	    "context": "NOT_USED_YET_jb_223_3432_lt1"
+        },
+        "301":
         {
 	    "comment": "specific rule to open peer synchronization for linux-show-player"
             "chain": "INPUT",
@@ -32,7 +42,7 @@
             "target": "ACCEPT",
 	    "context": "linux_show_player"
         },
-        "202":
+        "302":
         {
 	    "comment": "specific rule to open peer discovery for linux-show-player"
             "chain": "INPUT",
