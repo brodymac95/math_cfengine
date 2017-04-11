@@ -51,7 +51,7 @@ bundle agent manage_main
 
     install_software.!NO_INSTALLS::
       "package_management" usebundle => manage_packages;
-      "repository management" usebundle => manage_repositories;
+      #"repository management" usebundle => manage_repositories;
 
     any::
       "user_management" usebundle => manage_users;
