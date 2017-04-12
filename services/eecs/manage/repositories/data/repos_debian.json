@@ -107,6 +107,12 @@
 	    components: [ "main" ],
 	    types: [ "deb" ],
 	},
+	"8102": {
+	    comment: "testing apt-key",
+	    context: "testing_key",
+	    keyfile: "http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0x2CC98497A1231595",
+	    keyfile_fingerprint: "A1BD 8E9D 78F7 FE5C 3E65  D8AF 8B48 AD62 4692 5553",
+	},
     	"9101": {
 	    comment: "NOT USED: cfengine debian repository on amazonaws, added as file in sources.list.d",
 	    context: "NOT_debian",
@@ -114,6 +120,7 @@
 	    distribution: "stable",
 	    components: [ "main", ],
 	    types: [ "# deb", ],
+	    keyfile_fingerprint: "399B 698E EA9E F163 B6F9  A0F6 2CC9 8497 A123 1595",
 	},
     },
     "repos_to_wipe": {
