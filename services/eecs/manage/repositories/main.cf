@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   manage/repositories/main.cf - EECS package repository configuration
-#   Maintained: Ben Roose, ver 0.2
+#   Maintained: Ben Roose, ver 0.3
 #
 ###############################################################################
 
@@ -11,11 +11,11 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-# body file control
-# {
-#       inputs => { "$(sys.libdir)/stdlib.cf",
-# 		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-# }
+body file control
+{
+	inputs => { "$(sys.libdir)/stdlib.cf",
+ 		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
 
 ######################################################################
 # Public entry point: manage_repositories
@@ -79,19 +79,46 @@ bundle agent ensure_repos(file, repo, options)
 
       "class_prefix" string => canonify($(file)),
         policy => "free";
-      
+
+      # repo from external json file variables
       "i_unsorted" slist => getindices("repo");
       "index" slist => sort("i_unsorted",int),
 	comment => "build a sorted index list of all ensured repo entries in each file";
+
+      "context[$(index)]" string => "any",
+        ifvarclass => not(isvariable("repo[$(index)][context]"));
+      "context[$(index)]" string => "$(repo[$(index)][context])",
+        ifvarclass => and(isvariable("repo[$(index)][context]")),
+      comment => "set context class for each ensure entry or set as any if not defined";
       
+      "comment[$(index)]" string => "$(repro[$(index)][url])",
+        ifvarclass => not(isvariable("repo[$(index)][comment]"));
+      "comment[$(index)]" string => "$(repo[$(index)][comment])",
+        ifvarclass => and(isvariable("repo[$(index)][comment]")),
+      comment => "set comment for each ensure entry or set as [url] for reporting and logging";
+
+      # apt-key list variables
+      "apt_key_list_cmd" string => "/usr/bin/apt-key finger | grep fingerprint | tr -d '\n'";
+      "max_fingerprint_entries" string => "10000";
+
+      "apt_key_list_tmpstring" string => execresult("$(apt_key_list_cmd)","useshell");
+      "apt_key_list" slist => string_split("$(apt_key_list_tmpstring)", "      Key fingerprint = ", "$(max_fingerprint_entries)"),
+      comment => "build list of current apt keychain fingerprints once (accessed inside ensure_apt_key bundle)";
+
   files:
       "$(file)"
         create        => "true",
         perms         => m("0644"),
 	edit_defaults => backup_and_empty,
-	edit_line     => repo_sources_list( $(CFEnotice), @(repo), $(options), @(index)),
+	edit_line     => repo_sources_list( $(CFEnotice), @(repo), $(options), @(index) ),
         classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "edit $(file) adding repo entries and note that the file is managed by CFEngine";
+
+  methods:
+      "ensure all apt keys are inserted into keychain as specified in repos.json"
+        usebundle => ensure_apt_key( @(repo), $(index) ),
+        ifvarclass => and( isvariable("repo[$(index)][keyfile_fingerprint]"), "$(context[$(index)])" ),
+	inherit => "true";
       
   reports:
    (inform_mode|verbose_mode)::
@@ -100,6 +127,8 @@ bundle agent ensure_repos(file, repo, options)
     (DEBUG|DEBUG_testing)::
       "=== $(this.bundle) ===";
       "repository sources file: $(file)";
+      "Comment for ensured repository $(index) = $(comment[$(index)])"
+        ifvarclass => and("$(context[$(index)])");
 }
 
 ######################################################################
@@ -115,15 +144,9 @@ bundle edit_line repo_sources_list(header, repo, options, i)
       "context[$(i)]" string => "$(repo[$(i)][context])",
         ifvarclass => and(isvariable("repo[$(i)][context]")),
       comment => "set context class for each ensure entry or set as any if not defined";
-
-      "comment[$(i)]" string => "$(repro[$(i)][url])",
-        ifvarclass => not(isvariable("repo[$(i)][comment]"));
-      "comment[$(i)]" string => "$(repo[$(i)][comment])",
-        ifvarclass => and(isvariable("repo[$(i)][comment]")),
-      comment => "set comment for each ensure entry or set as [url] for reporting and logging";
       
       "entries[$(i)]" slist => maplist( "$(this) $(options) $(repo[$(i)][url]) $(repo[$(i)][distribution]) $(components_str[$(i)])", "repo[$(i)][types]" ),
-      comment => "use maplist to set up each repo entry defined by index [i] and expand the list using [types]";
+        comment => "use maplist to set up each repo entry defined by index [i] and expand the list using [types]";
 
   # delete_lines:
   #     ".*";
@@ -131,14 +154,10 @@ bundle edit_line repo_sources_list(header, repo, options, i)
   insert_lines:
       "$(header)$(const.n)";
       "# REPOSITORY SOURCES$(const.n)";
-       "# $(context[$(i)])$(const.n)$(entries[$(i)])"
-         ifvarclass => and("$(context[$(i)])");
-
-  reports:
-    (DEBUG|DEBUG_apt_sources)::
-      "=== $(this.bundle) ===";
-      "Comment for ensured repository $(i) = $(comment[$(i)])"
+      "# $(context[$(i)])$(const.n)$(entries[$(i)])"
         ifvarclass => and("$(context[$(i)])");
+      
+  reports:
 }
 
 ######################################################################
@@ -147,6 +166,68 @@ body edit_defaults backup_and_empty
 {
         empty_file_before_editing => "true";
         edit_backup => "true";
+}
+
+######################################################################
+
+bundle agent ensure_apt_key(repo, i)
+# @description: inserts entry lines from repo into the file
+{
+
+  vars:
+      "download_server"  string => "$(sys.policy_hub)";
+      "download_dir"  string => "/srv/cfengine/packages/apt_keyfiles/";
+      
+      "key_file" string => "$(repo[$(i)][keyfile])";
+      "key_fingerprint" string => "$(repo[$(i)][keyfile_fingerprint])";
+      
+      "apt_key_add_cmd" string => "/usr/bin/apt-key add ";
+
+      "key_cache_dir" string => "$(sys.workdir)/state/security/apt_keyfiles/";
+
+      "key_filepath" string => "$(key_cache_dir)$(key_file)";
+
+      "key_list" slist => getindices( "$(ensure_repos.apt_key_list)" );
+
+  classes:
+      "key_not_in_list" expression => none( "$(key_fingerprint)", "ensure_repos.apt_key_list" );
+
+      "keyfile_exists" expression => fileexists( "$(key_filepath)" );
+
+  files:
+      "$(key_cache_dir)/."
+        create => "true";
+
+    key_not_in_list::
+      "$(key_filepath)"
+        copy_from => secure_cp( "$(download_dir)$(key_file)", "$(download_server)" ),
+        classes => results("bundle", "key_file"),
+        comment => "Copying key file from source server";
+    
+  commands:
+    key_not_in_list.keyfile_exists::
+      "$(apt_key_add_cmd) $(key_filepath)"
+    	contain => in_shell,
+        classes => results("bundle", "apt_key_add"),
+        comment => "use apt-key to add new repository key file";
+      
+  reports:
+   (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";      
+
+    (DEBUG|DEBUG_testing)::
+      "=== $(this.bundle) ===";
+      "current fingerprints in apt keychain: $(ensure_repos.apt_key_list)";
+      "fingerprint for $(key_file) in [$(i)]: $(key_fingerprint)";
+
+    (DEBUG|DEBUG_testing).key_file_repaired::
+      "key not found in current apt-key list. Key file copied $(key_file)";
+
+    (DEBUG|DEBUG_testing).apt_key_add_repaired::
+      "Key $(key_file) added to apt keychain";
+
+    (DEBUG|DEBUG_testing).!key_not_in_list::
+      "Key $(key_file) found in apt keychain";
 }
 
 
