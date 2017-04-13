@@ -106,6 +106,8 @@
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
 	    types: [ "deb" ],
+	    keyfile: "debian_wsu_local.txt",
+	    keyfile_fingerprint: "C454 80EB B31E 8487 DC98  09E7 3077 B433 E194 1965",
 	},
 	"8102": {
 	    comment: "testing apt-key",
@@ -120,7 +122,6 @@
 	    distribution: "stable",
 	    components: [ "main", ],
 	    types: [ "# deb", ],
-	    keyfile_fingerprint: "399B 698E EA9E F163 B6F9  A0F6 2CC9 8497 A123 1595",
 	},
     },
     "repos_to_wipe": {
