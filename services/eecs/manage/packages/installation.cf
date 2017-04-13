@@ -135,6 +135,7 @@ bundle agent manage_repository_packages
       "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_manage_packages)::
+      "=== $(this.bundle) ===";
       "Repository package to be installed: $(all_installs)";
       "Repository package to be removed: $(all_removals)";
       
@@ -148,25 +149,11 @@ bundle agent manage_custom_packages
 # @description: custom scripting for packages required by users but not in standard repositories
 {
   vars:
-#     "custom_installs" slist => {},
-#      policy => "overridable";
-
-    ## Required packages to be INSTALLED
-    install_custom_packages::
-      "custom_installs" slist => getvalues( "classify_host.custom_packages" ),
-      comment => "list of custom packages from host_data.json file. Each package must have a specific installation method listed in this bundle";
-      "packages_json_str" string => format("%S", "classify_host.custom_packages");
 
       "texworks_dictionary_source" string => "/usr/share/hunspell";
       "texworks_dictionary_target" string => "/usr/share/myspell/dicts";
 
-#    any::
-#      "all_installs"       slist => {@(custom_installs)};
-
   classes:      
-      "$(custom_installs)"
-	expression => isvariable ("custom_installs"),
-        comment => "create classes from values within custom_installs list";
 
     "autostart_scmmanager"
 	expression => "scmmanager",
@@ -234,11 +221,11 @@ bundle agent manage_custom_packages
       "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_manage_packages)::
-      "Custom packages to be installed: $(custom_installs)";
-      "Custom repository packages specifically for this host: $(packages_json_str)";
+      "=== $(this.bundle) ===";
+      "Custom packages to be installed: $(classify_host.custom_packages)";
 
     (DEBUG|DEBUG_manage_packages).test_package::
-      "$(this.bundle): test_package is listed in host_data.json file for this host and a test_package class has been created";      
+      "test_package is listed in host_data.json file for this host and a test_package class has been created";      
 }
 
 ######################################################################
@@ -265,7 +252,8 @@ bundle agent unattended_upgrades_config
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_unattended_upgrades_config)::
+    (DEBUG|DEBUG_manage_packages)::
+      "=== $(this.bundle) ===";
       "file to add for enabling unattended upgrades: $(enable_unattended_file)";
       "Lines to be added into file: $(added_lines)";
 }

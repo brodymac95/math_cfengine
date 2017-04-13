@@ -30,8 +30,8 @@ bundle agent install_deep_learning_packages
   vars:
       "pip_package_dir" string => "/usr/local/lib/python2.7/dist-packages/";
       
-    debian|ubuntu::
-      # dependency repository packages
+    debian.!ubuntu::
+      # dependency repository packages for pure debian
       "apt_packages" slist => {
 				"build-essential",
 				"python",
@@ -44,6 +44,23 @@ bundle agent install_deep_learning_packages
 				"python-docopt",
 				"python-matplotlib",
 				"python-biopython",
+      };
+
+    ubuntu::
+      # dependency repository packages for ubuntu
+      "apt_packages" slist => {
+				"build-essential",
+				"python",
+				"python-dev",
+				"python-pip",
+				"python-numpy",
+				"python-scipy",
+				"python-nose",
+				"python-yaml",
+				"python-docopt",
+				"python-matplotlib",
+				"python-biopython",
+				"ubuntu-make",
       };
 
       # deep learning software required - reverse order for installation?
@@ -66,6 +83,9 @@ bundle agent install_deep_learning_packages
 				"Theano",
       };
 
+      # once ubuntu-make is installed pycharm and android-studio should now be able to be installed by user with:
+      # $ umake ide pycharm
+
   files:
     ubuntu::
       "$(pip_package_dir)"
@@ -78,12 +98,16 @@ bundle agent install_deep_learning_packages
       "install dependency package list" usebundle => package_latest("$(apt_packages)"),
       classes => results("bundle", "dependent_packages");
 
+      # "install ubuntu-make version 17.03 or above"
+      # 	usebundle => package_specific_latest( "ubuntu-make","17.03",$(sys.arch) ),
+      #   classes => results("bundle", "umake_install");
+
   packages:
     ubuntu.dependent_packages_kept::
       "$(pip_packages)" package_method => pip("--no-cache-dir"), package_policy => "add",
       classes => results("bundle", "pip_packages"),
-      comment => "install pip package list after dependent packages are installed without dependencies";
-
+      comment => "install pip package list after dependent packages are installed without dependencies";      
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -94,6 +118,10 @@ bundle agent install_deep_learning_packages
       "Python-pip packages to install: $(pip_packages)";
     (DEBUG|DEBUG_deep_learning).dependent_packages_repaired::
       "Repository packages were installed";
+    (DEBUG|DEBUG_deep_learning).ubuntu_make_install_repaired::
+      "ubuntu-make package was installed";
+    (DEBUG|DEBUG_deep_learning).pycharm_install_repaired::
+      "pycharm package was installed";
     (DEBUG|DEBUG_deep_learning).!ubuntu::
       "Deep learning packages cannot be installed on this operating system by CFEngine";
 }

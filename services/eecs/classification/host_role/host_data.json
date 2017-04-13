@@ -54,7 +54,7 @@
 	"users": {
 	    "roose": "Ben Roose"
 	},
-	"custom_packages": [ "deep_learning", ],
+	"custom_packages": [ "deep_learning", "ubuntu_make", ],
     },
     "oldtesting": {
 	"machine": "server",
@@ -210,7 +210,7 @@
         "role": "rdpsrv",
         "owner": "kaushik_sinha",
 	"security": [ "ssh_public", "rdp_public", ],
-	"custom_packages": [ "ad_authentication", "deep_learning", ],
+	"custom_packages": [ "ad_authentication", "deep_learning",  "ubuntu_make", ],
 	"authentication": "local_users_own_group",
 	"users": {
 	    "roose": "Ben Roose",
@@ -287,7 +287,7 @@
 	    "p377z922": "Omid Keivani",
 	},
 	"extra_repository_packages": [ "r-base", "python", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
-	"custom_packages": [ "matlab_research", "deep_learning","pip_pattern", "pip_orange", "texworks_dictionaries" ],
+	"custom_packages": [ "matlab_research", "deep_learning",  "ubuntu_make", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
         "printers": [ "jb258_laserjet" ]
     },
 }

@@ -52,21 +52,9 @@ bundle agent config_iptables
 
       "_cache_dir" string => "$(sys.workdir)/state/security/iptables/filter";
 
-    security_rules::
-      "security_classes" slist => getvalues( "classify_host.security_rules" ),
-      comment => "list of custom security rules from host_data.json file.";
-      "security_rules_json_str" string => format("%S", "classify_host.security_rules");
-
-  classes:      
-      "$(security_classes)"
-	expression => isvariable ("security_classes"),
-        scope => "namespace",
-        comment => "create classes from values within security classes/rules list";
-
   files:
       "$(_cache_dir)/."
       create => "true";
-      #handle => "iptables_create_cache_dir";
 
       "$(iptables_rules_file)"
       changes => detect_content_change,
@@ -92,13 +80,13 @@ bundle agent config_iptables
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_testing)::
+    (DEBUG|DEBUG_config_iptables)::
       "=== $(this.bundle) ===";
       
       # "Contents of 'json_input' data container: '$(json_str)'";  
 
-    (DEBUG|DEBUG_testing).security_rules::
-      "Security rule found $(security_classes)";
+    (DEBUG|DEBUG_config_iptables).custom_security_rules::
+      "custom security rule found $(classify_host.security_rules)";
 }
 
 bundle agent iptables_restore_on_boot(cdir)
@@ -146,11 +134,11 @@ bundle agent iptables_generate_policy(cdir, chain_policies, filter_rules)
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_testing)::
+    (DEBUG|DEBUG_config_iptables)::
       "=== $(this.bundle) ===";
       # "Contents of 'json_input' data container: '$(json_str)'";  
 
-    (DEBUG|DEBUG_testing).iptables_restore_repaired::
+    (DEBUG|DEBUG_config_iptables).iptables_restore_repaired::
        "iptables_restore repaired";
 }
 
@@ -174,14 +162,8 @@ bundle agent iptables_check(cdir)
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_testing)::
+    (DEBUG|DEBUG_config_iptables)::
       "=== $(this.bundle) ===";
-      
-    (DEBUG|DEBUG_testing).iptables_save_reached::
-       "iptables_save reached";
-
-    (DEBUG|DEBUG_testing).iptables_save_repaired::
-       "iptables_save repaired";
 }
 
 bundle agent edit_iptables_filter(cdir)
@@ -203,21 +185,9 @@ bundle agent edit_iptables_filter(cdir)
   reports:
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
-      
-    (DEBUG|DEBUG_testing)::
+ 
+    (DEBUG|DEBUG_config_iptables)::
       # "Contents of 'json_input' data container: '$(json_str)'";
-
-    (DEBUG|DEBUG_testing).comments_remove_reached::
-       "iptables_comments_remove reached";
-
-    (DEBUG|DEBUG_testing).iptables_change_reached::
-       "iptables_change_detection reached";
-
-    (DEBUG|DEBUG_testing).iptables_change_failed::
-       "iptables_change_detection failed";
-
-    (DEBUG|DEBUG_testing).iptables_change_repaired::
-       "iptables_change_detection repaired";
 }
 
 
@@ -233,7 +203,7 @@ bundle agent testing_iptables_tidy(cdir)
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_main)::
+    (DEBUG|DEBUG_config_iptables)::
       # "Contents of 'json_input' data container: '$(json_str)'";  
 }
 
@@ -373,7 +343,7 @@ bundle edit_line iptables_write_policy(p, r)
       "second_pass" expression => "any";
       
   reports:      
-    (DEBUG|DEBUG_iptables)::
+    (DEBUG|DEBUG_config_iptables)::
       "=== $(this.bundle) ===";
       "Filter rule $(i) = $(comment[$(i)])"
         ifvarclass => and("$(cmnd[context][$(i)])");
