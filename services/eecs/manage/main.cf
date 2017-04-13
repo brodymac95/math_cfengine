@@ -49,9 +49,11 @@ bundle agent manage_main
 
   methods:
 
+    (testing|research).install_software.!NO_INSTALLS::
+      "repository management" usebundle => manage_repositories;
+
     install_software.!NO_INSTALLS::
       "package_management" usebundle => manage_packages;
-      #"repository management" usebundle => manage_repositories;
 
     any::
       "user_management" usebundle => manage_users;

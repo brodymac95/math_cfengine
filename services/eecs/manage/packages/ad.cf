@@ -69,11 +69,10 @@ bundle agent join_host_to_ad
       "$(this.bundle): NOT INSTALLING SSSD/AD CLIENT, since this is a policy server";
 
     (DEBUG|DEBUG_join_host_to_ad)::
-#      "$(this.bundle): ";
+      "=== $(this.bundle) ===";
 
     (DEBUG|DEBUG_join_host_to_ad).host_joined_to_ad::
-      "$(this.bundle): $(sssd_settings.keytab_file) found on host. Not running install_ad_client bundle";
-
+      "$(sssd_settings.keytab_file) found on host. Not running install_ad_client bundle";
 }
 
 
@@ -189,17 +188,17 @@ bundle agent install_ad_client
     (inform_mode.policy_server|verbose_mode.policy_server)::
       "$(this.bundle): NOT INSTALLING AD CLIENT, since this is a policy server";
 
-    (DEBUG|DEBUG_install_ad)::
-      #"$(this.bundle): ";
+    (DEBUG|DEBUG_join_host_to_ad)::
+      "=== $(this.bundle) ===";
 
-    (DEBUG|DEBUG_install_ad).ad_packages_repaired::
-      "$(this.bundle): ad packages installed";
+    (DEBUG|DEBUG_join_host_to_ad).ad_packages_repaired::
+      "AD packages installed";
 
-    (DEBUG|DEBUG_install_ad).(sssd_config_repaired|krb5_config_repaired)::
-      "$(this.bundle): repaired sssd or krb5 config files";
+    (DEBUG|DEBUG_join_host_to_ad).(sssd_config_repaired|krb5_config_repaired)::
+      "repaired sssd or krb5 config files";
 
-    (DEBUG|DEBUG_install_ad).adcli_join_reached::
-      "$(this.bundle): adcli join command was run";
+    (DEBUG|DEBUG_join_host_to_ad).adcli_join_reached::
+      "adcli join command was run";
 
 }
 #############################################
