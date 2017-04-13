@@ -83,15 +83,9 @@ bundle agent install_deep_learning_packages
 				"Theano",
       };
 
-    ubuntu::
-      "pycharm_install_command" string => "umake ide pycharm",
-      comment => "use ubuntu-make to install the pycharm development suite";
-      
-  classes:
-    ubuntu::
-      "ubuntu_make" scope => "namespace",
-        comment => "set global class of ubuntu_make to add the ubuntu-make special repository";
-      
+      # once ubuntu-make is installed pycharm and android-studio should now be able to be installed by user with:
+      # $ umake ide pycharm
+
   files:
     ubuntu::
       "$(pip_package_dir)"
@@ -104,19 +98,15 @@ bundle agent install_deep_learning_packages
       "install dependency package list" usebundle => package_latest("$(apt_packages)"),
       classes => results("bundle", "dependent_packages");
 
+      # "install ubuntu-make version 17.03 or above"
+      # 	usebundle => package_specific_latest( "ubuntu-make","17.03",$(sys.arch) ),
+      #   classes => results("bundle", "umake_install");
+
   packages:
     ubuntu.dependent_packages_kept::
       "$(pip_packages)" package_method => pip("--no-cache-dir"), package_policy => "add",
       classes => results("bundle", "pip_packages"),
-      comment => "install pip package list after dependent packages are installed without dependencies";
-
-  commands:
-    ubuntu::
-      "$(pycharm_install_command)"
-        contain => in_shell,
-        classes => results("bundle", "pycharm_install"),
-        comment => "use ubuntu-make to install the pycharm development suite";
-      
+      comment => "install pip package list after dependent packages are installed without dependencies";      
       
   reports:
     (inform_mode|verbose_mode)::
@@ -128,6 +118,8 @@ bundle agent install_deep_learning_packages
       "Python-pip packages to install: $(pip_packages)";
     (DEBUG|DEBUG_deep_learning).dependent_packages_repaired::
       "Repository packages were installed";
+    (DEBUG|DEBUG_deep_learning).ubuntu_make_install_repaired::
+      "ubuntu-make package was installed";
     (DEBUG|DEBUG_deep_learning).pycharm_install_repaired::
       "pycharm package was installed";
     (DEBUG|DEBUG_deep_learning).!ubuntu::
