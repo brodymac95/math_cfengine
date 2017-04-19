@@ -54,19 +54,17 @@ bundle common classify_subnet_location
 	expression => iprange( $(subnets) ),
 	meta => { "derived-from=$(subnets)" };
 
-      "$(subnet_data[$(subnets)][vlan])"
+      "vlan_$(subnet_data[$(subnets)][vlan])"
 	expression => iprange( $(subnets) ),
 	meta => { "derived-from=$(subnets)" };
 
-      "$(subnet_data[$(subnets)][link_type])"
+      "link_$(subnet_data[$(subnets)][link_type])"
 	expression => iprange( $(subnets) ),
 	meta => { "derived-from=$(subnets)" };
 
       "$(subnet_data[$(subnets)][site])"
 	expression => iprange( $(subnets) ),
  	meta => { "derived-from=$(subnets)" };
-
-      "secondpass" expression => "any";
 
   reports:
     (inform_mode|verbose_mode)::
@@ -78,7 +76,9 @@ bundle common classify_subnet_location
       "Found subnet nickname: subnet_$(subnet_data[$(subnets)][subnet_nickname])"
 	ifvarclass => "subnet_$(subnet_data[$(subnets)][subnet_nickname])";
       "Found subnet building: $(building)";
-      "Found subnet vlan: $(vlan)";
-      "Found subnet link_type: $(link_type)";
+      "Found subnet vlan: $(vlan)"
+	ifvarclass => "subnet_$(subnet_data[$(subnets)][vlan])";
+      "Found subnet link_type: $(link_type)"
+	ifvarclass => "subnet_$(subnet_data[$(subnets)][link_type])";
       "Found subnet site: $(site)";
 }

@@ -3,56 +3,75 @@
 	"subnet_nickname": "cs_blue",
 	"building": "JB_2ndFloor",
 	"vlan": "804",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "156.26.10.128/25": {
 	"subnet_nickname": "cs_pink",
 	"building": "JB_2ndFloor",
 	"vlan": "802",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "156.26.11.0/24": {
 	"subnet_nickname": "cs_ext",
 	"building": "JB_2ndFloor",
 	"vlan": "unknown",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "156.26.43.0/24": {
 	"subnet_nickname": "engineering",
 	"building": "JB_2ndFloor",
 	"vlan": "43",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "156.26.250.0/26": {
 	"subnet_nickname": "dc_teaching",
 	"building": "JB_DataCenter",
 	"vlan": "970",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "156.26.250.64/26": {
 	"subnet_nickname": "dc_research",
 	"building": "JB_DataCenter",
 	"vlan": "971",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
     "192.168.250.0/24": {
 	"subnet_nickname": "dc_private",
 	"building": "JB_DataCenter",
 	"vlan": "972",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
     },
-    "192.168.1.0": {
+    "192.168.1.0/24": {
 	"subnet_nickname": "ltsp_private",
 	"building": "JB_2ndFloor",
 	"vlan": "805",
-	"link_type": "Wired",
-	"site": "Main Campus"
+	"link_type": "wired",
+	"site": "main_campus"
+    }
+    "172.18.208.0/24": {
+	"subnet_nickname": "wsu_labs",
+	"building": "EE_328",
+	"vlan": "undefined",
+	"link_type": "wired",
+	"site": "main_campus"
+    }
+    "172.27.0.0/16": {
+	"subnet_nickname": "wsu_secure",
+	"vlan": "undefined",
+	"link_type": "wireless",
+	"site": "main_campus"
+    }
+    "10.1.1.0/24": {
+	"subnet_nickname": "wsu_vpn",
+	"vlan": "undefined",
+	"link_type": "wireless",
+	"site": "off_campus"
     }
 }
