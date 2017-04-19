@@ -115,24 +115,6 @@
             "target": "ACCEPT",
 	    "context": "ltsp_geeks_open",
         },
-        "1101":
-        {
-	    "comment": "allow incoming CFEngine connections from WSU wired subnet for policy_server only"
-            "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
-            "destination_port": "5308",
-            "target": "ACCEPT",
-	    "context": "policy_server",
-        },
-        "1102":
-        {
-	    "comment": "allow incoming CFEngine connections from WSU VPN subnet for policy_server only"
-            "chain": "INPUT"
-            "source_ip": "10.1.1.0/24",
-            "destination_port": "5308",
-            "target": "ACCEPT",
-	    "context": "policy_server",
-        },
         "1111":
         {
 	    "comment": "allow any incoming connections on bluenet for roger LTSP only"
@@ -160,6 +142,42 @@
             "destination_ports": "67:69,111,177,1067:1068,2000,2049",
             "target": "ACCEPT",
 	    "context": "NOT_WORKING_ltsp_ports_only_geeks",
+        },
+        "1801":
+        {
+	    "comment": "allow incoming CFEngine connections from WSU wired subnet for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
+        "1802":
+        {
+	    "comment": "allow incoming CFEngine connections from WSU labs subnet in EE-328D for policy_server only. Can widen to 172.18.0.0/16 if needed"
+            "chain": "INPUT"
+            "source_ip": "172.18.208.0/24",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
+        "1803":
+        {
+	    "comment": "allow incoming CFEngine connections from WSU-Secure wireless subnet for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "172.27.0.0/16",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
+        "1804":
+        {
+	    "comment": "allow incoming CFEngine connections from WSU VPN subnet for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "10.1.1.0/24",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
         },
         "1999":
         {
