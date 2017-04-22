@@ -101,7 +101,7 @@
 	
     	"8101": {
 	    comment: "External network WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, !subnet_cs_blue, !subnet_cs_pink",
+	    context: "wsu_local_repo & !subnet_cs_blue & !subnet_cs_pink",
 	    url: "http://baley-ext.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
@@ -111,7 +111,7 @@
 	},
     	"8102": {
 	    comment: "bluenet WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, subnet_cs_blue",
+	    context: "wsu_local_repo & subnet_cs_blue",
 	    url: "http://baley-blue.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
@@ -121,7 +121,7 @@
 	},
     	"8103": {
 	    comment: "pinknet WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, subnet_cs_pink",
+	    context: "wsu_local_repo & subnet_cs_pink",
 	    url: "http://baley-pink.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
