@@ -24,6 +24,18 @@
             "roose": "Ben Roose",
 	   },
     },
+    "barclay": {
+	"machine": "server",
+	"purpose": "testing",
+        "role": "proxysrv",
+        "owner": "eecs",
+	"authentication": "local_users_own_group",
+	"users": {
+            "roose": "Ben Roose",
+	   },
+	"extra_repository_packages": [ "telnet", ],
+	"custom_packages": [ "ad_authentication", ],
+    },
     "cstesting": {
 	"machine": "server",
 	"purpose": "testing",
@@ -204,6 +216,7 @@
 	"security": [ "ssh_public", "rdp_public", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
+
     "turing": {
 	"machine": "server",
 	"purpose": "research",
