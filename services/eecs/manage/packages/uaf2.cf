@@ -22,25 +22,50 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
+bundle common uaf2_settings
+{
+  vars:
+
+      "password_cache"
+      string => "$(sys.workdir)/state/passwd/uaf2.secret",
+      comment => "This is where agents will cache the uaf2 database password locally (for offline enforcement).";
+
+      # "keytab_file"
+      # string => "/etc/krb5.keytab",
+      # comment => "This file is created once host has joined the AD domain.";
+
+  classes:
+      "host_joined_to_ad"
+      expression => fileexists( $(keytab_file) ),
+      comment => "Checks existence of file which is created on host upon successful joining of AD domain";
+      
+}
+
 
 bundle agent install_uaf2_client_deb
 # @description: 
 {
 
   vars:
-      "download_server"  string => "$(sys.policy_hub)",
-        policy => "overridable";
-      "download_dir"  string => "/srv/cfengine/packages/",
-        policy => "overridable";
-      "install_dir" string => "/root/",
-        policy => "overridable";
-
-      "executable_file" string => "/usr/?";
+      "download_server"  string => "$(sys.policy_hub)";
+      "download_dir"  string => "/srv/cfengine/packages/";
+      "install_dir" string => "/root/";
 
       "server_public_keys" string => "wsu-eecs-server-public-keys-1.0-20_all.deb";
-      "dependent_packages"  slist => { "wsu-whereami-eecs", "vtw10-globals" "vtw10-base", };
+      "dependent_packages" slist => { "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", };
       "uaf2_client_package" string => "vtw10-uaf2-client";
 
+      "dpkg_install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
+
+      "password_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/uaf2.secret";
+      "passwd_cache" string => "$(uaf2_settings.password_cache)";
+      "passwd_cache_dir" string => dirname("$(passwd_cache)");
+
+      "config_file" string => "/usr/local/etc/uaf2_dpass_client.conf";
+      
+
+      "executable_file" string => "/usr/local/sbin/uaf2_client.pl";
+      
   classes:
       "wsu_local_repo" expression => "any",
 	scope => "namespace",
@@ -48,116 +73,126 @@ bundle agent install_uaf2_client_deb
 
     "server_public_keys_package_exists" 
         expression => fileexists("$(install_dir)$(server_public_keys)");
+
+      "uaf2_client_installed"
+        expression => fileexists("$(executable_file)");
       
   methods:
       "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_installed");
 
-    server_public_keys_repaired::
-      "install uaf2_client_package after server public keys are installed"
-	usebundle => package_latest("uaf2_client_package");
+    server_public_keys_repaired|uaf2_client_installed::
+      "install uaf2_client_package after server public keys are installed or run an update if already installed"
+	usebundle => package_latest("$(uaf2_client_package)");
 
   files:
-    !server_public_keys_package_exists::
+    !uaf2_client_installed.!server_public_keys_package_exists::
       "$(install_dir)$(server_public_keys)"
         copy_from => secure_cp("$(download_dir)$(server_public_keys)", "$(download_server)"),
         comment => "Copying server public keys installer file from source server";
 
       
   packages:
-    dependent_packages_installed_repaired|dependent_packages_installed_kept::
-      "$(server_public_keys)"
-	package_method => dpkg_version("$(install_dir)"), package_policy => "add",
-        classes => results("bundle", "server_public_keys");
+    # !uaf2_client_installed.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
+    #   "$(server_public_keys)"
+    # 	package_method => dpkg_version("$(install_dir)"), package_policy => "add",
+    #     classes => results("bundle", "server_public_keys");
             
   commands:
+    !uaf2_client_installed.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
+      "$(dpkg_install_command) $(server_public_keys)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "server_public_keys"),
+        comment => "install wsu-server-public-keys from local .deb package";
       
       
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_config)::
+    (DEBUG|DEBUG_install_uaf2)::
       "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_install_uaf2).uaf2_client_installed::
+      "uaf2_client has been installed on this system";
 }
 
 ######################################################################
 
-bundle agent just_using_for_geting_ideas
-# @decription: manual installer for linux-show-player
-{
-  vars:
-      "download_server"  string => "$(sys.policy_hub)",
-        policy => "overridable";
-      "download_dir"  string => "/srv/cfengine/packages/",
-        policy => "overridable";
-      "install_dir" string => "/root/",
-        policy => "overridable";
+# bundle agent just_using_for_geting_ideas
+# # @decription: manual installer for linux-show-player
+# {
+#   vars:
+#       "download_server"  string => "$(sys.policy_hub)",
+#         policy => "overridable";
+#       "download_dir"  string => "/srv/cfengine/packages/",
+#         policy => "overridable";
+#       "install_dir" string => "/root/",
+#         policy => "overridable";
 
-      "executable_file" string => "/usr/bin/linux-show-player";
+#       "executable_file" string => "/usr/bin/linux-show-player";
 
-   debian::
-      "python3_rtmidi_deb" string => "python3-rtmidi_1.0.0rc1-debian1_amd64.deb";
-      "linux_show_player_deb" string => "linux-show-player_0.4.1-debian1_all.deb";
-            "dependent_packages"  slist => { "python3-all", "python3-jack-client", "python3-mido", "python3-sortedcontainers\
-", "python-pyqt5", "python3-pyqt5.qtsvg", "gstreamer1.0-plugins-ugly", "gstreamer1.0-plugins-bad", "gstreamer1.0-alsa"\
-					     , "gstreamer1.0-pulseaudio", "gstreamer1.0-fluendo-mp3", "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", },
-        comment => "list of all needed packages for linux-show-player";
-
-
-      "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
-
-  classes:
-      "python3_rtmidi_deb_is_present"
-        expression => fileexists("$(install_dir)$(python3_rtmidi_deb)");
-
-      "linux_show_player_deb_is_present"
-        expression => fileexists("$(install_dir)$(linux_show_player_deb)");
-
-      "linux_show_player_installed"
-        expression => fileexists("$(executable_file)");
+#    debian::
+#       "python3_rtmidi_deb" string => "python3-rtmidi_1.0.0rc1-debian1_amd64.deb";
+#       "linux_show_player_deb" string => "linux-show-player_0.4.1-debian1_all.deb";
+#             "dependent_packages"  slist => { "python3-all", "python3-jack-client", "python3-mido", "python3-sortedcontainers\
+# ", "python-pyqt5", "python3-pyqt5.qtsvg", "gstreamer1.0-plugins-ugly", "gstreamer1.0-plugins-bad", "gstreamer1.0-alsa"\
+# 					     , "gstreamer1.0-pulseaudio", "gstreamer1.0-fluendo-mp3", "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", },
+#         comment => "list of all needed packages for linux-show-player";
 
 
-  methods:
-    (debian_stretch|debian_9).64_bit::
-      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
-        classes => results("bundle", "dependent_packages_installed");
+#       "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
 
-  files:
-    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
-      "$(install_dir)$(python3_rtmidi_deb)"
-        copy_from => secure_cp("$(download_dir)$(python3_rtmidi_deb)", "$(download_server)"),
-        comment => "Copying installer .deb file from source server";
+#   classes:
+#       "python3_rtmidi_deb_is_present"
+#         expression => fileexists("$(install_dir)$(python3_rtmidi_deb)");
 
-    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
-      "$(install_dir)$(linux_show_player_deb)"
-        copy_from => secure_cp("$(download_dir)$(linux_show_player_deb)", "$(download_server)"),
-        comment => "Copying installer .deb file from source server";
+#       "linux_show_player_deb_is_present"
+#         expression => fileexists("$(install_dir)$(linux_show_player_deb)");
 
-  commands:
-    (debian_stretch|debian_9).64_bit.python3_rtmidi_deb_is_present.!linux_show_player_installed::
-      "$(install_command) $(python3_rtmidi_deb)"
-        contain => in_dir_shell("$(install_dir)"),
-        classes => results("bundle", "python3_rtmidi"),
-        comment => "install python3_rtmidi dependency from local .deb package";
+#       "linux_show_player_installed"
+#         expression => fileexists("$(executable_file)");
 
-      (debian_stretch|debian_9).64_bit.linux_show_player_deb_is_present.python3_rtmidi_repaired.!linux_show_player_insta\
-    lled::
-      "$(install_command) $(linux_show_player_deb)"
-        contain => in_dir_shell("$(install_dir)"),
-        classes => results("bundle", "linux_show_player"),
-        comment => "install linux-show-player from local .deb package";
 
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-    (inform_mode|verbose_mode).(!debian_stretch.!debian_9)|!64_bit::
-      "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
+#   methods:
+#     (debian_stretch|debian_9).64_bit::
+#       "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+#         classes => results("bundle", "dependent_packages_installed");
 
-    (DEBUG|DEBUG_install_linux_show_player)::
-      "=== $(this.bundle) ===";
+#   files:
+#     (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
+#       "$(install_dir)$(python3_rtmidi_deb)"
+#         copy_from => secure_cp("$(download_dir)$(python3_rtmidi_deb)", "$(download_server)"),
+#         comment => "Copying installer .deb file from source server";
 
-    (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
-      ".deb installer files downloaded";
+#     (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
+#       "$(install_dir)$(linux_show_player_deb)"
+#         copy_from => secure_cp("$(download_dir)$(linux_show_player_deb)", "$(download_server)"),
+#         comment => "Copying installer .deb file from source server";
 
-}
+#   commands:
+#     (debian_stretch|debian_9).64_bit.python3_rtmidi_deb_is_present.!linux_show_player_installed::
+#       "$(install_command) $(python3_rtmidi_deb)"
+#         contain => in_dir_shell("$(install_dir)"),
+#         classes => results("bundle", "python3_rtmidi"),
+#         comment => "install python3_rtmidi dependency from local .deb package";
+
+#       (debian_stretch|debian_9).64_bit.linux_show_player_deb_is_present.python3_rtmidi_repaired.!linux_show_player_insta\
+#     lled::
+#       "$(install_command) $(linux_show_player_deb)"
+#         contain => in_dir_shell("$(install_dir)"),
+#         classes => results("bundle", "linux_show_player"),
+#         comment => "install linux-show-player from local .deb package";
+
+#   reports:
+#     (inform_mode|verbose_mode)::
+#       "$(this.bundle): Activated";
+#     (inform_mode|verbose_mode).(!debian_stretch.!debian_9)|!64_bit::
+#       "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
+
+#     (DEBUG|DEBUG_install_linux_show_player)::
+#       "=== $(this.bundle) ===";
+
+#     (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
+#       ".deb installer files downloaded";
+
+# }
