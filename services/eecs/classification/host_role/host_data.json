@@ -34,27 +34,14 @@
             "roose": "Ben Roose",
 	   },
 	"extra_repository_packages": [ "telnet", ],
-	"custom_packages": [ "ad_authentication", ],
+	"custom_packages": [ "ad_authentication", "uaf2_client", ],
     },
     "cstesting": {
 	"machine": "server",
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
-	"authentication": "local_users_custom_groups",
-	"users": {
-	    "group1" : {
-		"d693f574": "Ben Roose"
-	    },
-	    "group2" : {
-	        "a123b456": "tester A",
-		"c456d123": "tester B"
-	    },
-	    "grader" : {
-	        "cs697am": "cs697am grader",
-	    },
-	},
-	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", "uaf2_client", ],
 	"security": [ "NOT_USED_ltsp_wsu_only", ],
     },
     "cs_ubuntu_testing": {
