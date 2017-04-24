@@ -75,6 +75,9 @@ bundle agent manage_main
     install_user_configs::
       "user_config_installation" usebundle => install_user_configs;
 
+    run_uaf2_client::
+      "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
+
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
