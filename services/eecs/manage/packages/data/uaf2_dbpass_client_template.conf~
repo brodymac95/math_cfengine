@@ -1,9 +1,0 @@
-# UAF2 Database CLIENT information
-# see documentation for more details
-#
-# This file is managed by cfengine
-#
-dbhost: $(uaf2_settings.client_dbhost)
-dbname: $(uaf2_settings.client_dbname)
-username: $(uaf2_settings.client_dbuser)
-password: $(uaf2_client_installer.client_dbpass)
