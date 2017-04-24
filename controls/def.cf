@@ -91,16 +91,23 @@ bundle common def
                    # 2. will cause a DNS lookup for every access
                    # ".*$(def.domain)",
 
-                   # Assume /16 LAN clients to start with
+                   # Assume /16 LAN clients: WSU 156.26.0.0/16 subnet
                    "$(sys.policy_hub)/16",
 
+		   # allow for WSU internal "labs" subnet (used in the EEB building)
+		   "172.18.0.0/16",
+
+		   # allow for wsu-secure wireless and vpn subnets
+		   "172.27.0.0/16",
+		    "10.1.1.0/24",
+		   
                    # Uncomment below if HA is used
                    #"@(def.policy_servers)"
 
                    #  "2001:700:700:3.*",
                    #  "217.77.34.18",
                    #  "217.77.34.19",
-		   "10.1.1.0/24",
+		  
         },
         comment => "Define an acl for the machines to be granted accesses",
         handle => "common_def_vars_acl",
@@ -124,6 +131,8 @@ bundle common def
 		   
 		   "156.26.10.0/25", # allow only CS bluenet IPs to be trusted for bootstrapping
 		   "156.26.250.0/25", # allow only CS data center IPs to be trusted for bootstrapping
+		   
+		   #"172.18.208.152/32", # TURNED OFF: allow bootstrapping barclay VM server in R&S lab, EE-328D
         },
         comment => "Define from which machines keys can be trusted",
         ifvarclass => and(not(isvariable("override_data_trustkeysfrom")),
