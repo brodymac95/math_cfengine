@@ -19,6 +19,74 @@ body file control
 # 1. Write removal bundles for each installation
 # 2. Write a bundle for removal of matlab: check if installed in installed_matlab (if installed and want removed, then delete directory /opt/matlab and /usr/local/bin/mtlab symlink to "repair state")
 
+bundle agent install_skype
+# @decription: manual installer for skype
+{
+  vars:
+      "download_server"  string => "$(sys.policy_hub)",
+        policy => "overridable";
+      "download_dir"  string => "/srv/cfengine/packages/",
+        policy => "overridable";
+      "install_dir" string => "/root/",
+        policy => "overridable";
+
+      "executable_file" string => "/usr/bin/skypeforlinux";
+
+    debian::
+      "skype_deb" string => "skypeforlinux-64.deb";
+      # "dependent_packages"  slist => { },
+      # comment => "list of all needed packages for linux-show-player";
+
+      
+      "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
+
+  classes:
+      "skype_deb_is_present"
+        expression => fileexists("$(install_dir)$(skype_deb)");
+
+      "skype_installed"
+        expression => fileexists("$(executable_file)");
+      
+
+  methods:
+    # debian::
+    #   "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+    #     classes => results("bundle", "dependent_packages_installed");
+      
+  files:
+    debian.!skype_deb_is_present.!skype_installed::
+      "$(install_dir)$(skype_deb)"
+        copy_from => secure_cp("$(download_dir)$(skype_deb)", "$(download_server)"),
+        comment => "Copying installer .deb file from source server";
+
+  commands:
+    debian.skype_deb_is_present.!skype_installed::
+      "$(install_command) $(skype_deb)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "skype"),
+        comment => "install skype from local .deb package";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+    (inform_mode|verbose_mode).!debian::
+      "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian";
+
+    (DEBUG|DEBUG_install_skype)::
+      "=== $(this.bundle) ===";
+
+    (DEBUG|DEBUG_install_skype).skype_deb_is_present::
+      ".deb installer file downloaded";
+
+    (DEBUG|DEBUG_install_skype).skype_repaired::
+      "linux_show_player_installed";
+      
+    (DEBUG|DEBUG_install_skype).skype_installed::
+      "skype has already been installed";
+}
+
+#############################################
+
 bundle agent install_linux_show_player
 # @decription: manual installer for linux-show-player
 {

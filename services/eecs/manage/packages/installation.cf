@@ -198,6 +198,9 @@ bundle agent manage_custom_packages
     etc_offline_editor::
       "install etc offline editor script" usebundle => install_etc_offline_editor;
       
+    skype::
+      "install skype" usebundle => install_skype;
+
     pyrosetta::
       "install python pyrosetta" usebundle => install_pyrosetta;
 
@@ -211,6 +214,7 @@ bundle agent manage_custom_packages
       "install all packages for deep learning (used by Dr Sinha)" usebundle => install_deep_learning_packages,
       inherit => "true";
 
+      
 #   matlab_research|matlab_classroom::
 #      "install matlab software" usebundle => install_matlab,
 #      inherit => "true",
