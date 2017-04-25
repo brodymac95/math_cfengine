@@ -35,7 +35,7 @@ bundle common cron_scheduler
       "Q3H" or => { "Hr00", "Hr03", "Hr06", "Hr09", "Hr12", "Hr15", "Hr18", "Hr21", };
       "Q6H" or => { "Hr00", "Hr06", "Hr12", "Hr18", };
       "Q6H_NIGHT_ONLY" or => { "Hr00", "Hr06", };
-      "Q15M" or => { "Q1", "Q2", "Q3", "Q4", };
+      "Q15M" or => { "Min00_05", "Min15_20", "Min30_35", "Min45_50", };
 
  
       # DEFINE JOBS

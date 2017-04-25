@@ -34,7 +34,7 @@
             "roose": "Ben Roose",
 	   },
 	"extra_repository_packages": [ "telnet", ],
-	"custom_packages": [ "ad_authentication", "uaf2_client", ],
+	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", ],
     },
     "cstesting": {
 	"machine": "server",

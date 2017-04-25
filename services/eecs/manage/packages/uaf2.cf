@@ -85,11 +85,8 @@ bundle agent install_uaf2_client
       "client_dbpass" string => readfile($(passwd_cache), 4096),
       	comment => "database password to define in uaf2_dbpass_client.conf file (downloaded from host_by_key directory)";
 
-  classes:      
-      "wsu_local_repo" expression => "any",
-	scope => "namespace",
-	comment => "set global class for adding Tom's local debian repository in the repositories bundle";
-
+  classes:
+      
     "server_public_keys_package_exists" 
         expression => fileexists("$(install_dir)$(server_public_keys)");
 
@@ -125,21 +122,21 @@ bundle agent install_uaf2_client
 
     uaf2_client_installed.have_cached_password::
       "$(uaf2_settings.files[client_config_file])"
-      perms => mog("600", "root", "root"),
+	perms => mog("600", "root", "root"),
       #action => if_elapsed("60"),
-      edit_defaults => empty,
-      edit_line => expand_template( $(client_config_template_file) ),
-      classes => results("bundle", "uaf2_client_config"),
-      comment => "Expand template file into uaf2_dbpass_client.conf file and set repaired class if copied";      
+	edit_defaults => empty,
+	edit_line => expand_template( $(client_config_template_file) ),
+	classes => results("bundle", "uaf2_client_config"),
+	comment => "Expand template file into uaf2_dbpass_client.conf file and set repaired class if copied";      
 
       "$(uaf2_settings.files[globals_config_file])"
-      edit_line => set_line_based("uaf2_settings.globals", ": ", "\s+", ".*", "\s*#\s*"),
-      classes => results("bundle", "uaf2_globals_config"),
-      comment => "Set desired uaf2_support_globals_config parameters";
+	edit_line => set_line_based("uaf2_settings.globals", ": ", "\s+", ".*", "\s*#\s*"),
+	classes => results("bundle", "uaf2_globals_config"),
+	comment => "Set desired uaf2_support_globals_config parameters";
 
       
   commands:
-    !uaf2_client_installed.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
+    !uaf2_client_installed.server_public_keys_package_exists.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
       "$(dpkg_install_command) $(server_public_keys)"
         contain => in_dir_shell("$(install_dir)"),
         classes => results("bundle", "server_public_keys"),
