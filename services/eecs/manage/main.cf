@@ -60,6 +60,7 @@ bundle agent manage_main
       "configure_rc_local" usebundle => config_rc_local;
       "configure_motd" usebundle => config_login_banner;
       "configure_login_defs" usebundle => config_login_defs;
+      "configure_hosts_file" usebundle => config_hosts_file;
       "configure_firewall" usebundle => config_iptables;
 
 #    !testing::

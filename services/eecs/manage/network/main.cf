@@ -1,7 +1,7 @@
 ##############################################################################
 #
 #   manage/network/main.cf - EECS network configuration
-#   Maintained: Ben Roose, ver 0.1
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -17,7 +17,7 @@ body file control
 }
 
 ######################################################################
-# Public entry point: bundle
+# Public entry point: config_net_interfaces and config_hosts_file
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -26,7 +26,6 @@ body file control
 bundle common net_settings
 {
   vars:
- 
       "interfaces_dist"
       string => "$(sys.workdir)/host_by_key/$(connection.key)/interfaces",
       comment => "This is where agents look for a custom network interfaces file.";
@@ -36,9 +35,11 @@ bundle common net_settings
               comment => "This is where agents will cache the interfaces file locally
                           (for offline enforcement).";
 
-      "interfaces_file" string => "/etc/network/interfaces";
-      
+      "interfaces_file" string => "/etc/network/interfaces"; 
+      "hosts_file"      string => "/etc/hosts";
+
 }
+
 
 ######################################################################
 
@@ -94,17 +95,34 @@ bundle agent config_net_interfaces
 
 ######################################################################
 
-bundle server interfaces_access
-# @description: shares the path on policy hub for interface file with access restricted to each host connection key directory
+bundle agent config_hosts_file
+# @description: adds custom hosts to hosts file 
 {
-  access:
 
-      # It's important that this path have $(connection.key) in it!
-      "$(net_settings.interfaces_dist)"
-      admit_keys =>  { $(connection.key) },
-              comment => "Grant each host to access its custom interfaces file. We        
-                  assume that each host has a unique keypair";
+  vars:
+      "custom_hosts"   string => "";
+      
+    routinglabsrv::
+      "custom_hosts"
+	slist => { "192.168.77.1 data", "192.168.77.2 obrien", "192.168.77.3 laforge", "192.168.77.5 barclay",
+		   "192.168.77.21 rack1", "192.168.77.22 rack2", "192.168.77.23 rack3", "192.168.77.24 rack4", };
+
+  files:
+
+      "$(net_settings.hosts_file)"
+        perms => m("644"),
+        create => "true",
+        perms => mog ("644", "root", "root"),
+        edit_line => append_if_no_lines("$(config_hosts_file.custom_hosts)"),
+        action => if_elapsed("60"),
+        comment => "Append a list of hosts to end of file if they don't exist";
+
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_login_banner)::
+      "=== $(this.bundle) ===";
+      "hosts added to $(net_settings.hosts_file): $(custom_hosts)";
+
 }
