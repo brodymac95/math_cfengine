@@ -261,6 +261,7 @@
 	"users": {
 	    "jewell": "Ward Jewell",
 	},
+	"extra_repository_packages": [ "firmware-ralink", ],
     },
     "jb_247_3918_lt1": {
 	"machine": "workstation",
