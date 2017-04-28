@@ -252,6 +252,16 @@
     },
     
     "WORKSTATIONS": {},
+    "jb_216_6340_lt11": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "laptop",
+        "owner": "ward_jewell",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "jewell": "Ward Jewell",
+	},
+    },
     "jb_247_3918_lt1": {
 	"machine": "workstation",
 	"purpose": "research",
