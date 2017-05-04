@@ -30,7 +30,9 @@
         "role": "routinglabsrv",
         "owner": "eecs",
 	"extra_repository_packages": [ "telnet", ],
-	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", ],
+	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", "tftp_server", ],
+	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
+
     },
     "cstesting": {
 	"machine": "server",
@@ -38,7 +40,7 @@
         "role": "testingsystem",
         "owner": "eecs",
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", "uaf2_client", ],
-	"security": [ "NOT_USED_ltsp_wsu_only", ],
+	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
     },
     "cs_ubuntu_testing": {
 	"machine": "server",

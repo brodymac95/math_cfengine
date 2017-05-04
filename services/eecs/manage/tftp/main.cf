@@ -1,0 +1,90 @@
+##############################################################################
+#
+#   manage/tftp/main.cf - EECS tftp server install and configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: config_tftp_server
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
+bundle agent config_tftp_server
+# @description: install and configure a simple tftpd-hda server
+{
+  vars:
+      "dependent_packages" slist => { "tftpd-hpa", "tftp", };
+
+      "tftpd_config" string => "/etc/default/tftpd-hpa";
+
+      "tftp[TFTP_USERNAME]" string => "tftp";
+      "tftp[TFTP_DIRECTORY]" string => "/srv/tftp";
+      "tftp[TFTP_ADDRESS]" string => "0.0.0.0:69";
+      "tftp[TFTP_OPTIONS]" string => "\"--create --secure\"";
+
+  files:
+      "$(tftp[TFTP_DIRECTORY])/."
+	perms => mog("775", "$(tftp[TFTP_USERNAME])", "$(tftp[TFTP_USERNAME])" ),
+        create => "true",
+        comment => "ensure the tftp directory has been created";
+
+      "$(tftp[TFTP_DIRECTORY])"
+	perms => mog("666", "$(tftp[TFTP_USERNAME])", "$(tftp[TFTP_USERNAME])" ),
+        depth_search => recurse( "inf" ),
+        comment => "ensure correct perms on any file within the tftp dir for tftp get/put";
+      
+  methods:
+    install_software::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_installed");
+
+    any::
+      "edit the tftpd-hda config file"  usebundle => edit_tftpd;
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+      "$(tftpd_config) configured";
+
+    (DEBUG|DEBUG_config).dependent_packages_installed_repaired::
+      "$(dependent packages) installed";
+}
+
+######################################################################
+
+bundle agent edit_tftpd
+{
+  files:
+      "$(config_tftp_server.tftpd_config)"
+      handle => "edit_tftpd",
+      comment => "Make sure default tftpd-hda file contains desired configuration settings",
+      create => "true",
+      edit_line => set_line_based("config_tftp_server.tftp", "=", "\s*=\s*", ".*", "\s*#\s*"),
+      classes => results("bundle", "tftpd");
+
+  services:
+    tftpd_repaired.!no_restarts::
+      "tftpd-hda"
+      service_policy => "restart",
+      handle => "tftpd_restart",
+      comment => "Restart tftpd-hda if the configuration file was modified";
+}
