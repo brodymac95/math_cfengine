@@ -20,6 +20,7 @@ bundle common manage_main_file_control
       "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
       "input[repositories]" string => "$(this.promise_dirname)/repositories/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
+      "input[tftp]" string => "$(this.promise_dirname)/tftp/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
 
@@ -60,6 +61,7 @@ bundle agent manage_main
       "configure_rc_local" usebundle => config_rc_local;
       "configure_motd" usebundle => config_login_banner;
       "configure_login_defs" usebundle => config_login_defs;
+      "configure_hosts_file" usebundle => config_hosts_file;
       "configure_firewall" usebundle => config_iptables;
 
 #    !testing::
@@ -69,11 +71,17 @@ bundle agent manage_main
       "configure_sshd" usebundle => sshd_config;
       "use_custom_network_interfaces" usebundle => config_net_interfaces;
 
+    tftp_server::
+      "install and configure tftp server" usebundle => config_tftp_server;
+
     install_printers::
       "printer_management" usebundle => manage_printers;
 
     install_user_configs::
       "user_config_installation" usebundle => install_user_configs;
+
+    run_uaf2_client::
+      "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"

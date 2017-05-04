@@ -22,142 +22,166 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
+bundle common uaf2_settings
+{
+  vars:
 
-bundle agent install_uaf2_client_deb
+      "files[globals_config_file]" string => "/usr/local/etc/uaf2_support_globals.conf";
+      "files[client_config_file]" string => "/usr/local/etc/uaf2_dbpass_client.conf";
+
+      "globals[UIDGID_SHAREABLE_LOWERLIMIT]" string => "1000";
+      
+      "client_dbhost"
+	string => "emcity.cs.wichita.edu",
+	comment => "database host to define in uaf2_dbpass_client.conf file";
+
+      "client_dbname"
+	string => "wsu_eecs_info",
+	comment => "database name to define in uaf2_dbpass_client.conf file";
+      
+      "client_dbuser"
+	string => "eecsrd",
+	comment => "database user to define in uaf2_dbpass_client.conf file";
+      
+      "password_cache"
+        string => "$(sys.workdir)/state/passwd/uaf2.secret",
+        comment => "This is where agents will cache the uaf2 database password locally (for offline enforcement).";
+
+       "uaf2_client_file"
+       string => "/uaf2_client_sequence.dat",
+       comment => "This file is created once host has run the uaf2_client.";
+      
+  # classes:
+  #     "host_joined_to_ad"
+  #     expression => fileexists( $(keytab_file) ),
+  #     comment => "Checks existence of file which is created on host upon successful joining of AD domain";
+      
+}
+
+bundle agent install_uaf2_client
 # @description: 
 {
 
   vars:
-      "download_server"  string => "$(sys.policy_hub)",
-        policy => "overridable";
-      "download_dir"  string => "/srv/cfengine/packages/",
-        policy => "overridable";
-      "install_dir" string => "/root/",
-        policy => "overridable";
-
-      "executable_file" string => "/usr/?";
+      "download_server"  string => "$(sys.policy_hub)";
+      "download_dir"  string => "/srv/cfengine/packages/";
+      "install_dir" string => "/root/";
 
       "server_public_keys" string => "wsu-eecs-server-public-keys-1.0-20_all.deb";
-      "dependent_packages"  slist => { "wsu-whereami-eecs", "vtw10-globals" "vtw10-base", };
+      "dependent_packages" slist => { "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", };
       "uaf2_client_package" string => "vtw10-uaf2-client";
 
-  classes:
-      "wsu_local_repo" expression => "any",
-	scope => "namespace",
-	comment => "set global class for adding Tom's local debian repository in the repositories bundle";
+      "dpkg_install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
 
+      "password_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/uaf2.secret";
+      "passwd_cache" string => "$(uaf2_settings.password_cache)";
+      "passwd_cache_dir" string => dirname("$(passwd_cache)");
+
+      "client_config_template_file" string => "$(this.promise_dirname)/data/uaf2_dbpass_client_template.conf";
+      
+      "executable_file" string => "/usr/local/sbin/uaf2_client.pl";
+
+    have_cached_password::
+      "client_dbpass" string => readfile($(passwd_cache), 4096),
+      	comment => "database password to define in uaf2_dbpass_client.conf file (downloaded from host_by_key directory)";
+
+  classes:
+      
     "server_public_keys_package_exists" 
         expression => fileexists("$(install_dir)$(server_public_keys)");
+
+      "have_cached_password"
+      expression => fileexists( $(passwd_cache) );
+
+      "uaf2_client_installed"
+        expression => fileexists( $(executable_file) );
       
   methods:
       "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_installed");
 
-    server_public_keys_repaired::
-      "install uaf2_client_package after server public keys are installed"
-	usebundle => package_latest("uaf2_client_package");
+    server_public_keys_repaired|uaf2_client_installed::
+      "install uaf2_client_package after server public keys are installed or run an update if already installed"
+	usebundle => package_latest("$(uaf2_client_package)");
 
   files:
-    !server_public_keys_package_exists::
+    uaf2_client_installed::
+      "$(passwd_cache_dir)/."
+            create => "true";
+
+      "$(passwd_cache)"
+      copy_from => secure_cp( $(password_dist), $(sys.policy_hub) ),
+      perms => mog("600", "root", "root"),
+      #action => if_elapsed("60"),
+      comment => "secure remote copy of the password file to local cache";
+
+    !uaf2_client_installed.!server_public_keys_package_exists::
       "$(install_dir)$(server_public_keys)"
         copy_from => secure_cp("$(download_dir)$(server_public_keys)", "$(download_server)"),
         comment => "Copying server public keys installer file from source server";
 
+    uaf2_client_installed.have_cached_password::
+      "$(uaf2_settings.files[client_config_file])"
+	perms => mog("600", "root", "root"),
+      #action => if_elapsed("60"),
+	edit_defaults => empty,
+	edit_line => expand_template( $(client_config_template_file) ),
+	classes => results("bundle", "uaf2_client_config"),
+	comment => "Expand template file into uaf2_dbpass_client.conf file and set repaired class if copied";      
+
+      "$(uaf2_settings.files[globals_config_file])"
+	edit_line => set_line_based("uaf2_settings.globals", ": ", "\s+", ".*", "\s*#\s*"),
+	classes => results("bundle", "uaf2_globals_config"),
+	comment => "Set desired uaf2_support_globals_config parameters";
+
       
-  packages:
-    dependent_packages_installed_repaired|dependent_packages_installed_kept::
-      "$(server_public_keys)"
-	package_method => dpkg_version("$(install_dir)"), package_policy => "add",
-        classes => results("bundle", "server_public_keys");
-            
   commands:
-      
+    !uaf2_client_installed.server_public_keys_package_exists.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
+      "$(dpkg_install_command) $(server_public_keys)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "server_public_keys"),
+        comment => "install wsu-server-public-keys from local .deb package";
       
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_config)::
+    (DEBUG|DEBUG_install_uaf2)::
       "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_install_uaf2).uaf2_client_installed::
+      "uaf2_client has been installed on this system";
+
+    (DEBUG|DEBUG_install_uaf2).uaf2_client_config_repaired::
+      "uaf2_dbpass_client.conf has been configured on this system";
+
+    (DEBUG|DEBUG_install_uaf2).uaf2_globals_config_repaired::
+      "uaf2_support_globals.conf has been configured on this system";
 }
 
 ######################################################################
 
-bundle agent just_using_for_geting_ideas
-# @decription: manual installer for linux-show-player
+bundle agent run_uaf2_client
+# @description: runs uaf2_client.pl
 {
+
   vars:
-      "download_server"  string => "$(sys.policy_hub)",
-        policy => "overridable";
-      "download_dir"  string => "/srv/cfengine/packages/",
-        policy => "overridable";
-      "install_dir" string => "/root/",
-        policy => "overridable";
+      "uaf2_client_command" string => "/usr/local/sbin/uaf2_client.pl";
 
-      "executable_file" string => "/usr/bin/linux-show-player";
-
-   debian::
-      "python3_rtmidi_deb" string => "python3-rtmidi_1.0.0rc1-debian1_amd64.deb";
-      "linux_show_player_deb" string => "linux-show-player_0.4.1-debian1_all.deb";
-            "dependent_packages"  slist => { "python3-all", "python3-jack-client", "python3-mido", "python3-sortedcontainers\
-", "python-pyqt5", "python3-pyqt5.qtsvg", "gstreamer1.0-plugins-ugly", "gstreamer1.0-plugins-bad", "gstreamer1.0-alsa"\
-					     , "gstreamer1.0-pulseaudio", "gstreamer1.0-fluendo-mp3", "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", },
-        comment => "list of all needed packages for linux-show-player";
-
-
-      "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
-
-  classes:
-      "python3_rtmidi_deb_is_present"
-        expression => fileexists("$(install_dir)$(python3_rtmidi_deb)");
-
-      "linux_show_player_deb_is_present"
-        expression => fileexists("$(install_dir)$(linux_show_player_deb)");
-
-      "linux_show_player_installed"
-        expression => fileexists("$(executable_file)");
-
-
-  methods:
-    (debian_stretch|debian_9).64_bit::
-      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
-        classes => results("bundle", "dependent_packages_installed");
-
-  files:
-    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
-      "$(install_dir)$(python3_rtmidi_deb)"
-        copy_from => secure_cp("$(download_dir)$(python3_rtmidi_deb)", "$(download_server)"),
-        comment => "Copying installer .deb file from source server";
-
-    (debian_stretch|debian_9).64_bit.!linux_show_player_installed::
-      "$(install_dir)$(linux_show_player_deb)"
-        copy_from => secure_cp("$(download_dir)$(linux_show_player_deb)", "$(download_server)"),
-        comment => "Copying installer .deb file from source server";
-
+    (testing|teaching)::
+      "uaf2_client_options" string => "-D -S -G -Z -A";
+      
   commands:
-    (debian_stretch|debian_9).64_bit.python3_rtmidi_deb_is_present.!linux_show_player_installed::
-      "$(install_command) $(python3_rtmidi_deb)"
-        contain => in_dir_shell("$(install_dir)"),
-        classes => results("bundle", "python3_rtmidi"),
-        comment => "install python3_rtmidi dependency from local .deb package";
-
-      (debian_stretch|debian_9).64_bit.linux_show_player_deb_is_present.python3_rtmidi_repaired.!linux_show_player_insta\
-    lled::
-      "$(install_command) $(linux_show_player_deb)"
-        contain => in_dir_shell("$(install_dir)"),
-        classes => results("bundle", "linux_show_player"),
-        comment => "install linux-show-player from local .deb package";
-
+      "$(uaf2_client_command) $(uaf2_client_options)"
+        contain => in_shell,
+      # classes => results("bundle", "uaf2_client"),
+        comment => "run uaf2_client to update /etc/passwd, /etc/shadow, /etc/group, /etc/gshadow";
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
-    (inform_mode|verbose_mode).(!debian_stretch.!debian_9)|!64_bit::
-      "$(this.bundle): ERROR: cannot install linux-show-player on this OS platform. Must be Debian Stretch 64bit";
 
-    (DEBUG|DEBUG_install_linux_show_player)::
+    (DEBUG|DEBUG_run_uaf2)::
       "=== $(this.bundle) ===";
-
-    (DEBUG|DEBUG_install_linux_show_player).python3_rtmidi_deb_is_present.linux_show_player_deb_is_present::
-      ".deb installer files downloaded";
-
 }
+
+######################################################################
