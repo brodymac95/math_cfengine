@@ -192,9 +192,6 @@ bundle agent manage_custom_packages
     ldap_removal::
       "remove old ldap config files and packages" usebundle => remove_ldap;
 
-    uaf2_client::
-      "install and configure tom's uaf2_client" usebundle => install_uaf2_client;
-
     linux_show_player::
       "install linux-show-player" usebundle => install_linux_show_player;
 

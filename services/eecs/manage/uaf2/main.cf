@@ -1,7 +1,7 @@
 ##############################################################################
 #
-#   manage/packages/uaf2.cf - EECS TOm Wallis' uaf2 custom package isntallation
-#   Maintained: Ben Roose, ver 0.1
+#   manage/uaf2/main.cf - EECS Tom Wallis' uaf2 custom package isntallation
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -48,7 +48,7 @@ bundle common uaf2_settings
         comment => "This is where agents will cache the uaf2 database password locally (for offline enforcement).";
 
        "uaf2_client_file"
-       string => "/uaf2_client_sequence.dat",
+       string => "uaf2_client_sequence.dat",
        comment => "This file is created once host has run the uaf2_client.";
       
   # classes:
@@ -59,7 +59,7 @@ bundle common uaf2_settings
 }
 
 bundle agent install_uaf2_client
-# @description: 
+# @description: fully install and configure the uaf2_client.pl package
 {
 
   vars:
@@ -97,10 +97,11 @@ bundle agent install_uaf2_client
         expression => fileexists( $(executable_file) );
       
   methods:
+    install_software::
       "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_installed");
 
-    server_public_keys_repaired|uaf2_client_installed::
+    install_software.(server_public_keys_repaired|uaf2_client_installed)::
       "install uaf2_client_package after server public keys are installed or run an update if already installed"
 	usebundle => package_latest("$(uaf2_client_package)");
 
@@ -112,7 +113,7 @@ bundle agent install_uaf2_client
       "$(passwd_cache)"
       copy_from => secure_cp( $(password_dist), $(sys.policy_hub) ),
       perms => mog("600", "root", "root"),
-      #action => if_elapsed("60"),
+      action => if_elapsed("60"),
       comment => "secure remote copy of the password file to local cache";
 
     !uaf2_client_installed.!server_public_keys_package_exists::
@@ -133,7 +134,6 @@ bundle agent install_uaf2_client
 	edit_line => set_line_based("uaf2_settings.globals", ": ", "\s+", ".*", "\s*#\s*"),
 	classes => results("bundle", "uaf2_globals_config"),
 	comment => "Set desired uaf2_support_globals_config parameters";
-
       
   commands:
     !uaf2_client_installed.server_public_keys_package_exists.(dependent_packages_installed_repaired|dependent_packages_installed_kept)::
