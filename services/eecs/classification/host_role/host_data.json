@@ -24,16 +24,6 @@
             "roose": "Ben Roose",
 	   },
     },
-    "barclay": {
-	"machine": "server",
-	"purpose": "testing",
-        "role": "routinglabsrv",
-        "owner": "eecs",
-	"extra_repository_packages": [ "telnet", ],
-	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", "tftp_server", ],
-	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
-
-    },
     "cstesting": {
 	"machine": "server",
 	"purpose": "testing",
@@ -136,6 +126,15 @@
 	"authentication": "local_users_custom_groups",
 	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
 	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
+    },
+    "barclay": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "rslabsrv",
+        "owner": "eecs",
+	"extra_repository_packages": [ "telnet", ],
+	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", "tftp_server", ],
+	"security": [ "tftp_rslab_internal", ],
     },
     "roger": {
 	"machine": "server",
