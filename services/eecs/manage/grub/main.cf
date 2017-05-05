@@ -57,7 +57,7 @@ bundle agent config_grub
       "$(grub_config)"
         create => "false",
         edit_line => comment_lines_matching("@(config_grub.quiet_mode_patterns)","#"),
-	classes => results("bundle", "grub_config"),
+	classes => results("bundle", "grub_config_file"),
 	comment => "ensure any quiet mode lines are commented out. This will also create a grub.cf-before-edit backup file. ALTERNATIVE IDEA: you could use set_line_based() to set GRIB_CMDLINE_LINUX_DEFAULT= to nothing";
 
     redhat::
@@ -74,13 +74,13 @@ bundle agent config_grub
       
 
   commands:
-    redhat.grub_config_repaired::
+    redhat.grub_config_file_repaired::
       "$(grub_update_cmd) > $(cached_cfg)"
         contain => in_dir_shell( "$(cache_dir)" ),
 	classes => results("bundle", "grub_update"),
         comment => "write to a temporary cache file prior to overwriting the system grub.cfg file";
 
-    debian.grub_config_repaired::
+    debian.grub_config_file_repaired::
       "$(grub_update_cmd)"
       classes => results("bundle", "grub_update");
       
