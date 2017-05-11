@@ -124,7 +124,7 @@
         "role": "cuda_ide",
         "owner": "eecs",
 	"authentication": "local_users_custom_groups",
-	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", ],
+	"extra_repository_packages": [ "nvidia-cuda-toolkit", "nvidia-driver", "nvidia-libopencl1", "nvidia-opencl-common", ],
 	"custom_packages": [ "ad_authentication", "cuda_by_example", ]
     },
     "barclay": {
