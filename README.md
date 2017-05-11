@@ -1,7 +1,8 @@
 # eecs_cfengine
 EECS CFEngine policyhub repo
 
-## MASTER BRANCH - CFENGINE POLICY DEVELOPMENT ENVIRONMENT
+## PRODUCTION BRANCH - CFENGINE POLICY PRODUCTION ENVIRONMENT
 
-Used for developing and testing  policies on fully managed sysadmin administrated hosts.
+Used for production policies on fully managed sysadmin administrated hosts.
+
 Custom policy files for EECS can be found in services/eecs.
