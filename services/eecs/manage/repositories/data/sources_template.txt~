@@ -1,4 +1,0 @@
-# sources.lst is managed by CFEngine v$(sys.cf_version)
-# Support for $(config_rc_local.support)
-
-
