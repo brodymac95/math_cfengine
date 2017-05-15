@@ -73,7 +73,7 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configs": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", "fbreader", ],
 	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", ],
      	"security": [ "linux_show_player", ],
     },
