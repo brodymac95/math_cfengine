@@ -253,7 +253,7 @@
         "owner": "eecs",
 	"authentication": "local_users_own_group",
 	"users": {
-	    "rsuser01": "rsuser01",
+	    "wireshark": "wireshark",
 	},
 	"extra_repository_packages": [ "wireshark", ],
     },
