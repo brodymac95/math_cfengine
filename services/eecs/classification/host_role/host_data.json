@@ -1,4 +1,4 @@
-{
+\{
     "hostname": {
 	"machine": "server OR workstation OR laptop OR mobile"
 	"purpose": "teaching OR research OR infrastructure",
@@ -246,7 +246,7 @@
     },
     
     "WORKSTATIONS": {},
-    "ee_328c_LAB1": {
+    "ee_328c_lab1": {
 	"machine": "workstation",
 	"purpose": "teaching",
         "role": "rslab_wireshark",
