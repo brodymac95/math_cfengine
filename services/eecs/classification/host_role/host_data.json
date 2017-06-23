@@ -246,6 +246,17 @@
     },
     
     "WORKSTATIONS": {},
+    "ee_328c_LAB1": {
+	"machine": "workstation",
+	"purpose": "teaching",
+        "role": "rslab_wireshark",
+        "owner": "eecs",
+	"authentication": "local_users_own_group",
+	"users": {
+	    "rsuser01": "rsuser01",
+	},
+	"extra_repository_packages": [ "wireshark", ],
+    },
     "jb_216_6340_lt11": {
 	"machine": "workstation",
 	"purpose": "research",
