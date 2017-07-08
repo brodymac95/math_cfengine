@@ -252,14 +252,6 @@ bundle common def
     !enable_cfengine_enterprise_hub_ha::
       "policy_servers" slist => {"$(sys.policy_hub)"};
 
-    # EECS CUSTOM SOFTWARE REPO!!
-    policy_server::
-      "dir_software_packages"
-        string => "/srv/cfengine/packages",
-        comment => "Define software files source location",
-        handle => "common_def_vars_dir_software_packages";
-
-
   classes:
 
       ### Enable special features policies. Set to "any" to enable.
