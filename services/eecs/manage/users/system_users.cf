@@ -1,0 +1,353 @@
+##############################################################################
+#
+#   manage/users/system_users.cf - EECS system administration users configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: 
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle common sys_user_settings
+{
+  vars:
+
+    debian::
+      "sudoers_dist"
+        string => "/srv/cfengine/security/sudoers_files/sudoers.debian",
+        comment => "server location where agents look for Debian sudoers file.";
+    red_hat::
+      "sudoers_dist"
+        string => "/srv/cfengine/security/sudoers_files/sudoers.red_hat",
+        comment => "server location where agents look for Red Hat sudoers file.";
+    os_undercloud::
+      "sudoers_dist"
+        string => "/srv/cfengine/security/sudoers_files/sudoers.os_undercloud",
+        comment => "server location where agents look for OpenStack undercloud sudoers file.";
+
+    any::
+      "sudoers_cache"
+        string => "$(sys.workdir)/state/security/sudoers",
+        comment => "local directory where agents cache the sudoers file
+        (for offline enforcement).";
+      
+      "ssh_authorized_keys_dist"
+        string => "/srv/cfengine/security/system_users/$(sudo_user)/authorized_keys",
+        ifvarclass => isvariable("sudo_users"),
+        comment => "server location where agents look for each user ssh authorized_keys file.";
+      "ssh_authorized_keys_cache"
+        string => "$(sys.workdir)/state/ssh_key_cache/$(user)_authorized_keys",
+        comment => "local directory where agents cache the user ssh authorized_keys file
+        (for offline enforcement).";
+
+      "default_mode" string => "600";
+
+      "home_skeleton" string => "/etc/skel";
+
+      "shared_group_primary" string => "sysusers";
+
+      debian::
+      "group_secondary" string => "sudo,audio,plugdev",
+	comment => "add all system users to sudo group for full superuser access
+        (need to change this for more granular control over sudo commands for specific sys_users)";
+
+      red_hat::
+      "group_secondary" string => "wheel,audio,plugdev",
+	comment => "add all system users to wheel group for full superuser access
+        (need to change this for more granular control over sudo commands for specific sys_users)";
+
+      any::
+      "sys_user_data" data => readjson("$(this.promise_dirname)/data/system_users.json",1M),
+        comment => "pull in external json file containing system administration users defined by role";
+      
+      "roles" slist => getindices( sys_user_data );
+
+      "sudo_user_data"
+        data => mergedata( "sys_user_data[sudo]" ),
+        ifvarclass => isvariable("sys_user_data[sudo]"),
+        comment => "create data subset of sudo superusers from system_users.json file";
+
+      "sudo_users_json_str" string => format("%S", "sudo_user_data"),
+        ifvarclass => isvariable("sys_user_data[sudo]");
+
+      "sudo_users" slist => getindices( "sudo_user_data" ),
+      comment => "get list of sudo users";
+      
+      "revoked_user_data"
+        data => mergedata( "sys_user_data[revoked]" ),
+        ifvarclass => isvariable("sys_user_data[revoked]"),
+        comment => "create data subset of revoked users to remove from system_users.json file";
+
+      "revoked_users_json_str" string => format("%S", "revoked_user_data"),
+        ifvarclass => isvariable("sys_user_data[revoked]");
+
+      "revoked_users" slist => getindices( "revoked_user_data" ),
+	comment => "get list of revoked users to remove from system";
+
+
+      # local_users_shared_group|local_users_own_group::
+    #   "user" slist => getindices( "classify_host.wsu_users" );
+    #   "json_str_users" string => format("%S", "classify_host.wsu_users");
+
+    # local_users_custom_groups::
+    #   "custom_umask" string => "007";
+}
+
+######################################################################
+
+bundle agent config_sys_users
+# @description: bundle to ensure or revoke system administration users for remote access via ssh public key authentication
+# 1. ensure list of "authorized" users are on system
+# 2. remove list of "revoked" users from system, inc. home dir?
+# 3. copy authorized_keys file for each user and ensure correct perms
+# 4. add each user as sudo - define a standard sudoers file for copying to system?
+# 5. alternative, ensure sudo or wheel group is enabled in sudoers file, then add users to group
+#  any other clean up?
+
+{
+
+  vars:
+
+  methods:
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+}
+
+######################################################################
+
+bundle agent manage_sudo_users(settings)
+# @description: adds local sudo user accounts to system with shared primary group.
+# Does NOT add or change user local password, but will add ssh public key access
+{
+  vars:
+      "user" slist => "$(settings).sudo_users";
+      
+
+  users:
+    linux.shared_group_exists_kept::
+      "$(user)"
+      policy => "present",
+      description => "$($(settings).sudo_user_data[$(user)])",
+      shell => "/bin/bash",
+      home_dir => "/home/$(user)",
+      home_bundle => home_skel( "$(user)", "$($(settings).shared_group_primary)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      group_primary => "$($(settings).shared_group_primary)",
+      groups_secondary => { "$($(settings).group_secondary)" },
+#      password => hashed_password( "!##lockedpassword##" ),
+      comment => "add local user with shared group from sudo_users dataset gained via external host file
+                 NOTE: local user password is not set by CFEngine, but SSH public key authentication can be used";
+      
+  methods:
+    linux::
+      "ensure shared primary group exists"
+      usebundle => group_exist( "$($(settings).shared_group_primary)" ),
+      classes => results("bundle", "shared_group_exists");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "Local user set on this system: $(user)";
+      "Username: $($(settings).sudo_user_data[$(user)])";
+      "Shared group: $($(settings).shared_group_primary)";
+}
+
+########################################################
+
+bundle agent manage_revoked_users(settings)
+# @description: ensures users in revoked list are absent from system and deletes user home directory 
+{
+  vars:
+      "user" slist => getindices( "$(settings).revoked_users" );
+
+  users:
+    linux.shared_group_exists_kept::
+      "$(user)"
+        policy => "absent",
+	comment => "removes revoked user from system";
+      
+  files:
+      "/home/$(user)"
+        delete => tidy,
+	depth_search => recurse_with_base("inf"),
+        classes => results("bundle", "home_deleted");
+        comment => "delete all files in user home directory inc. home dir";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "Revoked user: $(user)";
+    (DEBUG|DEBUG_sys_users).home_deleted_repaired::
+      "home for $(user) deleted!";
+}
+
+########################################################
+
+bundle agent ensure_ssh_authorized_keys(settings)
+# @description: ensure user specific ssh authorized_keys files are deployed
+{
+  vars:
+      "user" string => "$($(settings).sudo_users)";
+      "user_dir" string => "/home/$(user)/";
+      "user_auth_keys_file" string => "/home/$(user)/.ssh/authorized_keys";
+      "user_ssh_dir" string => dirname( "$(user_auth_keys_file)" );
+
+      "auth_keys_dist" string => "$($(settings).ssh_authorized_keys_dist)";
+      "auth_keys_cache" string => "$($(settings).ssh_authorized_keys_cache)";
+      "auth_keys_cache_dir" string => dirname( "$(auth_keys_cache)" );
+
+  classes:
+      "user_dir_exists"
+	expression => fileexists( "$(user_dir)." );
+
+      "have_cached_auth_keys"
+	expression => fileexists( $(auth_keys_cache) );
+      
+  files:
+      "$(auth_keys_cache_dir)/."
+	create => "true",
+        comment => "ensure the cache directory exists";
+
+    policy_server::
+      "$(auth_keys_cache)"
+        perms => mo("600","root"),
+        copy_from => local_dcp( $(auth_keys_dist) ),
+        action => if_elapsed("60"),
+        comment => "if host is the policy server then perform a local copy of the authorized_keys file";
+
+    !policy_server::
+      "$(auth_keys_cache)"
+	perms => mo("600","root"),
+	copy_from => secure_cp( $(auth_keys_dist), $(sys.policy_hub) ),
+	action => if_elapsed("60"),
+	comment => "if host is any other client then perform a secure remote copy of the authorized_keys file";
+
+    user_dir_exists::
+      "$(user_ssh_dir)/."
+	create => "true",
+	perms => mog( "700","$(user)","$($(settings).shared_group_primary)" ),
+	comment => "ensure existence and correct permissions for user .ssh directory";
+      
+    user_dir_exists.have_cached_auth_keys::
+      "$(user_auth_keys_file)"
+	copy_from => local_dcp( $(auth_keys_dist) ),
+	perms => mog( "400","$(user)","$($(settings).shared_group_primary)" ),
+        classes => results("bundle", "auth_keys_file");
+	comment => "copy authorized_keys file from local cache and ensure correct permissions";
+      
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "auth_keys_dist: $(auth_keys_dist)";
+      "auth_keys_cache: $(auth_keys_cache)";
+      "user_auth_keys_file: $(user_auth_keys_file)";
+
+    (DEBUG|DEBUG_sys_users).auth_keys_file_repaired::
+      "$(user_auth_keys_file) copied for $(user)";
+
+    (DEBUG|DEBUG_sys_users).auth_keys_file_kept::
+      "$(user_auth_keys_file) exists for $(user)";
+}
+
+########################################################
+
+bundle agent ensure_sudoers
+# @description: ensure correct sudoers file is deployed
+{
+  vars:
+      "sudoers_file" string => "/tmp/sudoers";  # change to /etc/sudoers after testing
+
+      "sudoers_dist" string => "$($(settings).sudoers_dist)";
+      "sudoers_cache" string => "$($(settings).sudoers_cache)";
+      "sudoers_cache_dir" string => dirname( "$(sudoers_cache)" );
+
+      "visudo_chk_cmd" string => "/usr/sbin/visudo --check --quiet -f ";
+
+  classes:
+      "have_cached_sudoers"
+	expression => fileexists( $(sudoers_cache) );
+
+      "visudo_check_passed"
+        expression => returnszero( "$(visudo_chk_cmd) $(sudoers_cache)", "useshell" ),
+        ifvarclass => "have_cached_sudoers";
+
+      "visudo_check_failed"
+        not => returnszero( "$(visudo_chk_cmd) $(sudoers_cache)", "useshell" ),
+	ifvarclass => "have_cached_sudoers";
+       
+  files:
+      "$(sudoers_cache_dir)/."
+	create => "true",
+        comment => "ensure the cache directory exists";
+
+    policy_server::
+      "$(sudoers_cache)"
+        perms => mo("400","root"),
+        copy_from => local_dcp( $(sudoers_dist) ),
+        action => if_elapsed("60"),
+        comment => "if host is the policy server then perform a local copy of the sudoers file";
+
+    !policy_server::
+      "$(sudoers_cache)"
+	perms => mo("400","root"),
+	copy_from => secure_cp( $(sudoers_dist), $(sys.policy_hub) ),
+	action => if_elapsed("60"),
+	comment => "if host is any other client then perform a secure remote copy of the sudoers file";
+      
+    have_cached_sudoers.visudo_check_passed::
+      "$(sudoers_file)"
+	copy_from => local_dcp( $(auth_keys_dist) ),
+	perms => mog( "440","root","root" ),
+        classes => results("bundle", "sudoers_file");
+	comment => "copy sudoers file from local cache and ensure correct permissions";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "sudoers_dist: $(sudoers_dist)";
+      "sudoers_cache: $(sudoers_cache)";
+      "sudoers_file: $(sudoers_file)";
+      
+    (DEBUG|DEBUG_sys_users).visudo_check_passed::
+      "cached sudoers file passed visudo check";
+    (DEBUG|DEBUG_sys_users).visudo_check_failed::
+      "cached sudoers file failed visudo check and will not be copied to $(sudoers_file)";
+
+    (DEBUG|DEBUG_sys_users).sudoers_file_repaired::
+      "$(sudoers_file) copied to system";
+    (DEBUG|DEBUG_sys_users).sudoers_file_kept::
+      "$(sudoers_file) exists on system";
+}
