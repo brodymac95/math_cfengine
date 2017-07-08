@@ -48,11 +48,10 @@ bundle common sys_user_settings
         (for offline enforcement).";
       
       "ssh_authorized_keys_dist"
-        string => "/srv/cfengine/security/system_users/$(sudo_user)/authorized_keys",
-        ifvarclass => isvariable("sudo_users"),
+        string => "/srv/cfengine/security/system_users/",
         comment => "server location where agents look for each user ssh authorized_keys file.";
       "ssh_authorized_keys_cache"
-        string => "$(sys.workdir)/state/ssh_key_cache/$(user)_authorized_keys",
+        string => "$(sys.workdir)/state/ssh_key_cache/",
         comment => "local directory where agents cache the user ssh authorized_keys file
         (for offline enforcement).";
 
@@ -218,8 +217,8 @@ bundle agent ensure_ssh_authorized_keys(settings)
       "user_auth_keys_file" string => "/home/$(user)/.ssh/authorized_keys";
       "user_ssh_dir" string => dirname( "$(user_auth_keys_file)" );
 
-      "auth_keys_dist" string => "$($(settings).ssh_authorized_keys_dist)";
-      "auth_keys_cache" string => "$($(settings).ssh_authorized_keys_cache)";
+      "auth_keys_dist" string => "$($(settings).ssh_authorized_keys_dist)/$(user)/authorized_keys";
+      "auth_keys_cache"string => "$($(settings).ssh_authorized_keys_dist)/cache)/$(user)_authorized_keys";
       "auth_keys_cache_dir" string => dirname( "$(auth_keys_cache)" );
 
   classes:
