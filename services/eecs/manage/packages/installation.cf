@@ -50,17 +50,64 @@ bundle agent manage_repository_packages
       "extra_installs" slist => getvalues( "classify_host.extra_packages" );
       "packages_json_str" string => format("%S", "classify_host.extra_packages");
 
+    red_hat::
+      "core_installs" slist => {
+ 				 "iptables",
+				 "openssh",
+				 "openssh-clients",
+				 "bind-utils",
+				 "emacs",
+				 "screen",
+				 "tmux",
+                                };
+
     debian|ubuntu::
       "core_installs" slist => {
- 				  "unattended-upgrades",
-				  "iptables",
-				  "openssh-client",
-				  "emacs",
-				  "screen",
-				  "tmux",
-				  "build-essential",
+ 				 "unattended-upgrades",
+				 "iptables",
+				 "openssh-client",
+				 "dnsutils",
+				 "emacs",
+				 "screen",
+				 "tmux",
                                 };
-      
+
+    server.infrastructure.(red_hat)::
+      "server_installs" slist => {
+				   "openssh-server",
+                                 };
+            
+    server.infrastructure.(debian|ubuntu)::
+      "server_installs" slist => {
+				   "openssh-server",
+				   "molly-guard",
+                                 };
+
+    server.research.(debian|ubuntu)::
+      "server_installs" slist => {
+				   "openssh-server",
+				   "molly-guard",
+				   "build-essential",
+                                 };
+
+    server.teaching.(debian|ubuntu)::
+      "server_installs" slist => {
+				   "openssh-server",
+				   "molly-guard",
+				   "build-essential",
+				   "tree",
+				   "terminator",
+				   "default-jre",
+				   "default-jdk",
+				   "eclipse",
+				   "eclipse-cdt",
+				   "geany",
+				   "geany-plugins",
+				   "subversion",
+				   "git",
+				   "git-el",
+                                 };
+
     workstation.(debian|ubuntu):: 
       # libvte9 is needed by geany to show a terminal window inside
       "workstation_installs" slist => {
@@ -80,29 +127,6 @@ bundle agent manage_repository_packages
 					"libvte9",
 					"texmaker",
 					"git",
-                                 };
-      
-    server.!teaching.(debian|ubuntu)::
-      "server_installs" slist => {
-				   "openssh-server",
-				   "molly-guard",
-                                 };
-
-    server.teaching.(debian|ubuntu)::
-      "server_installs" slist => {
-				   "openssh-server",
-				   "molly-guard",
-				   "tree",
-				   "terminator",
-				   "default-jre",
-				   "default-jdk",
-				   "eclipse",
-				   "eclipse-cdt",
-				   "geany",
-				   "geany-plugins",
-				   "subversion",
-				   "git",
-				   "git-el",
                                  };
 
     ## Required packages to be REMOVED
@@ -127,7 +151,7 @@ bundle agent manage_repository_packages
       "install_update_listed packages" usebundle => package_latest("$(all_installs)");
       "remove_listed packages" usebundle => package_absent("$(all_removals)");
 
-    workstation.(debian|ubuntu)::
+    debian|ubuntu::
       "add unattended-upgrades config files" usebundle => unattended_upgrades_config;
       
   reports:
@@ -141,95 +165,6 @@ bundle agent manage_repository_packages
       
     (DEBUG|DEBUG_manage_packages).install_extra_packages::
       "Extra repository packages specifically for this host: $(packages_json_str)";
-}
-
-###################################
-
-bundle agent manage_custom_packages
-# @description: custom scripting for packages required by users but not in standard repositories
-{
-  vars:
-
-      "texworks_dictionary_source" string => "/usr/share/hunspell";
-      "texworks_dictionary_target" string => "/usr/share/myspell/dicts";
-
-  classes:      
-
-    "autostart_scmmanager"
-	expression => "scmmanager",
-        scope => "namespace",
-        comment => "create global class for autostart if scmmannager is listed in custom_installs";
-      
-  packages:
-    pip_gensim::
-      "gensim" package_method => pip(""), package_policy => "add",
-      comment => "install the gensim package using python pip (used by Sara Bahrami)";
-
-    pip_theano::
-      "theano" package_method => pip(""), package_policy => "add",
-      comment => "install the theano package using python pip (used by Dr. Kaushik Sinha)";
-
-    pip_pattern::
-      "pattern" package_method => pip(""), package_policy => "add",
-      comment => "install the pattern package using python pip (used by Dr. Kaushik Sinha)";
-
-    pip_orange::
-      "orange" package_method => pip(""), package_policy => "add",
-      comment => "install the orange package using python pip (used by Dr. Kaushik Sinha)";
-
-  files:
-    texworks_dictionaries::
-      "$(texworks_dictionary_target)"
-      move_obstructions => "true",
-      link_from => linkchildren( "$(texworks_dictionary_source)" ),
-      comment => "create symbolic links for all libreoffice dictionaries in texworks dictionary directory";
-
-  methods:
-
-    ad_authentication::
-      "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
-      
-    ldap_removal::
-      "remove old ldap config files and packages" usebundle => remove_ldap;
-
-    linux_show_player::
-      "install linux-show-player" usebundle => install_linux_show_player;
-
-    etc_offline_editor::
-      "install etc offline editor script" usebundle => install_etc_offline_editor;
-      
-    skype::
-      "install skype" usebundle => install_skype;
-
-    pyrosetta::
-      "install python pyrosetta" usebundle => install_pyrosetta;
-
-    python_graphics_lib::
-      "install python graphics library (for Keenan Jackson)" usebundle => install_python_graphics;
-
-    cuda_by_example::
-      "install cuda_by_example code and nvidia cuda toolkit" usebundle => install_cuda_by_example;
-
-    deep_learning|deep_learning_gpu::
-      "install all packages for deep learning (used by Dr Sinha)" usebundle => install_deep_learning_packages,
-      inherit => "true";
-
-      
-#   matlab_research|matlab_classroom::
-#      "install matlab software" usebundle => install_matlab,
-#      inherit => "true",
-#      comment => "run the set of custom bundles for installing the commercial matlab software. Must specify whether to use the research or classroom license";
-      
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-      
-    (DEBUG|DEBUG_manage_packages)::
-      "=== $(this.bundle) ===";
-      "Custom packages to be installed: $(classify_host.custom_packages)";
-
-    (DEBUG|DEBUG_manage_packages).test_package::
-      "test_package is listed in host_data.json file for this host and a test_package class has been created";      
 }
 
 ######################################################################
@@ -246,6 +181,7 @@ bundle agent unattended_upgrades_config
                 };
 
   files:
+    debian|ubuntu::
       "$(enable_unattended_file)"
       create => "true",
       perms => mog("644","root","root"),

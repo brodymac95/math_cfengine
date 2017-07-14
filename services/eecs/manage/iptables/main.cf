@@ -86,7 +86,7 @@ bundle agent config_iptables
       # "Contents of 'json_input' data container: '$(json_str)'";  
 
     (DEBUG|DEBUG_config_iptables).custom_security_rules::
-      "custom security rule found $(classify_host.security_rules)";
+      "custom security rule found in hosts file $(classify_host.security_rules)";
 }
 
 bundle agent iptables_restore_on_boot(cdir)
@@ -180,7 +180,7 @@ bundle agent edit_iptables_filter(cdir)
      # "$(cdir)/cf.iptables.filter.current"
      # changes => detect_content_change,
      # classes => results("namespace", "iptables_current_change"),
-     #x comment => "check if iptables saved file content has changed and set repaired class if changed";     
+     # comment => "check if iptables saved file content has changed and set repaired class if changed";     
 
   reports:
    (inform_mode|verbose_mode)::

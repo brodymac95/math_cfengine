@@ -16,7 +16,7 @@
 #}
 
 ######################################################################
-# Public entry point: sshd_config
+# Public entry point: config_sshd
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -27,7 +27,7 @@
 # file. This improves resilience, and tries to avoid deploying a potentially
 # broken config.bundle agent configfiles
 
-bundle agent sshd_config
+bundle agent config_sshd
 {
   vars:  
       # Files to edit
@@ -37,8 +37,14 @@ bundle agent sshd_config
       "sshd[Port]"                                    string => "22";
       "sshd[X11Forwarding]"                           string => "yes";
       "sshd[UseDNS]"                                  string => "no";
+
+    debian::
       "sshd[PermitRootLogin]"                         string => "no";
 
+    red_hat::
+      "sshd[PermitRootLogin]"                         string => "yes";
+      # change this to no once red hat clients work okay with sys_user ssh access
+      
   methods:
       "sshd"    usebundle => edit_sshd;
 
@@ -53,10 +59,10 @@ bundle agent sshd_config
 bundle agent edit_sshd
 {
   files:
-      "$(sshd_config.files[sshd])"
+      "$(config_sshd.files[sshd])"
       handle => "edit_sshd",
-      comment => "Set desired sshd_config parameters",
-      edit_line => set_line_based("sshd_config.sshd", " ", "\s+", ".*", "\s*#\s*"),
+      comment => "Set desired sshd parameters",
+      edit_line => set_line_based("config_sshd.sshd", " ", "\s+", ".*", "\s*#\s*"),
       classes => results("bundle", "sshd");
       
   services:

@@ -160,7 +160,7 @@ bundle common classify_host
       "custom_security_rules"
 	expression => isvariable("security_rules"),
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
-	comment => "Add class security_rules if found for host from external data file.";
+	comment => "Add class custom_security_rules if found for host from external data file.";
 
       "install_user_configs"
 	expression => isvariable("user_configs"),
@@ -195,7 +195,6 @@ bundle common classify_host
     (DEBUG|DEBUG_classify_host)::
       "=== $(this.bundle) ===";
       "Found hostname: $(sys.host)";
-      "Found machine type: $(host_machine)";
       "Found machine type: $(host_machine)";
       "Found purpose: $(host_purpose)";
       "Found role: $(host_role)";

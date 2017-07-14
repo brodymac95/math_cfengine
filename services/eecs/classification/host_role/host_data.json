@@ -1,7 +1,7 @@
 {
     "hostname": {
-	"machine": "server OR workstation OR laptop OR mobile"
-	"purpose": "teaching OR research OR infrastructure",
+	"machine": "openstack OR server OR workstation OR laptop"
+	"purpose": "testing OR teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
 	"security": [ "ssh_public", "rdp_public", ],
