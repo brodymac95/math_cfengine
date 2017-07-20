@@ -194,7 +194,6 @@ bundle agent manage_sys_users
 	usebundle => ensure_sudoers("sys_user_settings"),
         comment => "add sudoers files to /srv/cfengine/security/sudoers_files";
 
-
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -242,7 +241,7 @@ bundle agent manage_sudo_users(settings)
       "Username: $($(settings).sudo_user_data[$(user)])";
       "Shared group: $($(settings).shared_group_primary)";
 
-      "Contents of 'sudo_users' data container: $($(settings).json_str_sudo_users)";
+      # "Contents of 'sudo_users' data container: $($(settings).json_str_sudo_users)";
 }
 
 ########################################################
@@ -365,7 +364,7 @@ bundle agent ensure_ssh_authorized_keys(settings)
 	ifvarclass => "$(user)_auth_keys_file_kept";
 
       "SELinux restorecon ran on $(user_ssh_dir[$(user)])"
-	ifvarclass => "$(user)_auth_keys_file_kept";
+	ifvarclass => "restorecon_repaired";
 
 }
 
