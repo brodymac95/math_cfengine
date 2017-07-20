@@ -43,13 +43,6 @@
 	},
 	"custom_packages": [ "deep_learning", "ubuntu_make", ],
     },
-    "te_instance_z4elwd72vhbu_debian_instance_pd6erajlbhqd": {
-	"machine": "os_tenant",
-	"purpose": "testing",
-        "role": "rhel_test",
-        "owner": "eecs",
-    },
-
 
     "oldtesting": {
 	"machine": "server",
