@@ -50,7 +50,7 @@ bundle agent manage_repository_packages
       "extra_installs" slist => getvalues( "classify_host.extra_packages" );
       "packages_json_str" string => format("%S", "classify_host.extra_packages");
 
-    red_hat::
+    redhat::
       "core_installs" slist => {
  				 "iptables",
 				 "openssh",
@@ -72,7 +72,7 @@ bundle agent manage_repository_packages
 				 "tmux",
                                 };
 
-    server.infrastructure.(red_hat)::
+    server.infrastructure.(redhat)::
       "server_installs" slist => {
 				   "openssh-server",
                                  };

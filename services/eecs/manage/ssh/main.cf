@@ -41,7 +41,7 @@ bundle agent config_sshd
     debian::
       "sshd[PermitRootLogin]"                         string => "no";
 
-    red_hat::
+    redhat::
       "sshd[PermitRootLogin]"                         string => "yes";
       # change this to no once red hat clients work okay with sys_user ssh access
       

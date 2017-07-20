@@ -18,6 +18,10 @@ bundle agent config_login_banner
       "motd_file"     string => "/etc/motd";
       "support"       string => "EECS: Ben Roose (ben.roose@wichita.edu)";
 
+    os_tenant::
+      "type" string => "OpenStack Tenant";
+    os_node::
+      "type" string => "OpenStack Node";
     server::
       "type" string => "Server";
     workstation::
@@ -53,7 +57,7 @@ bundle agent config_login_defs
 
       "pam_umask_enable" string => "session optional        pam_umask.so";
 
-    red_hat::
+    redhat::
       # RHEL 6 and 7 seem to set umask in /etc/bashrc
       # Need to add RHEL configuration to this bundle when it's wanted!
       # see https://linuxaria.com/article/linux-shell-understanding-umask-with-examples
@@ -82,7 +86,7 @@ bundle agent config_login_defs
       "=== $(this.bundle) ===";
     (DEBUG|DEBUG_config_login_defs).debian::
       "default umask value: $(login_defs[UMASK])";
-    (DEBUG|DEBUG_config_login_defs).red_hat::
+    (DEBUG|DEBUG_config_login_defs).redhat::
       "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 
 }

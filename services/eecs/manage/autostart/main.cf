@@ -75,7 +75,7 @@ echo 'start scmmanager at boot time [CFEngine configured]'
       "=== $(this.bundle) ===";
     (DEBUG|DEBUG_config_rc_local).debian::
       "autostart items: $(insertions)";
-    (DEBUG|DEBUG_config_rc_local).red_hat::
+    (DEBUG|DEBUG_config_rc_local).redhat::
       "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 }
 

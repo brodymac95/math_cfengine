@@ -39,7 +39,7 @@ bundle common net_settings
 
       # red_hat stores data in interface specific files within /etc/sysconfig/network-scripts
 
-    debian|red_hat::
+    linux::
       "hosts_file"      string => "/etc/hosts";
 
 }
@@ -99,7 +99,7 @@ bundle agent config_net_interfaces
     (DEBUG|DEBUG_config_net_interfaces).have_cached_interfaces::
       "$(this.bundle): custom interfaces file found on policy hub for this host";
 
-    (DEBUG|DEBUG_config_net_interfaces).red_hat::
+    (DEBUG|DEBUG_config_net_interfaces).redhat::
       "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 }
 

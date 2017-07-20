@@ -11,11 +11,11 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-body file control
-{
-	inputs => { "$(sys.libdir)/stdlib.cf",
- 		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-}
+# body file control
+# {
+# 	inputs => { "$(sys.libdir)/stdlib.cf",
+#  		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+# }
 
 ######################################################################
 # Public entry point: manage_repositories
@@ -38,7 +38,7 @@ bundle agent manage_repositories
     ubuntu::
       "repositories_file" string => "$(this.promise_dirname)/data/repos_ubuntu.json";
 
-    any::
+    debian::
       "repositories_data" data => readjson( $(repositories_file), 10M );
       "json_str" string => format("%S", repositories_data);
 
@@ -56,7 +56,6 @@ bundle agent manage_repositories
    (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-
     (DEBUG|DEBUG_manage_repositories)::
       "=== $(this.bundle) ===";
 
@@ -71,6 +70,7 @@ bundle agent ensure_repos(file, repo, options)
 # @description: enforcing entries in /etc/apt/sources.list or /etc/apt/sources.list.d/*.list
 {
   vars:
+    debian::
       "template_file" string => "$(this.promise_dirname)/data/sources_template.txt";
 
       "CFEnotice"
@@ -258,4 +258,3 @@ bundle agent wipe(runenv, metadata, wipe, given_file)
     cfengine::
       "$(file)" bundle_return_value_index => "file";
 }
-

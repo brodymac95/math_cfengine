@@ -28,7 +28,7 @@ bundle common sys_user_settings
 {
   vars:
       
-    debian::
+    debian.!uaf2_client::
       "sudoers_dist"
         string => "/srv/cfengine/security/sudoers_files/sudoers.debian",
         comment => "server location where agents look for Debian sudoers file.";
@@ -36,13 +36,13 @@ bundle common sys_user_settings
       "sudoers_dist"
         string => "/srv/cfengine/security/sudoers_files/sudoers.debian_uaf2",
         comment => "server location where agents look for Debian sudoers file.";
-    red_hat::
+    redhat.!os_tenant::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.red_hat",
+        string => "/srv/cfengine/security/sudoers_files/sudoers.redhat",
         comment => "server location where agents look for Red Hat sudoers file.";
-    os_undercloud::
+    redhat.os_tenant::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.os_undercloud",
+        string => "/srv/cfengine/security/sudoers_files/sudoers.redhat_cloudimg",
         comment => "server location where agents look for OpenStack undercloud sudoers file.";
 
     any::
@@ -70,8 +70,8 @@ bundle common sys_user_settings
 	comment => "add all system users to sudo group for full superuser access
         (need to change this for more granular control over sudo commands for specific sys_users)";
 
-      red_hat::
-      "group_secondary" string => "wheel,audio,plugdev",
+      redhat::
+      "group_secondary" string => "wheel",
 	comment => "add all system users to wheel group for full superuser access
         (need to change this for more granular control over sudo commands for specific sys_users)";
 
@@ -297,6 +297,10 @@ bundle agent ensure_ssh_authorized_keys(settings)
       "auth_keys_cache[$(user)]" string => "$($(settings).ssh_authorized_keys_cache)/$(user)_authorized_keys";
       "auth_keys_cache_dir" string => dirname( "$(auth_keys_cache[$(user)])" );
 
+    redhat::
+      "restorecon_cmd" string => "/usr/sbin/restorecon -R ",
+      comment => "-R = recursive";
+      
   classes:
       "$(user)_dir_exists"
 	expression => fileexists( "$(user_dir[$(user)])." );
@@ -332,11 +336,18 @@ bundle agent ensure_ssh_authorized_keys(settings)
      
       "$(user_auth_keys_file[$(user)])"
     	copy_from => local_dcp( $(auth_keys_cache[$(user)]) ),
-    	perms => mog( "400","$(user)","$($(settings).shared_group_primary)" ),
+    	perms => mog( "600","$(user)","$($(settings).shared_group_primary)" ),
         classes => results("bundle", "$(user)_auth_keys_file"),
     	comment => "copy authorized_keys file from local cache and ensure correct permissions",
         ifvarclass => and( "$(user)_dir_exists", "$(user)_have_cached_auth_keys" );    
 
+  commands:
+    redhat::
+      "$(restorecon_cmd) $(user_ssh_dir[$(user)])"
+        classes => results("bundle", "restorecon"),
+        comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
+      	ifvarclass => "$(user)_auth_keys_file_repaired";
+  
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -352,6 +363,10 @@ bundle agent ensure_ssh_authorized_keys(settings)
 
       "$(user_auth_keys_file[$(user)]) exists for $(user)"
 	ifvarclass => "$(user)_auth_keys_file_kept";
+
+      "SELinux restorecon ran on $(user_ssh_dir[$(user)])"
+	ifvarclass => "$(user)_auth_keys_file_kept";
+
 }
 
 ########################################################
@@ -360,13 +375,14 @@ bundle agent ensure_sudoers(settings)
 # @description: ensure correct sudoers file is deployed
 {
   vars:
-      "sudoers_file" string => "/tmp/sudoers";  # change to /etc/sudoers after testing
+      "sudoers_file" string => "/etc/sudoers";  # change to /etc/sudoers after testing
 
       "sudoers_dist" string => "$($(settings).sudoers_dist)";
       "sudoers_cache" string => "$($(settings).sudoers_cache)";
       "sudoers_cache_dir" string => dirname( "$(sudoers_cache)" );
 
-      "visudo_chk_cmd" string => "/usr/sbin/visudo --check --quiet -f ";
+      "visudo_chk_cmd" string => "/usr/sbin/visudo -c -q -f ",
+      comment => "-c = check-only -q = quiet mode -f = sudoers file location";
 
       "dependent_packages" slist => { "sudo", },
         comment => "/etc/sudoers requires sudo package";
