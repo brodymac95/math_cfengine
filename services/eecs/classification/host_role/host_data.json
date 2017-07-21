@@ -105,6 +105,28 @@
 	"user_configs": [ "roose", ],
        "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "asunder", "audacity", "soundconverter", "git", ],
     },
+
+
+    "OPENSTACK": {}
+    "os_kvm": {
+	"machine": "os_node",
+	"purpose": "undercloud",
+        "role": "kvm",
+        "owner": "eecs",
+    },
+    "os_director": {
+	"machine": "os_node",
+	"purpose": "undercloud",
+        "role": "director",
+        "owner": "eecs",
+    },
+    "os_radosgw": {
+	"machine": "os_node",
+	"purpose": "undercloud",
+        "role": "ceph",
+        "owner": "eecs",
+    },
+
     
     "SERVERS": {},
     "policyhub_prod": {
