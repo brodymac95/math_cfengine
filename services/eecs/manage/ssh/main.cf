@@ -82,10 +82,10 @@ bundle agent edit_sshd
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config_files).sshd_reload_repaired::
-      "sshd service reload repaired"
+      "sshd service reload repaired";
     (DEBUG|DEBUG_config_files).sshd_reload_kept::
-      "sshd service reload kept"
+      "sshd service reload kept";
     (DEBUG|DEBUG_config_files).sshd_reload_reached::
-      "sshd service reload reached"
+      "sshd service reload reached";
       
 }
