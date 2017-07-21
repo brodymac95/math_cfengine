@@ -273,7 +273,7 @@ bundle agent manage_revoked_users(settings)
       "=== $(this.bundle) ===";
       "Revoked user: $(user)";
 
-      "Contents of 'revoked_users' data container: $($(settings).json_str_revoked_users)";      
+      # "Contents of 'revoked_users' data container: $($(settings).json_str_revoked_users)";      
 
     (DEBUG|DEBUG_sys_users).user_removed_repaired::
       "$(user) account removed!";
