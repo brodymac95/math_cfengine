@@ -37,13 +37,7 @@ bundle agent config_sshd
       "sshd[Port]"                                    string => "22";
       "sshd[X11Forwarding]"                           string => "yes";
       "sshd[UseDNS]"                                  string => "no";
-
-    debian::
       "sshd[PermitRootLogin]"                         string => "no";
-
-    redhat::
-      "sshd[PermitRootLogin]"                         string => "yes";
-      # change this to no once red hat clients work okay with sys_user ssh access
       
   methods:
       "sshd"    usebundle => edit_sshd;
@@ -66,11 +60,17 @@ bundle agent edit_sshd
       classes => results("bundle", "sshd");
 
   methods:
-    sshd_repaired.!no_restarts::
-      "reload sshd service if config file modified" usebundle => standard_services("sshd", "reload"),
+    sshd_repaired.debian.!no_restarts::
+      "debian reload sshd service if config file modified" usebundle => standard_services("sshd", "reload"),
       classes => results("bundle", "sshd_reload");
+
+    sshd_repaired.redhat.!no_restarts::
+      "redhat restart sshd service if config file modified" usebundle => standard_services("sshd", "restart"),
+      classes => results("bundle", "sshd_restart");
 
   reports:
     (DEBUG|DEBUG_config_files).sshd_reload_repaired::
       "sshd service reloaded after $(config_sshd.files[sshd]) file repaired";
+    (DEBUG|DEBUG_config_files).sshd_restart_repaired::
+      "sshd service restarted after $(config_sshd.files[sshd]) file repaired";
 }
