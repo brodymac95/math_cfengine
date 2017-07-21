@@ -42,7 +42,7 @@ bundle agent config_sshd
       "sshd[PermitRootLogin]"                         string => "no";
 
     redhat::
-      "sshd[PermitRootLogin]"                         string => "no";
+      "sshd[PermitRootLogin]"                         string => "yes";
       # change this to no once red hat clients work okay with sys_user ssh access
       
   methods:
@@ -71,8 +71,8 @@ bundle agent edit_sshd
 #      comment => "make sure ssh is always running";
 
     sshd_repaired.!no_restarts::
-      "ssh"
-      service_policy => "restart",
+      "sshd"
+      service_policy => "reload",
       handle => "sshd_restart",
       comment => "Restart sshd if the configuration file was modified";
 }
