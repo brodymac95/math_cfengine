@@ -110,20 +110,20 @@
     "OPENSTACK": {}
     "os_kvm": {
 	"machine": "os_node",
-	"purpose": "undercloud",
-        "role": "kvm",
+	"purpose": "infrastructure",
+        "role": "undercloud",
         "owner": "eecs",
     },
     "os_director": {
 	"machine": "os_node",
-	"purpose": "undercloud",
-        "role": "director",
+	"purpose": "infrastructure",
+        "role": "undercloud",
         "owner": "eecs",
     },
     "os_radosgw": {
 	"machine": "os_node",
-	"purpose": "undercloud",
-        "role": "ceph",
+	"purpose": "infrastructure",
+        "role": "undercloud",
         "owner": "eecs",
     },
 

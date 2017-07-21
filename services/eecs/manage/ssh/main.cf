@@ -70,9 +70,22 @@ bundle agent edit_sshd
 #      service_policy => "start",
 #      comment => "make sure ssh is always running";
 
-    sshd_repaired.!no_restarts::
+    # sshd_repaired.!no_restarts::
       "sshd"
       service_policy => "reload",
       handle => "sshd_restart",
+      classes => results("bundle", "sshd_reload"),
       comment => "Restart sshd if the configuration file was modified";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_files).sshd_reload_repaired::
+      "sshd service reload repaired"
+    (DEBUG|DEBUG_config_files).sshd_reload_kept::
+      "sshd service reload kept"
+    (DEBUG|DEBUG_config_files).sshd_reload_reached::
+      "sshd service reload reached"
+      
 }
