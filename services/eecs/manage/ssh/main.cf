@@ -33,11 +33,25 @@ bundle agent config_sshd
       # Files to edit
       "files[sshd]"   string => "/etc/ssh/sshd_config";
 
-      # SSHD configuration to set
+      # SSHD configuration options to set
       "sshd[Port]"                                    string => "22";
+      "sshd[Protocol]"                                string => "2";
+
       "sshd[X11Forwarding]"                           string => "yes";
+      "sshd[AllowAgentForwarding]"                    string => "yes";
+      "sshd[RSAAuthentication]"                       string => "yes";
+      "sshd[PubkeyAuthentication]"                    string => "yes";
+      
       "sshd[UseDNS]"                                  string => "no";
       "sshd[PermitRootLogin]"                         string => "no";
+      "sshd[PermitEmptyPasswords]"                    string => "no";
+
+    !infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes";      
+
+    # allow SSH password authentication to be turned off for infrastructure servers and nodes if wanted in future
+    infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes";      
       
   methods:
       "sshd"    usebundle => edit_sshd;
