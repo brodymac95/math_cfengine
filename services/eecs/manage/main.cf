@@ -149,7 +149,7 @@ bundle agent manage_server_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-    !uaf2_client::      
+    !uaf2_client|!uaf2_legacy::
       "system/admin user management" usebundle => manage_sys_users;
       "standard user management" usebundle => manage_users;
 
@@ -195,7 +195,7 @@ bundle agent manage_workstation_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-    !uaf2_client::
+    !uaf2_client|!uaf2_legacy::
       "system/admin user management" usebundle => manage_sys_users;
       "standard user management" usebundle => manage_users;
 
