@@ -28,11 +28,11 @@ bundle common sys_user_settings
 {
   vars:
       
-    debian.!uaf2_client::
+    debian.(!uaf2_client|!uaf2_legacy)::
       "sudoers_dist"
         string => "/srv/cfengine/security/sudoers_files/sudoers.debian",
         comment => "server location where agents look for Debian sudoers file.";
-    debian.uaf2_client::
+    debian.(uaf2_client|uaf2_legacy)::
       "sudoers_dist"
         string => "/srv/cfengine/security/sudoers_files/sudoers.debian_uaf2",
         comment => "server location where agents look for Debian sudoers file.";
@@ -180,6 +180,8 @@ bundle agent manage_sys_users
       
       
   methods:
+
+    !uaf2_client|!uaf2_legacy::
       "manage and add sudo users"
 	usebundle => manage_sudo_users("sys_user_settings");
 
@@ -190,6 +192,7 @@ bundle agent manage_sys_users
 	usebundle => ensure_ssh_authorized_keys("sys_user_settings"),
         comment => "add a sys user's ssh public keys to /srv/cfengine/security/$(user)/authorized_keys";
 
+    any::
       "manage sudoers file"
 	usebundle => ensure_sudoers("sys_user_settings"),
         comment => "add sudoers files to /srv/cfengine/security/sudoers_files";

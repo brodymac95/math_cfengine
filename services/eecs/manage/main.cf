@@ -114,8 +114,9 @@ bundle agent manage_os_tenant_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-    !uaf2_client::
       "system/admin user management" usebundle => manage_sys_users;
+
+    !uaf2_client::
       "standard user management" usebundle => manage_users;
 
     install_software.!NO_INSTALLS::
@@ -149,8 +150,9 @@ bundle agent manage_server_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-    !uaf2_client|!uaf2_legacy::
       "system/admin user management" usebundle => manage_sys_users;
+      
+    !uaf2_client|!uaf2_legacy::
       "standard user management" usebundle => manage_users;
 
     (testing|research).install_software.!NO_INSTALLS::
@@ -195,8 +197,9 @@ bundle agent manage_workstation_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-    !uaf2_client|!uaf2_legacy::
       "system/admin user management" usebundle => manage_sys_users;
+      
+    !uaf2_client|!uaf2_legacy::
       "standard user management" usebundle => manage_users;
 
     (testing|research).install_software.!NO_INSTALLS::
