@@ -181,7 +181,7 @@ bundle agent manage_sys_users
       
   methods:
 
-    !uaf2_client|!uaf2_legacy::
+    !(uaf2_client|uaf2_legacy)::
       "manage and add sudo users"
 	usebundle => manage_sudo_users("sys_user_settings");
 
