@@ -62,9 +62,9 @@ bundle server srv_paths_access
         string => "/srv/cfengine/packages",
         comment => "Define software repository source location";
 
-      "path[security_configs]"
-        string => "/srv/cfengine/security",
-        comment => "Define security configuration repository source location";
+      "path[system_configs]"
+        string => "/srv/cfengine/configs",
+        comment => "Define system and user configuration repository source location";
 
       "paths"
         slist => getvalues(path);

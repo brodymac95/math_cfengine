@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   manage/users/system_users.cf - EECS system administration users configuration
+#   manage/system_users/main.cf - EECS system administration users configuration
 #   Maintained: Ben Roose, ver 0.1
 #
 ###############################################################################
@@ -18,7 +18,7 @@ body file control
 }
 
 ######################################################################
-# Public entry point: manage_sys_users
+# Public entry point: manage_sys_users, manage_root_passwd
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -28,31 +28,31 @@ bundle common sys_user_settings
 {
   vars:
       
-    debian.(!uaf2_client|!uaf2_legacy)::
+    debian.!(uaf2_client|uaf2_legacy)::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.debian",
+        string => "/srv/cfengine/configs/sudoers_files/sudoers.debian",
         comment => "server location where agents look for Debian sudoers file.";
     debian.(uaf2_client|uaf2_legacy)::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.debian_uaf2",
+        string => "/srv/cfengine/configs/sudoers_files/sudoers.debian_uaf2",
         comment => "server location where agents look for Debian sudoers file.";
     redhat.!os_tenant::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.redhat",
+        string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat",
         comment => "server location where agents look for Red Hat sudoers file.";
     redhat.os_tenant::
       "sudoers_dist"
-        string => "/srv/cfengine/security/sudoers_files/sudoers.redhat_cloudimg",
+        string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat_cloudimg",
         comment => "server location where agents look for OpenStack undercloud sudoers file.";
 
     any::
       "sudoers_cache"
-        string => "$(sys.workdir)/state/security/sudoers",
+        string => "$(sys.workdir)/state/configs/sudoers",
         comment => "local directory where agents cache the sudoers file
         (for offline enforcement).";
       
       "ssh_authorized_keys_dist"
-        string => "/srv/cfengine/security/system_users/",
+        string => "/srv/cfengine/configs/system_users/",
         comment => "server location where agents look for each user ssh authorized_keys file.";
       "ssh_authorized_keys_cache"
         string => "$(sys.workdir)/state/ssh_key_cache/",
@@ -190,12 +190,12 @@ bundle agent manage_sys_users
 
       "manage ssh authorized_keys files for system users"
 	usebundle => ensure_ssh_authorized_keys("sys_user_settings"),
-        comment => "add a sys user's ssh public keys to /srv/cfengine/security/$(user)/authorized_keys";
+        comment => "add a sys user's ssh public keys to /srv/cfengine/configs/$(user)/authorized_keys";
 
     any::
       "manage sudoers file"
 	usebundle => ensure_sudoers("sys_user_settings"),
-        comment => "add sudoers files to /srv/cfengine/security/sudoers_files";
+        comment => "add sudoers files to /srv/cfengine/configs/sudoers_files";
 
   reports:
     (inform_mode|verbose_mode)::
@@ -320,14 +320,14 @@ bundle agent ensure_ssh_authorized_keys(settings)
         perms => mo("600","root"),
         copy_from => local_dcp( $(auth_keys_dist[$(user)]) ),
         action => if_elapsed("60"),
-        comment => "if host is the policy server then perform a local copy of the authorized_keys file";
+        comment => "if host is policy server then perform local copy of the authorized_keys file for local staging";
 
     !policy_server::
       "$(auth_keys_cache[$(user)])"
     	perms => mo("600","root"),
     	copy_from => secure_cp( $(auth_keys_dist[$(user)]), $(sys.policy_hub) ),
     	action => if_elapsed("60"),
-    	comment => "if host is any other client then perform a secure remote copy of the authorized_keys file";
+    	comment => "if host is another client then perform secure remote copy of the authorized_keys file for local staging";
 
     any::
       "$(user_ssh_dir[$(user)])/."
@@ -340,7 +340,7 @@ bundle agent ensure_ssh_authorized_keys(settings)
     	copy_from => local_dcp( $(auth_keys_cache[$(user)]) ),
     	perms => mog( "600","$(user)","$($(settings).shared_group_primary)" ),
         classes => results("bundle", "$(user)_auth_keys_file"),
-    	comment => "copy authorized_keys file from local cache and ensure correct permissions",
+    	comment => "copy authorized_keys file from local staging cache and ensure correct permissions",
         ifvarclass => and( "$(user)_dir_exists", "$(user)_have_cached_auth_keys" );    
 
   commands:
@@ -411,21 +411,21 @@ bundle agent ensure_sudoers(settings)
         perms => mo("400","root"),
         copy_from => local_dcp( $(sudoers_dist) ),
         action => if_elapsed("60"),
-        comment => "if host is the policy server then perform a local copy of the sudoers file";
+        comment => "if host is policy server then perform a local copy of the sudoers file for local staging";
 
     !policy_server::
       "$(sudoers_cache)"
 	perms => mo("400","root"),
 	copy_from => secure_cp( $(sudoers_dist), $(sys.policy_hub) ),
 	action => if_elapsed("60"),
-	comment => "if host is any other client then perform a secure remote copy of the sudoers file";
+	comment => "if host is any other client then perform a secure remote copy of the sudoers file for local staging";
       
     have_cached_sudoers.visudo_check_passed::
       "$(sudoers_file)"
 	copy_from => local_dcp( $(sudoers_cache) ),
 	perms => mog( "440","root","root" ),
         classes => results("bundle", "sudoers_file"),
-	comment => "copy sudoers file from local cache and ensure correct permissions";
+	comment => "copy sudoers file from local staging cache and ensure correct permissions";
 
   methods:
     install_software.!NO_INSTALLS::
