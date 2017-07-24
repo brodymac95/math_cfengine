@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   manage/users/user_config.cf - EECS user specific configuration
+#   manage/users/user_config.cf - EECS user configuration file management
 #   Maintained: Ben Roose, ver 0.1
 #
 ###############################################################################
@@ -10,339 +10,242 @@
 # PROTIP: Use body file control to help make modular policy.
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
-# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf",
-#		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-#}
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+# body file control
+# {
+#       inputs => { "$(sys.libdir)/stdlib.cf",
+# 		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+# }
 
 ######################################################################
-# Public entry point: install_user_configs
+# Public entry point: manage_user_configurations
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1. Problem: classes are currently activated upon first user found, what if there are multiple users!
-# 2. Problem: How to check for user directory on server without erroring out if not found!
+# 1. 
 
-bundle agent install_user_configs
+bundle common user_config_settings
 {
-# @decription:
+  vars:
+           
+      "configs_dist"
+        string => "/srv/cfengine/configs/user_configs/",
+        comment => "server location where agents look for each user configuration files.";
+      "configs_cache"
+        string => "$(sys.workdir)/state/configs_cache/",
+        comment => "local directory where agents cache user configuration files
+                    (for offline staging and enforcement).";
+      "templates_dist"
+        string => "/srv/cfengine/configs/user_templates/",
+        comment => "server location where agents look for each user configuration templates.";
+      "templates_cache"
+        string => "$(sys.workdir)/state/templates_cache/",
+        comment => "local directory where agents cache configuration templates
+                    (for offline staging and enforcement).";
+
+      "username" slist => getvalues( "classify_host.user_configuration" ),
+        comment => "list of usernames with centrally managed config files stored /srv/cfengine/configs/ directory";
+      "json_str_username" string => format("%S", "classify_host.user_configuration");
+
+      "default_mode" string => "600";
+
+}
+
+######################################################################
+
+bundle agent manage_user_configurations
+# @description: bundle to ensure user configs are copied to required hosts
+{
 
   vars:
-      "username" slist => getvalues( "classify_host.user_configs" ),
-        comment => "List of username with custom config files stored in host_by_key directory";
-      "json_str_username" string => format("%S", "classify_host.user_configs");
-  classes:
-      "second_pass" expression => "any";
-            
-  methods:
-      "user configuration settings"  usebundle => user_config_vars;
-      second_pass::
-      "configure user files"  usebundle => config_user_files("user_config_vars.conf");
-
-  
-      # "copy ssh keys into user profile"
-	# usebundle => manage_ssh_keys("user_config_vars.conf"),
-	# ifvarclass => and( "$(username)_have_ssh_key_pair", "$(username)_has_ssh_pub_key_only" );
       
+      
+  methods:
+
+      "copy user config files from policyhub to host"
+	usebundle => ensure_user_configs("user_config_settings"),
+        comment => "add a user's config files to /srv/cfengine/configs/user_configs/$(user) and add user to host in host_data json under user_configuration";
+
+      "copy and expand user config files using templates from policyhub to host"
+	usebundle => ensure_user_templates("user_config_settings"),
+        comment => "add a user's config template to /srv/cfengine/configs/user_templates/$(user) and add user to host in host_data json under user_configuration";
+
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
 }
 
+######################################################################
 
-bundle agent user_config_vars
+bundle agent ensure_user_configs(settings)
+# @description: ensure user specific configuration files are deployed
 {
   vars:
-      "conf[username]" string => "$(install_user_configs.username)",
-        comment => "List of username with custom config files stored in host_by_key directory";
-      "conf[json_str_username]" string => "$(install_user_configs.json_str_username)";
+      "user" slist => { "@($(settings).username)" };
+      "user_dir[$(user)]" string => "/home/$(user)/";
 
-      "conf[dist]"
-	string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/$(conf[username])/";
+      "configs_dist[$(user)]" string => "$($(settings).configs_dist)$(user)/";
+      "configs_cache[$(user)]" string => "$($(settings).configs_cache)$(user)/";
 
-      "conf[cache]"
-	string => "$(sys.workdir)/state/config/$(conf[username])",
-        comment => "This directory is where agents will cache custom user config files
-                    (for offline enforcement).";
-
-      "conf[home_path]" string => "/home/$(install_user_configs.username)";
+      "mode" string =>"$($(settings).default_mode)";
 
       # Set the owner group the same as the home directory owner
-      "conf[path_owner]" string => filestat( "$(conf[home_path])", uid ),
+      "path_owner[$(user)]" string => filestat( "$(user_dir[$(user)])", uid ),
       comment => "assume the owner will be the the same as the user home directory";
 
-      "conf[path_group]" string => filestat( "$(conf[home_path])", gid ),
+      "path_group[$(user)]" string => filestat( "$(user_dir[$(user)])", gid ),
       comment => "assume the group will be the the same as the user home directory";
 
-      "conf[path_mode_rw]" string => "600";
-      "conf[path_mode_r]" string => "400",
-      comment => "default restrictive permissions, but CFEngine is managing the
-                  file, so why encourage anyone to make local edits?";
-
-      "conf[ssh_pri_key]" string => "id_rsa";
-      "conf[ssh_pub_key]" string => "id_rsa.pub";
-      "conf[emacs_config]" string => ".emacs";
-      "conf[emacs_template]" string => "emacs.mustache";
-      "conf[emacs_path]" string => "/home/$(conf[username])/.emacs";
-      "conf[ssh_dir]" string => ".ssh/";
-      "conf[config_dir]" string => ".config/";
-      "conf[bin_dir]" string => "bin/";
-      "conf[bash_profile]" string => ".bash_profile";
-
       
-#      "i3_config" string => "i3/config";
-#      "i3_status" string => "i3/i3status.conf";
-
-    any::
-      # Copy configuration parameters passed, into a local array
-      "param_keys"          slist  => getindices("$(settings)");
-      "conf[$(param_keys)]" string => "$($(settings)[$(param_keys)])",
-	policy => "overridable";
-
   classes:
+      "$(user)_dir_exists"
+	expression => fileexists( "$(user_dir[$(user)])." );
 
-#      "$(conf[username])_have_ssh_key_pair"
-#	and => { fileexists("$(conf[cache])/$(conf[ssh_pri_key])"), fileexists("$(conf[cache])/$(conf[ssh_pub_key])") },
-#	scope => "namespace";
-
-        "$(conf[username])_has_ssh_pub_key"
-	expression => fileexists( "$(conf[cache])/$(conf[ssh_pub_key])" ),
-	scope => "namespace";
-
-      "$(conf[username])_has_ssh_dir"
-	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
-	scope => "namespace";
-
-      "$(conf[username])_has_emacs_config"
-	expression => fileexists( "$(conf[cache])/$(conf[emacs_config])" ),
-	scope => "namespace";
-
-      "$(conf[username])_has_user_config_dir"
-	expression => fileexists( "$(conf[cache])/$(conf[config_dir])." ),
-	scope => "namespace";
-
-      "$(conf[username])_has_bin_dir"
-	expression => fileexists( "$(conf[cache])/$(conf[bin_dir])." ),
-	scope => "namespace";
-
-#      "$(conf[username])_has_i3_config"
-#      and => { fileexists( "$(conf[i3_config])" ), fileexists( "$(conf[i3_status])" ) };
-    
+      "$(user)_have_cached_configs"
+	expression => fileexists( "$(configs_cache[$(user)])/." );
       
-  reports:
-    (DEBUG|DEBUG_config)::
-      "=== $(this.bundle) ===";
-      "username listed with configs: $(conf[username])";
-      "Contents of 'user_configs' data container: '$(conf[json_str_username])'";
-
-      "user home path:   $(conf[home_path])";
-      "user home UID:    $(conf[path_owner])";
-      "user home GID:    $(conf[path_group])";
-     
-    #"$(conf[username])_have_ssh_pub_key"::
-    #  "$(this.bundle): $(conf[username]) ssh public key file found and class generated";
-
-    #"$(conf[username])_have_ssh_key_pair"::
-    #  "$(this.bundle): $(conf[username]) ssh priv/pub key files found and class generated";
-
-}
-
-######################################################################
-      
-bundle agent config_user_files(settings)
-# @description: copy user specific configuration files from policyhub and deploy to correct directories
-{
-  vars:
-      "username" string => "$($(settings)[username])";
-      "user_ssh_dir" string => "/home/$($(settings)[username])/$($(settings)[ssh_dir])";
-      "user_config_dir" string => "/home/$($(settings)[username])/$($(settings)[config_dir])";
-      "user_emacs_config" string => "/home/$($(settings)[username])/$($(settings)[emacs_config])";
-      "user_bin_dir" string => "/home/$($(settings)[username])/$($(settings)[bin_dir])";
-
-  classes:
-      "second_pass" expression => "any";
-
   files:
-      "$($(settings)[cache])/."
-      create => "true";
+      "$(configs_cache[$(user)])/."
+    	create => "true",
+        comment => "ensure the cache directory exists";
+
 
     policy_server::
-      "$($(settings)[cache])"
-      #perms => mo("600","root"),
-      copy_from => perms_cp( "$($(settings)[dist])" ),
+      "$(configs_cache[$(user)])"
+      perms => mog("600","root","root"),
+      copy_from => local_dcp( "$(configs_dist[$(user)])" ),
       depth_search => recurse("inf"),
       action => if_elapsed("60"),
-      comment => "if host is the policy server then perform a local recursive copy of entire user_config directory";
+      comment => "if host is policy server then perform local recursive copy of entire user_config directory for local staging";
 
     !policy_server::
-      "$($(settings)[cache])"
-      #perms => mo("600","root"),
-      copy_from => sync_cp( "$($(settings)[dist])",$(sys.policy_hub) ),
+      "$(configs_cache[$(user)])"
+      perms => mog("600","root","root"),
+      copy_from => secure_cp( "$(configs_dist[$(user)])",$(sys.policy_hub) ),
       depth_search => recurse("inf"),
       action => if_elapsed("60"),
-      comment => "if host is any other client then perform a secure remote recursive copy of entire user_config directory";
+      comment => "if host is another client then perform secure remote recursive copy of entire user_config directory for local staging";
 
-    "$(username)_has_ssh_dir"::
-      "$(user_ssh_dir)"
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[ssh_dir])" ),
-      depth_search => recurse_with_base("inf"),
-      comment => "locally recursive copy anything in the .ssh directory to user's home if directory exists in the cache";
+    
+    any::
+      "$(user_dir[$(user)])"
+	perms => og( "$(path_owner[$(user)])","$(path_group[$(user)])" ),
+	copy_from => local_dcp( "$(configs_cache[$(user)])" ),
+	depth_search => recurse("inf"),
+        classes => results("bundle", "$(user)_config_files"),
+	comment => "copy all user configs from local staging cache to user home and ensure correct permissions
+                    only set permissions of owner/group since this will set perms of all files in user home!",
+	ifvarclass => and( "$(user)_dir_exists", "$(user)_have_cached_configs" );
 
-      "$(user_ssh_dir)/."
-      perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      comment => "set correct permissions for .ssh directory";
-
-      "$(user_ssh_dir)"
-      perms => og( "$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      depth_search => recurse("inf"),
-      comment => "set only owner and group for .ssh files";
-
-      # could use a preserve on copy promise?
-#      "$(user_ssh_dir)/*.pub"
-#      perms => mog( "644","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-#      comment => "set correct permissions for ssh public key files";
-
-    "$(username)_has_emacs_config.second_pass"::
-      "$(user_emacs_config)"
-      perms => mog( "$($(settings)[path_mode_r])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[emacs_config])" ),
-      comment => "locally copy user emacs config file to user's home if exists in the cache";
-     
-    "$(username)_has_user_config_dir.second_pass"::
-      "$(user_config_dir)"
-      perms => mog( "$($(settings)[path_mode_rw])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[config_dir])" ),
-      depth_search => recurse_with_base("inf"),
-      comment => "locally recursive copy anything in the .config directory to user's home if directory exists in the cache";
-     
-    "$(username)_has_bin_dir.second_pass"::
-      "$(user_bin_dir)"
-      perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      copy_from => local_dcp( "$($(settings)[cache])/$($(settings)[bin_dir])" ),
-      depth_search => recurse_with_base("inf"),
-      comment => "locally recursive copy anything in the bin directory to user's home if directory exists in the cache";
-     
-  methods:
-      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
-      "username listed with configs: '$(username)'";
-      #"Contents of 'user_configs' data container: '$($(settings)[json_str_username])'";
-      "user home path:   $($(settings)[home_path])";
-      "user home UID:    $($(settings)[path_owner])";
-      "user home GID:    $($(settings)[path_group])";
-     
+      "username listed with configs: $(user)";
+      "user home path:    $(user_dir[$(user)])";
+      "default file mode: $(mode)";
+      "user home UID:     $(path_owner[$(user)])";
+      "user home GID:     $(path_group[$(user)])";
+
+      "configs_dist:      $(configs_dist[$(user)])";
+      "configs_cache:     $(configs_cache[$(user)])";
+      
+      "configuration files copied for $(user)"
+      	ifvarclass => "$(user)_config_files_repaired";
+
 }
 
 ########################################################
 
-body copy_from preserve_local_dcp(from)
-{
-      source      => "$(from)";
-      compare     => "digest";
-      preserve => "true";
-}
-
-########################################################
-
-bundle agent manage_ssh_keys(settings)
-# @description: copies ssh public key for user login from policy server to authorized_keys file on system
-# and copies public and private keys 
+bundle agent ensure_user_templates(settings)
+# @description: ensure user specific template based files are deployed
 {
   vars:
-      "username" string => "$($(settings)[username])";
-      "ssh_dir" string => "/home/$($(settings)[username])/.ssh";
-      "authorized_keys_file" string => "$(ssh_dir)/authorized_keys";
-      "ssh_pri_key_location" string => "$(ssh_dir)/$($(settings)[ssh_pri_key])";
-      "ssh_pub_key_location" string => "$(ssh_dir)/$($(settings)[ssh_pub_key])";
-      "ssh_pri_key_cache" string => "$($(settings)[cache])/$($(settings)[ssh_pri_key])";
-      "ssh_pub_key_cache" string => "$($(settings)[cache])/$($(settings)[ssh_pub_key])";
+      "user" slist => { "@($(settings).username)" };
+      "user_dir[$(user)]" string => "/home/$(user)/";
 
-  files:
-      "$(ssh_dir)/."
-	create => "true",
-	perms => mog( "700","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-	comment => "make sure user .ssh directory has been created with correct permissions";
+      "templates_dist[$(user)]" string => "$($(settings).templates_dist)$(user)/";
+      "templates_cache[$(user)]" string => "$($(settings).templates_cache)$(user)/";
 
-      "$(authorized_keys_file)"
-        edit_line => insert_file_if_no_line_matching("$(username)","$(ssh_pub_key_cache)"),
-	action => if_elapsed("60"),
-        create => "true",
-	perms => mog( "600","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-        comment => "Edit the authorized keys file and add public key to the user's personal ssh keyring";
+      "mode" string =>"$($(settings).default_mode)";
 
-    "$($(settings)[username])_have_ssh_key_pair"::
+      # Set the owner group the same as the home directory owner
+      "path_owner[$(user)]" string => filestat( "$(user_dir[$(user)])", uid ),
+      comment => "assume the owner will be the the same as the user home directory";
+
+      "path_group[$(user)]" string => filestat( "$(user_dir[$(user)])", gid ),
+      comment => "assume the group will be the the same as the user home directory";
+
+      "file_path[$(user)][ssh_config]" string => "$(user_dir[$(user)])/.ssh/config";
+      "template_path[$(user)][ssh_config]" string => "$(templates_cache[$(user)])ssh_config.template";
+
+
+      "file_paths[$(user)]" slist => getvalues( file_path );
+      "template_paths[$(user)]" slist => getvalues( template_path );
       
-      "$(ssh_pri_key_location)"
-        perms => mog( "400","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-        copy_from => local_dcp( $(ssh_pri_key_cache) ),
-        comment => "copy user ssh private key to home directory";
+  classes:
+      "$(user)_dir_exists"
+	expression => fileexists( "$(user_dir[$(user)])." );
 
-      "$(ssh_pub_key_location)"
-        perms => mog( "444","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-        copy_from => local_dcp( $(ssh_pub_key_cache) ),
-        comment => "copy user ssh public key to home directory";
-            
+      "$(user)_have_cached_templates"
+	expression => fileexists( "$(templates_cache[$(user)])/." );
+      
+  files:
+      "$(templates_cache[$(user)])/."
+    	create => "true",
+        comment => "ensure the cache directory exists";
+
+    policy_server::
+      "$(templates_cache[$(user)])"
+      # perms => mog("600","root","root"),
+	copy_from => local_dcp( "$(templates_dist[$(user)])" ),
+	depth_search => recurse("inf"),
+	action => if_elapsed("60"),
+	comment => "if host is policy server then perform local recursive copy of entire user_config directory for local staging";
+
+    !policy_server::
+      "$(templates_cache[$(user)])"
+      # perms => mog("600","root","root"),
+	copy_from => secure_cp( "$(templates_dist[$(user)])",$(sys.policy_hub) ),
+	depth_search => recurse("inf"),
+	action => if_elapsed("60"),
+	comment => "if host is another client then perform secure remote recursive copy of entire user_config directory for local staging";
+
+    any::
+      "$(file_paths[$(user)])"
+	perms => mog( "$(mode)","$(path_owner[$(user)])","$(path_group[$(user)])" ),
+        create => "true",
+        edit_template => "$(template_paths[$(user)])",
+        classes => results("bundle", "$(user)_template_files"),
+	comment => "expand all user templates from local staging cache to user home and ensure correct permissions",
+	ifvarclass => and( "$(user)_dir_exists", "$(user)_have_cached_templates" );
+ 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_manage_ssh_authorized_keys)::
+    (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
-      "ssh public key in authorized key file: $(authorized_keys_file)";
-      "ssh files copied: $(ssh_pri_key_location) and $(ssh_pub_key_location)"
-      	ifvarclass => "$(username)_have_ssh_key_pair";
+      # "username listed with configs: $(user)";
+      # "user home path:    $(user_dir[$(user)])";
+      # "default file mode: $(mode)";
+      # "user home UID:     $(path_owner[$(user)])";
+      # "user home GID:     $(path_group[$(user)])";
+
+      "templates_dist:      $(templates_dist[$(user)])";
+      "templates_cache:     $(templates_cache[$(user)])";
+
+      "templates found: $(template_paths[$(user)])";
+      "configuration files expanded: $(file_paths[$(user)])";
       
-#      "ssh key dist file: $(ssh_key_dist)";
-#      "ssh key cached file: $(ssh_key_cache)";
+      "configuration files copied from templates for $(user)"
+      	ifvarclass => "$(user)_template_files_repaired";
 
 }
 
-#####################################################################
-
-bundle edit_line insert_file_if_no_line_matching(user,file)
-{
-  classes:
-      "have_user" expression => regline("$(user).*","$(this.promiser)");
-
-  insert_lines:
-    !have_user::
-      "$(file)"
-      insert_type => "file";
-}
-
-######################################################################
-
-bundle agent emacs_config(settings)
-{
-  vars:
-      "template"
-      string => "$($(settings)[emacs_template])",
-      comment => "Path to mustache template used to render config";
-
-      "path"
-      string => "$($(settings)[emacs_path])",
-      comment => "Path to the emacs configuration file";
-
-  files:
-      "$(path)"
-      edit_template => "$(template)",
-      template_method => "mustache",
-      perms => mog( "$($(settings)[path_mode])","$($(settings)[path_owner])","$($(settings)[path_group])" ),
-      comment => "If we don't render the template the config won't be as
-                 needed. We apply restrictive permissions with the ownership of
-                 the parent directory so that the user does not have to fiddle
-                 with setting them.";
-
-  reports:
-    DEBUG|DEBUG_emacs_config::
-      "=== $(this.bundle) ===";
-      "Template: $(template)";
-      "Config:   $(path)";
-}
+########################################################

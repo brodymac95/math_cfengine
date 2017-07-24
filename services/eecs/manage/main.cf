@@ -95,6 +95,9 @@ bundle agent manage_os_node_host
     install_software.!NO_INSTALLS::
       "package management" usebundle => manage_packages;
 
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
     testing::
       # insert bundles here for testing hosts only
 }
@@ -129,6 +132,9 @@ bundle agent manage_os_tenant_host
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
@@ -177,6 +183,9 @@ bundle agent manage_server_host
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
@@ -215,8 +224,8 @@ bundle agent manage_workstation_host
     install_printers::
       "printer management defined in printers within host_data.json" usebundle => manage_printers;
       
-    install_user_configs::
-      "user specific configuration defined in user_configs within host_data.json" usebundle => install_user_configs;
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
          
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
