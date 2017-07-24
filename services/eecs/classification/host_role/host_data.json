@@ -104,7 +104,7 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configuration": [ "roose", ],
-       "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "asunder", "audacity", "soundconverter", "git", ],
+        "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "asunder", "audacity", "soundconverter", "git", ],
     },
 
 

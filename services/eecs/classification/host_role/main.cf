@@ -22,7 +22,7 @@ bundle common classify_host
     "hosts_json_str" string => format("%S", host_data);
     	       	         # Just for printing seralized version of data container for debugging (note its JSON).
 
-    "canonified_host" string => canonify("$(sys.host)");
+    "canonified_host" string => canonify("$(sys.uqhost)");
 
     "host_machine"
       string => "$(host_data[$(hosts)][machine])",
