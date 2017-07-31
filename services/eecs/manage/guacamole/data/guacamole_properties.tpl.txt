@@ -1,0 +1,16 @@
+## $(guacamole_vars.conf[guac_props_file]) is managed by CFEngine v$(sys.cf_version) at $(sys.policy_hub)
+## Support for $(config_login_banner.support)
+
+## GUACD CONFIGURATION
+## changes here need to mirror changes in /etc/guacamole/guacd.conf
+guacd-hostname: localhost
+guacd-port:     4822
+
+## MYSQL CONFIGURATION
+## using vars defined in manage/guacamole/main.cf CFEngine policy
+mysql-hostname: $(guacamole_vars.conf[guac_props][mysql-hostname])
+mysql-port:     $(guacamole_vars.conf[guac_props][mysql-port])
+mysql-database: $(guacamole_vars.conf[guac_props][mysql-database])
+mysql-username: $(guacamole_vars.conf[guac_props][mysql-username])
+mysql-password: $(configure_guac_server.mysql_passwd)
+
