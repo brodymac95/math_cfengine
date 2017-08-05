@@ -1,7 +1,7 @@
 ##############################################################################
 #
-#   manage/guacamole/main.cf - EECS guacamole RDP gateway server install and configuration
-#   Maintained: Ben Roose, ver 0.1
+#   manage/guacamole/main.cf - EECS guacamole RDP gateway service install and configuration
+#   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
@@ -14,62 +14,85 @@ body file control
 }
 
 ######################################################################
-# Public entry point: manage_guac_server
+# Public entry point: guacamole_server(on) OR guacamole_server(off)
 ######################################################################
 
 # BUILT THIS INSTALLATION POLICY FROM AN UBUNTU 16.04 GUAC INSTALL SCRIPT HERE:
 # https://www.chasewright.com/guacamole-with-mysql-on-ubuntu/
+# and from the official Apache Guacamole manual here:
+# http://guacamole.incubator.apache.org/doc/gug/index.html
 
 # NOTES for future development of configuration:
 # 1.
 
-
-bundle agent manage_guac_server
-# @description: install and configure a guacamole server
+bundle agent guacamole_server
+#bundle agent guacamole_server(state)
+# @description: install and configure the guacamole RDP gateway service.
+# also needs apache2 fully configured and enabled as reverse proxy! see manage/web_server/main.cf
 {
   vars:
       
-      
+      "guacd_exec" string => "/usr/local/sbin/guacd";
+
+  classes:
+      "on"  expression => "any";
+      # "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "guacd_exists"
+	expression => fileexists( "$(guacd_exec)" );
+   
   methods:
+
+    off.guacd_exists::
+      "ensure guacd service is stopped if guacamole_server is off"
+      	usebundle => standard_services( "guacd", "stop" ),
+      	classes => if_ok("guacd_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.guacd_exists::
+      "ensure guacd service is running if guacamole_server is on"
+      	usebundle => standard_services( "guacd", "start" ),
+      	classes => if_ok("guacd_server_on");
+
+      "ensure tomcat8 service is running if guacamole_server is on"
+      	usebundle => standard_services( "tomcat8", "start" ),
+      	classes => if_ok("tomcat8_server_on");
+
       "generate all guacamole variables"  usebundle => guacamole_vars;
 
-    install_software::
-      "install dependent packages"
-    	usebundle => dependent_packages_installed("guacamole_vars.install"),
-        classes => results("bundle", "dependent_packages_install"),
-        comment => "use packages/custom_install.cf generic bundle";
-
-    #   # PROBLEM: following bundles will not run unless install_software class is defined!
-    #   # need to fix!
-    any::
-      "download and expand guacamole installation tarball"
-    	usebundle => installation_tarball_is_present("guacamole_vars.install"),
-        classes => results("bundle", "download_tarball"),
-        comment => "use packages/custom_install.cf generic bundle";
-
-    (download_tarball_repaired|download_tarball_kept)::
-      "install guacamole server and client from source files"
-      	usebundle =>install_guac_server("guacamole_vars.install"),
-        classes => results("bundle", "guac_install");
-
-    (guac_install_repaired|guac_install_kept)::
-      "configure guacamole, tomcat8, and mysql"
-    	usebundle =>configure_guac_server("guacamole_vars.conf"),
-        classes => results("bundle", "guac_configuration");
+      "configure guacamole for mysql db and ad/ldap authentication"
+    	usebundle =>configure_guac_authentication("guacamole_vars.conf"),
+        classes => results("bundle", "guac_authentication");
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
-    guac_configuration_repaired.!NO_RESTARTS::
-      # "restart guacd service if configuration changed"
-      # 	usebundle => standard_services( "guacd", "restart" ),
-      # 	classes => results("bundle", "guacd_restart");
-      ## NEED TO BUILD A SERVICE CONTROL FOR GUACD! ##
+    on.guac_configuration_repaired.!NO_RESTARTS::
+      "restart guacd service if configuration changed"
+      	usebundle => standard_services( "guacd", "restart" ),
+      	classes => if_ok("guacd_server_restart");
 
       "restart tomcat8 service if configuration changed"
     	usebundle => standard_services( "tomcat8", "restart" ),
-    	classes => results("bundle", "tomcat_restart");
+      	classes => if_ok("tomcat8_server_restart");
 
+    ## INSTALL ALL SOFTWARE FOR GUACAMOLE SERVER
+    on.install_software::
+      "generate all guacamole variables"  usebundle => guacamole_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest("$(guacamole_vars.install[dependent_packages])"),
+        classes => results("bundle", "dependent_packages_install"),
+        comment => "pull package list from guacamole_vars";
+
+      "download and expand guacamole installation tarball"
+    	usebundle => install_tarball("guacamole_vars.install"),
+        classes => results("bundle", "download_tarball"),
+        comment => "use packages/custom_install.cf generic bundle";
       
-      # "delete installation files" usebundle => installation_tidy("pyrosetta_vars.conf");
+    on.(download_tarball_repaired|download_tarball_kept)::
+      "install guacamole server and client from source files"
+      	usebundle =>install_guac_server("guacamole_vars.install"),
+        classes => results("bundle", "guac_install");
 
   reports:
     (inform_mode|verbose_mode)::
@@ -78,14 +101,27 @@ bundle agent manage_guac_server
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
 
-      "$(guacamole_vars.install[_dependent_packages]) installed"
+      "guacamole is not installed on this host"
+        ifvarclass => "!guacd_exists";
+      "guacamole server is turned off"
+        ifvarclass => "guacd_server_off";
+      "guacamole server is turned on and running"
+        ifvarclass => "guacd_server_on";
+      "tomcat8 server is turned on and running"
+        ifvarclass => "tomcat8_server_on";
+      "guacamole server restarted due to configuration change"
+        ifvarclass => "guacamole_server_restart";
+      "tomcat8 server restarted due to configuration change"
+        ifvarclass => "tomcat8_server_restart";
+
+      "$(guacamole_vars.install[dependent_packages]) installed"
         ifvarclass => "dependent_packages_install_repaired";
       "$(guacamole_vars.install[_tarball]) downloaded and unrolled"
         ifvarclass => "download_tarball_repaired";
       "guacamole server and client installed from source code"
         ifvarclass => "guac_install_repaired";
-      "guacamole server and client configured"
-        ifvarclass => "guac_configuration_repaired";
+      "guacamole server and client configured for mysql db and ad authentication"
+        ifvarclass => "guac_authentication_repaired";
 }
 
 ######################################################################
@@ -93,8 +129,16 @@ bundle agent manage_guac_server
 bundle agent guacamole_vars(params1, params2)
 {
   vars:
-  
-      # Default install values. Internal parameters start with _ ?
+    ## INSTALL PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "install[dependent_packages]" slist => { "build-essential", "binutils", "libcairo2-dev", "libjpeg-dev", "libpng++-dev", "libpng-tools", "libturbojpeg0-dev", "libpng-dev", "libossp-uuid-dev", "libavcodec-dev", "libavutil-dev", "libswscale-dev", "libfreerdp-dev", "libpango1.0-dev", "libssh2-1-dev", "libtelnet-dev", "libvncserver-dev", "libpulse-dev", "libssl-dev", "libvorbis-dev", "libwebp-dev", "mysql-server", "mysql-client", "mysql-common", "mysql-utilities", "tomcat8", "freerdp", "ghostscript", "jq", "wget", "curl", "autotools-dev", "maven", "default-jdk", },
+        comment => "guacamole depends on build tools for make from source, mysql for backend DB, tomcat for java support, and others";
+
+      # NEEDED TO FIND ALT PACKAGES FOR ORIGINALLY REQUIRED PACKAGES IN TUTORIAL SCRIPT:
+      # libjpeg-turbo8-dev (using libjpeg-dev and libturbojpeg0-dev)
+      # libpng12-dev (using libpng-dev and libpng++-dev and libpng-tools?)
+      # adding binutils
+      # NOTE: autotools-dev, maven, and default-jdk are needed packages to build from pre-release source only!
       
       "install[server_exec_file]" string =>"/usr/local/sbin/guacd";
       "install[_download_server]"  string => "$(sys.policy_hub)";
@@ -128,9 +172,11 @@ bundle agent guacamole_vars(params1, params2)
       "install[tomcat_webapps_dir]" string => "/var/lib/tomcat8/webapps/";
       "install[tomcat_guac_file]" string => "/usr/share/tomcat8/.guacamole";
 
-      "conf[tomcat_config_file]" string => "/etc/default/tomcat8";
-      "conf[tomcat_config][GUACAMOLE_HOME]" string => "/etc/guacamole";
+      "install[tomcat_config_file]" string => "/etc/default/tomcat8";
+      "install[tomcat_config][GUACAMOLE_HOME]" string => "/etc/guacamole";
+
       
+    ## CONFIGURATION PARAMETERS FOR AUTHENTICATION
       "conf[guac_props_file]" string => "/etc/guacamole/guacamole.properties";
       "conf[guac_template_file]" string => "$(this.promise_dirname)/data/guacamole_properties.tpl.txt";
       "conf[guac_props][mysql-hostname]" string => "localhost";
@@ -138,33 +184,39 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guac_props][mysql-database]" string => "guacamole_db";
       "conf[guac_props][mysql-username]" string => "guacamole_user";
 
+      "conf[guac_props][ldap-hostname]" string => "ad.wichita.edu";
+      # "conf[guac_props][ldap-port]" string => "389"; # Standard LDAP port is 389, but 636 is used by WSU for AD
+      "conf[guac_props][ldap-port]" string => "636";
+      "conf[guac_props][ldap-encryption-method]" string => "ssl"; # can also set this to starttls
+      "conf[guac_props][ldap-user-base-dn]" string => "OU=Wichita State University,DC=ad,DC=wichita,DC=edu";
+      # "conf[guac_props][ldap-search-bind-dn]" string => "CN=unixldapper,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu"; # this was the entry from Tom's how-to
+      "conf[guac_props][ldap-search-bind-dn]" string => "CN=unixldapper,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu";
+      "conf[guac_props][ldap-search-bind-password]" string => "NEED TO GET THIS FROM POLICYHUB";
+      "conf[guac_props][ldap-username-attribute]" string => "sAMAccountName";
+
+    ## CONFIGURATION PARAMETERS FOR MYSQL AND AD PASSWORD DISTRIBUTION/CACHING
       "conf[guac_mysql_passwd_dist]"
         string => "/srv/cfengine/configs/service_credentials/guacamole_db_passwd",
-        comment => "server location where agents look for guacamole password
+        comment => "server location where agents look for guacamole database password
                     (WARNING: STORED IN PLAIN TEXT, ENSURE SECURITY ON THIS FILE).";
       "conf[guac_mysql_passwd_cache]"
-        string => "$(sys.workdir)/state/security/guac_cached_passwd",
-        comment => "local directory where agents cache guacamole password
+        string => "$(sys.workdir)/state/security/guac_db_cached_passwd",
+        comment => "local directory where agents cache guacamole database password
                     (for offline enforcement).";
       "conf[guac_mysql_passwd_cache_dir]"
-        string => dirname( "$(conf[guac_mysql_password_cache_dir])" );
+        string => dirname( "$(conf[guac_mysql_passwd_cache])" );
 
+      "conf[guac_ad_passwd_dist]"
+        string => "/srv/cfengine/configs/service_credentials/ad_search_bind_passwd",
+        comment => "server location where agents look for guacamole ad search bind password
+                    (WARNING: STORED IN PLAIN TEXT, ENSURE SECURITY ON THIS FILE).";
+      "conf[guac_ad_passwd_cache]"
+        string => "$(sys.workdir)/state/security/ad_cached_passwd",
+        comment => "local directory where agents cache ad search bind password
+                    (for offline enforcement).";
+      "conf[guac_ad_passwd_cache_dir]"
+        string => dirname( "$(conf[guac_ad_passwd_cache])" );
       
-#      "conf[_unrolled_dir_bin]"  string => "$(conf[_install_dir])bin/",
-#      "conf[_install_command]"  string => "python setup.py install",
-#        policy => "overridable";
-#      "conf[_log_file]"    string => "/var/log/matlab_install.log",
-#        policy => "overridable";
-      
-    debian::
-      "install[_dependent_packages]" slist => { "build-essential", "binutils", "libcairo2-dev", "libjpeg-dev", "libpng++-dev", "libpng-tools", "libturbojpeg0-dev", "libpng-dev", "libossp-uuid-dev", "libavcodec-dev", "libavutil-dev", "libswscale-dev", "libfreerdp-dev", "libpango1.0-dev", "libssh2-1-dev", "libtelnet-dev", "libvncserver-dev", "libpulse-dev", "libssl-dev", "libvorbis-dev", "libwebp-dev", "mysql-server", "mysql-client", "mysql-common", "mysql-utilities", "tomcat8", "freerdp", "ghostscript", "jq", "wget", "curl", "autotools-dev", "maven", "default-jdk", },
-        comment => "guacamole depends on build tools for make from source, mysql for backend DB, tomcat for java support, and others";
-
-      # NEEDED TO FIND ALT PACKAGES FOR ORIGINALLY REQUIRED:
-      # libjpeg-turbo8-dev (using libjpeg-dev and libturbojpeg0-dev)
-      # libpng12-dev (using libpng-dev and libpng++-dev and libpng-tools?)
-      # adding binutils
-      # NOTE: autotools-dev, maven, and default-jdk are needed packages to build from pre-release source!
 
     any::
       # Copy configuration parameters passed, into a local array
@@ -184,6 +236,7 @@ bundle agent install_guac_server(params)
 # @description: install guacamole from downloaded source files
 {
   vars:
+      "tomcat_config_entries" slist => getindices( "$(params)[tomcat_config]" );
 
   classes:
       "guacd_exec_file_exist"
@@ -196,6 +249,7 @@ bundle agent install_guac_server(params)
         and => { fileexists( "$($(params)[guac_war_source_path])" ), };
       
   files:
+    ## CREATE GUAC DIRECTORIES
       "$($(params)[guac_lib_dir])/."
 	# perms => mog("755", "root", "root" ),
         create => "true",
@@ -213,6 +267,7 @@ bundle agent install_guac_server(params)
                     tomcat8 to access all client files (read access only, CFE edits these files!)";
       
     guacd_exec_file_exist.guac_etc_dirs_exist.guac_client_war_file_exist::
+    ## COPY GUAC CLIENT (WAR) AND AUTHENTICATION EXTENSIONS
       "$($(params)[guac_war_destination_path])"
         create => "true",
 	copy_from => local_dcp( "$($(params)[guac_war_source_path])" ),
@@ -228,7 +283,7 @@ bundle agent install_guac_server(params)
 	copy_from => local_dcp( "$($(params)[mysql_connector_source_path])" ),
 	comment => "cp mysql-connector-java .jar file to /etc/guacamole/lib";
 
-      # SYMBOLIC LINKS
+    ## CREATE SYMBOLIC LINKS FOR TOMCAT8 AND FREERDP
       "$($(params)[tomcat_webapps_dir])/$($(params)[guac_war_filename])"
         move_obstructions => "true",
         link_from => linkfrom( "$($(params)[guac_war_destination_path])", "symlink" ),
@@ -243,36 +298,42 @@ bundle agent install_guac_server(params)
         move_obstructions => "true",
         link_from => linkchildren( "$($(params)[freerdp_lib_dir])" ),
         comment => "create symbolic link for freerdp in i86_64 directory";
-      
+
+    ## ADD GUAC TO TOMCAT8 CONFIGURATION
+      "$($(params)[tomcat_config_file])"
+      	edit_line => set_line_based( "$(params)[tomcat_config]", "=", "\s+", ".*", "\s*#\s*" ),
+      	classes => results("bundle", "tomcat_config"),
+      	comment => "Set desired tomcat8 parameters in its config file";
+
   commands:
+    ## BUILD GUAC SERVER AND CLIENT FROM SOURCE CODE
     !guacd_exec_file_exist.guac_etc_dirs_exist::
       "autoreconf -fi &&
        ./configure --with-init-dir=/etc/init.d &&
        /usr/bin/make &&
        /usr/bin/make install &&
        /sbin/ldconfig;"
-       # /bin/systemctl enable guacd;"
         contain => in_dir_shell("$($(params)[server_source_dir])"),
         classes => results("bundle", "guac_server_build"),
         comment => "run the sequence of build commands to build guacamole server from source";
 
-    !guac_client_war_file_exist::
+      !guac_client_war_file_exist::
       "/usr/bin/mvn package;"
         contain => in_dir_shell("$($(params)[client_source_dir])"),
         classes => results("bundle", "guac_client_build"),
         comment => "run the sequence of build commands to build guacamole client from source into .war file";
 
-    guac_server_build_repaired::
-      "/etc/init.d/guacd start"
-        comment => "once guacd has been built and installed, start the service.
-                    NEED TO CREATE A SYSTEMD guacd.service FILE!!";
-
+    # USING GUACD SERVICE INSTEAD OF OLDED INIT.D SCRIPT
+    # guac_server_build_repaired::
+    #   "/etc/init.d/guacd start"
+    #     comment => "once guacd has been built and installed, start the service.
       
   methods:
-    # guac_server_build_repaired::
-    #   "enable guacd service once fully built from source"
-    # 	usebundle => standard_services("guacd", "enable"),
-    #     classes => results("bundle", "guacd_enable");
+    ## ENABLE GUACD SERVICE
+    guac_server_build_repaired::
+      "enable guacd service in systemd once fully built from source"
+    	usebundle => standard_services("guacd", "enable"),
+        classes => results("bundle", "guacd_service_enable");
 
 
   reports:
@@ -285,18 +346,18 @@ bundle agent install_guac_server(params)
         ifvarclass => "guac_server_build_repaired";
       "guacamole client built from source using $($(params)[source_dir])"
         ifvarclass => "guac_client_build_repaired";
+      "guacamole server enabled as service in systemd"
+        ifvarclass => "guacd_service_enable_repaired";
       
 }
 
 ######################################################################
 
-bundle agent configure_guac_server(params)
-# @description: configure guacd, mysql, and tomcat for guacamole server
+bundle agent configure_guac_authentication(params)
+# @description: configure guacamole, mysql db, and ad/ldap for guacamole authentication
 {
   vars:
       "mysql_cmd" string => "/usr/bin/mysql -u root ";
-
-      "tomcat_config_entries" slist => getindices( "$(params)[tomcat_config]" );
       
       "guac_props_entries" slist => getindices( "$(params)[guac_props]" );
       
@@ -308,34 +369,40 @@ bundle agent configure_guac_server(params)
 	expression => fileexists( "$($(params)[guac_mysql_passwd_cache])" );
 
   files:
+    ## COPY GUAC MYSQL DB AND AD SEARCH BIND PASSWORDS FROM POLICYHUB
       "$($(params)[guac_mysql_passwd_cache_dir])/."
+	create => "true";
+
+      "$($(params)[guac_ad_passwd_cache_dir])/."
 	create => "true";
 
       "$($(params)[guac_mysql_passwd_cache])"
 	perms => mo("400","root"),
 	copy_from => secure_cp( "$($(params)[guac_mysql_passwd_dist])", $(sys.policy_hub) ),
-	# action => if_elapsed("60"),
-	comment => "perform a secure remote copy of the guacamole mysql password file";
+	action => if_elapsed("60"),
+	comment => "perform a secure remote copy of the guacamole mysql database password file";
 
-      "$($(params)[tomcat_config_file])"
-      	edit_line => set_line_based( "$(params)[tomcat_config]", "=", "\s+", ".*", "\s*#\s*" ),
-      	classes => results("bundle", "tomcat_config"),
-      	comment => "Set desired tomcat8 parameters in its config file";
+      "$($(params)[guac_ad_passwd_cache])"
+	perms => mo("400","root"),
+	copy_from => secure_cp( "$($(params)[guac_ad_passwd_dist])", $(sys.policy_hub) ),
+	action => if_elapsed("60"),
+	comment => "perform a secure remote copy of the ad domain search bind password file";
 
+    ## SET GUAC PROPERTIES FROM TEMPLATE
       "$($(params)[guac_props_file])"
         create => "true",
         edit_template => "$($(params)[guac_template_file])",
         classes => results("bundle", "guac_config"),
 	comment => "expand guacamole.properies file using template from staging cache in this promise directory";
       
+    ## CREATE GUAC DATABASE AND ADDING GUAC SCHEMA INTO DB
   methods:
-      # AUTHSOCKET SHOULD ALREADY BE SET UP FOR MYSQL ROOT USER, SO NO ROOT PASSWORD IS NEEDED!
       "create guacamole user and database in mysql"
-      	usebundle => create_mysql_db( "$($(params)[guac_props][mysql-database])", "$($(params)[guac_props][mysql-username])", "mysql_passwd" ),
+      	usebundle => create_mysql_db( "$($(params)[guac_props][mysql-database])", "$($(params)[guac_props][mysql-username])", "$(mysql_passwd)" ),
+        comment => "authsocket should be set up for mysql root user, so no root password is needed within cfengine!";
       	classes => results("bundle", "mysql_db");
 
   commands:
-
     mysql_db_repaired::
       "/bin/cat $($(params)[guac_mysql_schema_files]) | $(mysql_cmd) \"$($(params)[guac_props][mysql-database])\" "
         contain => in_shell,
@@ -356,11 +423,10 @@ bundle agent configure_guac_server(params)
       "$($(params)[guac_props][mysql-database]) created in mysql and guacamole schema added from $($(params)[guac_mysql_schema_files])"
 	ifvarclass => "adding_mysql_schema_repaired";
       
-      "MySQL password found in $($(params)[guac_mysql_passwd_cache])"
+      "MySQL password found for guacamole in $($(params)[guac_mysql_passwd_cache])"
          ifvarclass => "have_cached_mysql_passwd";
       "ALERT: MySQL cache password not found. Check connection to policyhub server"
         ifvarclass => not ("have_cached_mysql_passwd");
-
 }
 
 ######################################################################
@@ -410,7 +476,6 @@ bundle agent create_mysql_db(database, user, password)
         ifvarclass => "mysql_db_repaired";
       "WARNING: $(database) NOT created for $(user)@$(host)"
         ifvarclass => "mysql_db_failed";
-
 }
 
 ######################################################################

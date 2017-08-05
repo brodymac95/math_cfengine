@@ -21,29 +21,7 @@ body file control
 
 ######################################################################
 
-bundle agent dependent_packages_installed(params)
-# @description: generic bundle to install a list of dependent packages as found in $(params)[_dependent_packages]
-{
-  vars:
-      "desired_package" slist => { "@($(params)[_dependent_packages])" };
-
-
-  methods:
-      "install desired packages" usebundle => package_latest("$(desired_package)");
-
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
-
-    DEBUG::
-      "$(this.bundle): Packages to install: $(desired_package)";
-
-}
-
-######################################################################
-
-bundle agent installation_tarball_is_present(params)
-# NOT USED?
+bundle agent install_tarball(params)
 # @description: generic bundle to download and unroll a .tar.gz archive file found on the policyhub
 {
   classes:
@@ -77,58 +55,59 @@ bundle agent installation_tarball_is_present(params)
 }
 
 ######################################################################
+## UNUSED BUNDLES - NEED TO BE MADE GENERIC
 
-bundle agent installation_tidy(params)
-# @description: generic bundle to remove downloaded tar.gz files from a custom package install
-{
-  classes:
-      "install_dir_exists"  
-        expression => fileexists("$($(params)[_unrolled_dir])");
+# bundle agent installation_tidy(params)
+# # @description: generic bundle to remove downloaded tar.gz files from a custom package install
+# {
+#   classes:
+#       "install_dir_exists"  
+#         expression => fileexists("$($(params)[_unrolled_dir])");
 
-      "tarball_exists"
-        expression => fileexists("$($(params)[_install_dir])$($(params)[_tarball])");
+#       "tarball_exists"
+#         expression => fileexists("$($(params)[_install_dir])$($(params)[_tarball])");
 
-  files:
-    install_dir_exists::
-      "$($(params)[_unrolled_dir])"
-        pathtype => "literal",
-        delete => tidy,
-        file_select => minutes_old(20),
-        depth_search => recurse("inf"),
-      #BEN: ADD RESULTS CLASS
-        comment => "Remove all files within $($(params)[_unrolled_dir]) created in last 20 minutes.";
+#   files:
+#     install_dir_exists::
+#       "$($(params)[_unrolled_dir])"
+#         pathtype => "literal",
+#         delete => tidy,
+#         file_select => minutes_old(20),
+#         depth_search => recurse("inf"),
+#       #BEN: ADD RESULTS CLASS
+#         comment => "Remove all files within $($(params)[_unrolled_dir]) created in last 20 minutes.";
 
-      "$($(params)[_unrolled_dir])"
-        pathtype => "literal",
-        delete => tidy,
-        file_select => minutes_old(20),
-        depth_search => include_base,
-        comment => "Remove the directory $($(params)[_unrolled_dir]).";
+#       "$($(params)[_unrolled_dir])"
+#         pathtype => "literal",
+#         delete => tidy,
+#         file_select => minutes_old(20),
+#         depth_search => include_base,
+#         comment => "Remove the directory $($(params)[_unrolled_dir]).";
 
-    tarball_exists::
-      "$($(params)[_install_dir])$($(params)[_tarball])"
-        pathtype => "literal",
-        delete => tidy,
-        comment => "Remove $($(params)[_tarball]).";
+#     tarball_exists::
+#       "$($(params)[_install_dir])$($(params)[_tarball])"
+#         pathtype => "literal",
+#         delete => tidy,
+#         comment => "Remove $($(params)[_tarball]).";
 
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
+#   reports:
+#     (inform_mode|verbose_mode)::
+#       "$(this.bundle): Activated";
 
-    DEBUG.(!install_dir_exists)::
-      "$(this.bundle): Removed installation files: $($(params)[_unrolled_dir])";
+#     DEBUG.(!install_dir_exists)::
+#       "$(this.bundle): Removed installation files: $($(params)[_unrolled_dir])";
 
-    DEBUG.(!tarball_exists)::
-      "$(this.bundle): Removed installation files: $($(params)[_tarball])";
+#     DEBUG.(!tarball_exists)::
+#       "$(this.bundle): Removed installation files: $($(params)[_tarball])";
 
-}
+# }
 
-######################################################################
+# ######################################################################
 
-body file_select minutes_old(min)
-{
-      mtime       => irange(0,ago(0,0,0,0,"$(min)",0));
-      file_result => "mtime";
-}
+# body file_select minutes_old(min)
+# {
+#       mtime       => irange(0,ago(0,0,0,0,"$(min)",0));
+#       file_result => "mtime";
+# }
 
-######################################################################
+# ######################################################################
