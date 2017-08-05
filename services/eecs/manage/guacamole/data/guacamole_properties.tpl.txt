@@ -12,5 +12,14 @@ mysql-hostname: $(guacamole_vars.conf[guac_props][mysql-hostname])
 mysql-port:     $(guacamole_vars.conf[guac_props][mysql-port])
 mysql-database: $(guacamole_vars.conf[guac_props][mysql-database])
 mysql-username: $(guacamole_vars.conf[guac_props][mysql-username])
-mysql-password: $(configure_guac_server.mysql_passwd)
+mysql-password: $(configure_guac_authentication.mysql_passwd)
 
+## AD/LDAP CONFIGURATION
+## using vars defined in manage/guacamole/main.cf CFEngine policy
+ldap-hostname:             $(guacamole_vars.conf[guac_props][ldap-hostname])
+ldap-port:                 $(guacamole_vars.conf[guac_props][ldap-port])
+ldap-encryption-method:    $(guacamole_vars.conf[guac_props][ldap-encryption-method])
+ldap-user-base-dn:         $(guacamole_vars.conf[guac_props][ldap-user-base-dn])
+ldap-search-bind-dn:       $(guacamole_vars.conf[guac_props][ldap-search-bind-dn])
+ldap-search-bind-password: $(configure_guac_authentication.ad_passwd)
+ldap-username-attribute:   $(guacamole_vars.conf[guac_props][ldap-username-attribute])

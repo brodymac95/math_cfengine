@@ -176,7 +176,7 @@ bundle agent guacamole_vars(params1, params2)
       "install[tomcat_config][GUACAMOLE_HOME]" string => "/etc/guacamole";
 
       
-    ## CONFIGURATION PARAMETERS FOR AUTHENTICATION
+    ## CONFIGURATION PARAMETERS IN GUACAMOLE.PROPERTIES FOR AUTHENTICATION
       "conf[guac_props_file]" string => "/etc/guacamole/guacamole.properties";
       "conf[guac_template_file]" string => "$(this.promise_dirname)/data/guacamole_properties.tpl.txt";
       "conf[guac_props][mysql-hostname]" string => "localhost";
@@ -188,12 +188,15 @@ bundle agent guacamole_vars(params1, params2)
       # "conf[guac_props][ldap-port]" string => "389"; # Standard LDAP port is 389, but 636 is used by WSU for AD
       "conf[guac_props][ldap-port]" string => "636";
       "conf[guac_props][ldap-encryption-method]" string => "ssl"; # can also set this to starttls
-      "conf[guac_props][ldap-user-base-dn]" string => "OU=Wichita State University,DC=ad,DC=wichita,DC=edu";
-      # "conf[guac_props][ldap-search-bind-dn]" string => "CN=unixldapper,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu"; # this was the entry from Tom's how-to
-      "conf[guac_props][ldap-search-bind-dn]" string => "CN=unixldapper,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu";
+      "conf[guac_props][ldap-user-base-dn]" string => "OU=MCSEE,OU=UNIX_Servers,DC=ad,DC=wichita,DC=edu";      
+      "conf[guac_props][ldap-search-bind-dn]" string => "CN=unix.joiner,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu";
       "conf[guac_props][ldap-search-bind-password]" string => "NEED TO GET THIS FROM POLICYHUB";
       "conf[guac_props][ldap-username-attribute]" string => "sAMAccountName";
-
+     
+      # From Tom Wallis' how-to guide (guessing this is math guac set up)
+      # "conf[guac_props][ldap-user-base-dn]" string => "OU=Wichita State University,DC=ad,DC=wichita,DC=edu";
+      # "conf[guac_props][ldap-search-bind-dn]" string => "CN=unixldapper,CN=Managed Service Accounts,DC=ad,DC=wichita,DC=edu";
+      
     ## CONFIGURATION PARAMETERS FOR MYSQL AND AD PASSWORD DISTRIBUTION/CACHING
       "conf[guac_mysql_passwd_dist]"
         string => "/srv/cfengine/configs/service_credentials/guacamole_db_passwd",
@@ -364,9 +367,15 @@ bundle agent configure_guac_authentication(params)
     have_cached_mysql_passwd::
       "mysql_passwd" string => readfile( "$($(params)[guac_mysql_passwd_cache])", 4096);
 
+    have_cached_ad_passwd::
+      "ad_passwd" string => readfile( "$($(params)[guac_ad_passwd_cache])", 4096);
+
   classes:
       "have_cached_mysql_passwd"
 	expression => fileexists( "$($(params)[guac_mysql_passwd_cache])" );
+
+      "have_cached_ad_passwd"
+	expression => fileexists( "$($(params)[guac_ad_passwd_cache])" );
 
   files:
     ## COPY GUAC MYSQL DB AND AD SEARCH BIND PASSWORDS FROM POLICYHUB
