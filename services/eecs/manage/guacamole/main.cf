@@ -61,7 +61,7 @@ bundle agent guacamole_server
 
       "generate all guacamole variables"  usebundle => guacamole_vars;
 
-      "configure guacamole for mysql db and ad/ldap authentication"
+      "configure guacamole for mysql db and ad/ldap user authentication"
     	usebundle =>configure_guac_authentication("guacamole_vars.conf"),
         classes => results("bundle", "guac_authentication");
 
