@@ -12,6 +12,7 @@ bundle common manage_main_file_control
 #    "input[testing]" string => "$(this.promise_dirname)/iptables/testing.cf";
 
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
+      "input[guacamole]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
@@ -25,6 +26,7 @@ bundle common manage_main_file_control
       "input[uaf2]" string => "$(this.promise_dirname)/uaf2/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
+      "input[web_server]" string => "$(this.promise_dirname)/web_server/main.cf";
 
     #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
     #"input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
@@ -52,15 +54,16 @@ bundle agent manage_main
 {
 
   classes:
-      "NO_MACHINE_TYPE" not => "os_node|os_tenant|server|workstation|laptop";
+      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|server|workstation|laptop";
       
   methods:
 
+    ## DEFINE MACHINE TYPE
     os_node::
-      "all physical server nodes within openstack cluster" usebundle => manage_os_node_host;
+      "all physical undercloud nodes within openstack" usebundle => manage_os_node_host;
 
-    os_tenant::
-      "all tenant VMs within openstack cluster" usebundle => manage_os_node_host;
+    os_tenant_cluster::
+      "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
 
     server::
       "all isolated/legacy physical servers and VMs" usebundle => manage_server_host;
@@ -104,43 +107,50 @@ bundle agent manage_os_node_host
 
 ###################################
 
-bundle agent manage_os_tenant_host
+bundle agent manage_os_tenant_cluster
 {
 # NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!!
       
   methods:
 
-      "configure login motd" usebundle => config_login_banner;
-      "configure sshd" usebundle => config_sshd;
+    ## ALL NODE GLOBAL CONFIGURATION
+    any::
+      "configure login motd"     usebundle => config_login_banner;
+      "configure sshd"           usebundle => config_sshd;
       "configure login defaults" usebundle => config_login_defs;
 
-      "manage root password" usebundle => manage_root_passwd,
+      "manage root password"     usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
-      "system/admin user management" usebundle => manage_sys_users;
-
-    !uaf2_client::
-      "standard user management" usebundle => manage_users;
+      "admin user management"    usebundle => manage_sys_users;
 
     install_software.!NO_INSTALLS::
-      "repository management" usebundle => manage_repositories;
-      "package management" usebundle => manage_packages;
+      "repository management"    usebundle => manage_repositories;
+      "package management"       usebundle => manage_packages;
 
-    uaf2_client::
-      "install and configure tom's uaf2_client if defined in custom packages" usebundle => install_uaf2_client;
+    ## DEFINE ROLE SUBSETS
+    guac_gateway::
+      "turn on guacamole service"  usebundle => guacamole_server("on");
+      "turn on apache web service" usebundle => web_server("on");
+
+    dev_cluster.!uaf2_client::
+      "standard user management"   usebundle => manage_users;
+
+    dev_cluster.uaf2_client::
+      "uaf2 user management"       usebundle => install_uaf2_client,
+	comment => "install and configure tom's uaf2_client if defined in custom packages";
+
       
+    ## SYSTEM CONTROL AND SCHEDULED TASKS
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
-
-    manage_user_configuration::
-      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
-         
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
 
     testing::
       # insert bundles here for testing hosts only
+
 }
 
 ###################################

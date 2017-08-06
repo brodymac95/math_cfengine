@@ -29,8 +29,8 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
-bundle agent guacamole_server
-#bundle agent guacamole_server(state)
+# bundle agent guacamole_server
+bundle agent guacamole_server(state)
 # @description: install and configure the guacamole RDP gateway service.
 # also needs apache2 fully configured and enabled as reverse proxy! see manage/web_server/main.cf
 {
@@ -39,8 +39,8 @@ bundle agent guacamole_server
       "guacd_exec" string => "/usr/local/sbin/guacd";
 
   classes:
-      "on"  expression => "any";
-      # "on"  expression => strcmp("$(state)","on");
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
 
       "guacd_exists"

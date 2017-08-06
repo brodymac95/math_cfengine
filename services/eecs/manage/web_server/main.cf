@@ -24,20 +24,21 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
-bundle agent web_server
-# bundle agent web_server(state)
+# bundle agent web_server
+bundle agent web_server(state)
 # @description: installs and configures an apache2 web server with SSL CA Certs from Let's Encrypt using certbot
 # NOTE: uses the CFE service state on/off for enabling configuration!!
 {
 
-  vars:
-      
+  vars:      
       "apache_exec" string => "/usr/sbin/apache2";
 
   classes:
+      # REMOVE testing_cert once fully ready for production deployment!
       "testing_cert"  expression => "any";
-      "on"  expression => "any";
-      # "on"  expression => strcmp("$(state)","on");
+
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
 
       "apache_exists"
@@ -101,7 +102,7 @@ bundle agent web_server
     ## SSL CERTIFICATE RENEWAL
     on.ssl_cert_renew::
       "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
-    	usebundle => manage_certbot("$(web_server_vars.conf, renew"),
+    	usebundle => manage_certbot("web_server_vars.conf", renew),
         classes => results("bundle", "renew_certs");
       
   reports:

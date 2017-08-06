@@ -36,11 +36,11 @@ bundle common sys_user_settings
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.debian_uaf2",
         comment => "server location where agents look for Debian sudoers file.";
-    redhat.!os_tenant::
+    redhat.!os_tenant_cluster::
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat",
         comment => "server location where agents look for Red Hat sudoers file.";
-    redhat.os_tenant::
+    redhat.os_tenant_cluster::
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat_cloudimg",
         comment => "server location where agents look for OpenStack undercloud sudoers file.";
