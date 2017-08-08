@@ -156,8 +156,6 @@ bundle agent guacamole_vars(params1, params2)
       "install[guac_client_war_source_path]" string => "$(install[client_source_dir])guacamole/target/guacamole-0.9.13-incubating.war";
       "install[guac_auth_mysql_source_path]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/target/guacamole-auth-jdbc-mysql-0.9.13-incubating.jar";
       "install[guac_auth_ldap_source_path]" string => "$(install[client_source_dir])extensions/guacamole-auth-ldap/target/guacamole-auth-ldap-0.9.13-incubating.jar";
-      "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
-      
       "install[mysql_connector_source_path]" string => "$(install[_unrolled_dir])mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar";
 
       "install[guac_client_war_destination_path]" string => "/etc/guacamole/guacamole.war";
@@ -190,6 +188,9 @@ bundle agent guacamole_vars(params1, params2)
     ## CONFIGURATION PARAMETERS IN GUACAMOLE.PROPERTIES FOR AUTHENTICATION
       "conf[guac_props_file]" string => "/etc/guacamole/guacamole.properties";
       "conf[guac_template_file]" string => "$(this.promise_dirname)/data/guacamole_properties.tpl.txt";
+
+      "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
+      
       "conf[guac_props][mysql-hostname]" string => "localhost";
       "conf[guac_props][mysql-port]" string => "3306";
       "conf[guac_props][mysql-database]" string => "guacamole_db";
