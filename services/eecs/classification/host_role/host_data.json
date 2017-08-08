@@ -1,6 +1,6 @@
 {
     "hostname": {
-	"machine": "os_tenant OR os_node OR server OR workstation OR laptop"
+	"machine": "os_tenant_cluster OR os_node OR server OR workstation OR laptop"
 	"purpose": "testing OR teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
@@ -23,6 +23,12 @@
 	"users": {
             "roose": "Ben Roose",
 	   },
+    },
+    "testing_box": {
+	"machine": "os_tenant_cluster",
+	"purpose": "testing",
+        "role": "guac_gateway",
+        "owner": "eecs",
     },
     "cstesting": {
 	"machine": "server",
@@ -255,6 +261,7 @@
 	    "q647m988": "Hui Li",
 	    "v252v594": "Yashar Zargari Zonouz",
 	    "a767p375": "Nathan Baker",
+	    "s767f543": "Anindya Maiti",
 	},
     },
     "crypto_ltsp": {
