@@ -39,10 +39,16 @@ bundle agent guacamole_server(state)
       "guacd_exec" string => "/usr/local/sbin/guacd";
 
   classes:
+      # DEFINE SERVER STATES
       # "on"  expression => "any";
       "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
 
+      # ENABLE SPECIFIC GUAC AUTHENTICATION MODULES HERE!
+      "enable_auth_mysql_module" expression => "any";
+      # "enable_auth_cas_module" expression => "any";
+      "enable_auth_ldap_module" expression => "any";
+      
       "guacd_exists"
 	expression => fileexists( "$(guacd_exec)" );
    
@@ -63,14 +69,16 @@ bundle agent guacamole_server(state)
       	usebundle => standard_services( "tomcat8", "start" ),
       	classes => if_ok("tomcat8_server_on");
 
-      "generate all guacamole variables"  usebundle => guacamole_vars;
+      "generate all guacamole variables"  usebundle => guacamole_vars,
+        inherit=> "true";
 
       "configure guacamole for mysql db and ad/ldap user authentication"
     	usebundle =>configure_guac_authentication("guacamole_vars.conf"),
+        inherit=> "true",
         classes => results("bundle", "guac_authentication");
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
-    on.guac_configuration_repaired.!NO_RESTARTS::
+    on.(guac_configuration_repaired|guac_install_repaired).!NO_RESTARTS::
       "restart guacd service if configuration changed"
       	usebundle => standard_services( "guacd", "restart" ),
       	classes => if_ok("guacd_server_restart");
@@ -81,7 +89,8 @@ bundle agent guacamole_server(state)
 
     ## INSTALL ALL SOFTWARE FOR GUACAMOLE SERVER
     on.install_software::
-      "generate all guacamole variables"  usebundle => guacamole_vars;
+      "generate all guacamole variables"  usebundle => guacamole_vars,
+        inherit=> "true";
 
       "install dependent packages"
     	usebundle => package_latest("$(guacamole_vars.install[dependent_packages])"),
@@ -96,6 +105,7 @@ bundle agent guacamole_server(state)
     on.(download_tarball_repaired|download_tarball_kept)::
       "install guacamole server and client from source files"
       	usebundle =>install_guac_server("guacamole_vars.install"),
+        inherit=> "true",
         classes => results("bundle", "guac_install");
 
   reports:
@@ -118,14 +128,18 @@ bundle agent guacamole_server(state)
       "tomcat8 server restarted due to configuration change"
         ifvarclass => "tomcat8_server_restart";
 
-      "$(guacamole_vars.install[dependent_packages]) installed"
-        ifvarclass => "dependent_packages_install_repaired";
+      # "$(guacamole_vars.install[dependent_packages]) installed"
+      #   ifvarclass => "dependent_packages_install_repaired";
       "$(guacamole_vars.install[_tarball]) downloaded and unrolled"
         ifvarclass => "download_tarball_repaired";
       "guacamole server and client installed from source code"
         ifvarclass => "guac_install_repaired";
-      "guacamole server and client configured for mysql db and ad authentication"
-        ifvarclass => "guac_authentication_repaired";
+      "guacamole server and client configured for mysql database authentication"
+        ifvarclass => "(guac_authentication_repaired|guac_authentication_kept).enable_auth_mysql_module";
+      "guacamole server and client configured for cas authentication"
+        ifvarclass => "(guac_authentication_repaired|guac_authentication_kept).enable_auth_cas_module";
+      "guacamole server and client configured for ldap authentication"
+        ifvarclass => "(guac_authentication_repaired|guac_authentication_kept).enable_auth_ldap_module";
 }
 
 ######################################################################
@@ -135,6 +149,7 @@ bundle agent guacamole_vars(params1, params2)
   vars:
     ## INSTALL PARAMETERS FOR ALL SOFTWARE
     debian::
+
       "install[dependent_packages]" slist => { "build-essential", "binutils", "libcairo2-dev", "libjpeg-dev", "libpng++-dev", "libpng-tools", "libturbojpeg0-dev", "libpng-dev", "libossp-uuid-dev", "libavcodec-dev", "libavutil-dev", "libswscale-dev", "libfreerdp-dev", "libpango1.0-dev", "libssh2-1-dev", "libtelnet-dev", "libvncserver-dev", "libpulse-dev", "libssl-dev", "libvorbis-dev", "libwebp-dev", "mysql-server", "mysql-client", "mysql-common", "mysql-utilities", "tomcat8", "freerdp", "ghostscript", "jq", "wget", "curl", "autotools-dev", "maven", "default-jdk", },
         comment => "guacamole depends on build tools for make from source, mysql for backend DB, tomcat for java support, and others";
 
@@ -142,7 +157,7 @@ bundle agent guacamole_vars(params1, params2)
       # libjpeg-turbo8-dev (using libjpeg-dev and libturbojpeg0-dev)
       # libpng12-dev (using libpng-dev and libpng++-dev and libpng-tools?)
       # adding binutils
-      # NOTE: autotools-dev, maven, and default-jdk are needed packages to build from pre-release source only!
+      # NOTE: autotools-dev, maven, and default-jdk are needed packages to build guacamole-client from pre-release source only!
       
       "install[server_exec_file]" string =>"/usr/local/sbin/guacd";
       "install[_download_server]"  string => "$(sys.policy_hub)";
@@ -150,24 +165,28 @@ bundle agent guacamole_vars(params1, params2)
       "install[_tarball]"      string => "guacamole_0.9.13.tar.gz";
       "install[_install_dir]"  string => "/root/";
       "install[_unrolled_dir]"  string => "$(install[_install_dir])guacamole_0.9.13/";
-      "install[server_source_dir]"  string => "$(install[_unrolled_dir])guacamole-server-0.9.13-prerelease/";
-      "install[client_source_dir]"  string => "$(install[_unrolled_dir])guacamole-client-0.9.13-prerelease/";
+      "install[server_source_dir]"  string => "$(install[_unrolled_dir])guacamole-server-0.9.13-incubating/";
+      "install[client_source_dir]"  string => "$(install[_unrolled_dir])guacamole-client-0.9.13-incubating/";
       
       "install[guac_client_war_source_path]" string => "$(install[client_source_dir])guacamole/target/guacamole-0.9.13-incubating.war";
       "install[guac_auth_mysql_source_path]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/target/guacamole-auth-jdbc-mysql-0.9.13-incubating.jar";
+      "install[guac_auth_cas_source_path]" string => "$(install[client_source_dir])extensions/guacamole-auth-cas/target/guacamole-auth-cas-0.9.13-incubating.jar";
       "install[guac_auth_ldap_source_path]" string => "$(install[client_source_dir])extensions/guacamole-auth-ldap/target/guacamole-auth-ldap-0.9.13-incubating.jar";
       "install[mysql_connector_source_path]" string => "$(install[_unrolled_dir])mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar";
 
       "install[guac_client_war_destination_path]" string => "/etc/guacamole/guacamole.war";
       "install[guac_client_war_filename]" string => lastnode( "$(install[guac_client_war_destination_path])", "/" );
       "install[guac_auth_mysql_filename]" string => lastnode( "$(install[guac_auth_mysql_source_path])", "/" );
+      "install[guac_auth_cas_filename]" string => lastnode( "$(install[guac_auth_cas_source_path])", "/" );
       "install[guac_auth_ldap_filename]" string => lastnode( "$(install[guac_auth_ldap_source_path])", "/" );
       "install[mysql_connector_filename]" string => lastnode( "$(install[mysql_connector_source_path])", "/" );
 
       "install[wsu_ad_certs_source_path]" string => "$(install[_unrolled_dir])/jssecacerts_for_wsu_ad";
-      "install[java_custom_cacert_destination_path]" string => "/etc/ssl/certs/java/jssecacerts",
-      comment => "jssecerts file is defined as the first path tomcat/java checks by default for CA certificates.
-                  If jssecacerts is not found, then tomcat will use the bundled cacerts in same directory";
+      "install[java_custom_cacert_destination_path]" string => "/etc/ssl/certs/java/cacerts",
+      # "install[java_custom_cacert_destination_path]" string => "/etc/ssl/certs/java/jssecacerts",
+      comment => "in theory jssecacerts file is defined as the first path tomcat/java checks by default
+                  for CA certificates, and cacerts will be checked if jssecacarts does not exist.
+                  However, jssecacerts is not seen in Debian 9 with TomCat8. So just overwriting cacerts instead!";
 
       "install[guac_config_dir]" string => "/etc/guacamole/";
       "install[guac_lib_dir]" string => "/etc/guacamole/lib/";
@@ -195,6 +214,9 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guac_props][mysql-port]" string => "3306";
       "conf[guac_props][mysql-database]" string => "guacamole_db";
       "conf[guac_props][mysql-username]" string => "guacamole_user";
+
+      "conf[guac_props][cas-authorization-endpoint]" string => "ad.wichita.edu";
+      "conf[guac_props][cas-redirect-uri]" string => "https://guac-testing.cs.wichita.edu/guacamole";
 
       "conf[guac_props][ldap-hostname]" string => "ad.wichita.edu";
       # "conf[guac_props][ldap-port]" string => "389"; # Standard LDAP port is 389, but 636 is used by WSU for AD
@@ -258,6 +280,11 @@ bundle agent install_guac_server(params)
 
       "guac_client_war_file_exist"
         and => { fileexists( "$($(params)[guac_client_war_source_path])" ), };
+
+      "guac_client_source_exists"
+        and => { fileexists( "$($(params)[client_source_dir])" ), };
+      "guac_server_source_exists"
+        and => { fileexists( "$($(params)[server_source_dir])" ), };
       
   files:
     ## CREATE GUAC DIRECTORIES
@@ -281,23 +308,52 @@ bundle agent install_guac_server(params)
       "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_mysql_filename])"
         create => "true",
 	copy_from => local_dcp( "$($(params)[guac_auth_mysql_source_path])" ),
-	comment => "cp guacamole auth mysql jar file to /etc/guacamole/extensions for mysql database authentication";
+	comment => "cp guacamole auth mysql jar file to /etc/guacamole/extensions for mysql database authentication if enabled",
+        ifvarclass => "enable_auth_mysql_module";
 
-      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_ldap_filename])"
-        create => "true",
-	copy_from => local_dcp( "$($(params)[guac_auth_ldap_source_path])" ),
-	comment => "cp guacamole auth ldap jar file to /etc/guacamole/extensions for ldap authentication";
+      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_mysql_filename])"
+	delete => tidy,
+	comment => "remove guacamole auth mysql jar file from /etc/guacamole/extensions if not enabled",
+        ifvarclass => "!enable_auth_mysql_module";
 
       "$($(params)[guac_lib_dir])/$($(params)[mysql_connector_filename])"
         create => "true",
 	copy_from => local_dcp( "$($(params)[mysql_connector_source_path])" ),
-	comment => "cp mysql-connector-java .jar file to /etc/guacamole/lib";
+	comment => "cp mysql-connector-java .jar file to /etc/guacamole/lib if mysql enabled",
+        ifvarclass => "enable_auth_mysql_module";
+
+      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_cas_filename])"
+        create => "true",
+	copy_from => local_dcp( "$($(params)[guac_auth_cas_source_path])" ),
+	comment => "cp guacamole auth cas jar file to /etc/guacamole/extensions for cas authentication if enabled",
+        ifvarclass => "enable_auth_cas_module";
+
+      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_cas_filename])"
+	delete => tidy,
+	comment => "remove guacamole auth cas jar file from /etc/guacamole/extensions if not enabled",
+        ifvarclass => "!enable_auth_cas_module";
+
+      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_ldap_filename])"
+        create => "true",
+	copy_from => local_dcp( "$($(params)[guac_auth_ldap_source_path])" ),
+	comment => "cp guacamole auth ldap jar file to /etc/guacamole/extensions for ldap authentication if enabled",
+        ifvarclass => "enable_auth_ldap_module";
+
+      "$($(params)[guac_extensions_dir])/$($(params)[guac_auth_ldap_filename])"
+	delete => tidy,
+	comment => "remove guacamole auth ldap jar file from /etc/guacamole/extensions if not enabled",
+        ifvarclass => "!enable_auth_ldap_module";
 
       "$($(params)[java_custom_cacert_destination_path])"
         create => "true",
+	perms => mog("644", "root", "root" ),
 	copy_from => local_dcp( "$($(params)[wsu_ad_certs_source_path])" ),
-	comment => "cp custom jssecerts file with WSU's AD server certificates to /etc/ssl/certs/java/";
-            
+	comment => "cp custom cacerts file with WSU's AD server certificates to /etc/ssl/certs/java/ if ldap enabled
+                    open perms for read access to all users on host
+                    NOTE: jssecacerts is not seen by java, so just overwriting the default cacerts file!
+                    Perhaps related to https://bugs.openjdk.java.net/browse/JDK-8059818",
+        ifvarclass => "enable_auth_ldap_module";
+
     ## CREATE SYMBOLIC LINKS FOR TOMCAT8 AND FREERDP
       "$($(params)[tomcat_webapps_dir])/$($(params)[guac_client_war_filename])"
         move_obstructions => "true",
@@ -329,7 +385,7 @@ bundle agent install_guac_server(params)
 
   commands:
     ## BUILD GUAC SERVER AND CLIENT FROM SOURCE CODE
-    !guacd_exec_file_exist.guac_etc_dirs_exist::
+    !guacd_exec_file_exist.guac_etc_dirs_exist.guac_server_source_exists::
       "autoreconf -fi &&
        ./configure --with-init-dir=/etc/init.d &&
        /usr/bin/make &&
@@ -339,7 +395,7 @@ bundle agent install_guac_server(params)
         classes => results("bundle", "guac_server_build"),
         comment => "run the sequence of build commands to build guacamole server from source";
 
-      !guac_client_war_file_exist::
+      !guac_client_war_file_exist.guac_client_source_exists::
       "/usr/bin/mvn package;"
         contain => in_dir_shell("$($(params)[client_source_dir])"),
         classes => results("bundle", "guac_client_build"),

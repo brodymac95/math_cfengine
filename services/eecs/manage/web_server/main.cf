@@ -37,6 +37,7 @@ bundle agent web_server(state)
       # REMOVE testing_cert once fully ready for production deployment!
       "testing_cert"  expression => "any";
 
+      # DEFINE SERVER STATES
       # "on"  expression => "any";
       "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
