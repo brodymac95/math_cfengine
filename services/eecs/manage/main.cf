@@ -16,6 +16,7 @@ bundle common manage_main_file_control
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
+      "input[network file system]" string => "$(this.promise_dirname)/nfs/main.cf";
       "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
       "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
       "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
@@ -139,7 +140,7 @@ bundle agent manage_os_tenant_cluster
     dev_cluster.uaf2_client::
       "uaf2 user management"       usebundle => install_uaf2_client,
 	comment => "install and configure tom's uaf2_client if defined in custom packages";
-
+      "mount emcity nfs shares"    usebundle => autofs("on");
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
     uaf2_client.run_uaf2_client::
