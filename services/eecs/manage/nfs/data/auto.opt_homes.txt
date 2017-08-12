@@ -1,0 +1,7 @@
+## auto.opt_homes manged by CFEngine
+stu01 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/stu01
+stu02 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/stu02
+stu03 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/stu03
+stu04 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/stu04
+stu05 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/stu05
+grader01 -fstype=nfs -rw,intr,grpid,suid,tcp,soft,nfsvers=3 emcity.cs.wichita.edu:/opt/homes/grader01
