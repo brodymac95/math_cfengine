@@ -1,77 +1,105 @@
 {
+    "192.168.80.0/24": {
+	"subnet_nickname": "roose_private",
+	"location": "roose_home",
+	"vlan": "no_vlan",
+	"link_type": "wireless",
+	"site": "off_campus"
+    }
+
     "156.26.10.0/25": {
 	"subnet_nickname": "cs_blue",
-	"building": "JB_2ndFloor",
+	"location": "JB_2ndFloor",
 	"vlan": "804",
 	"link_type": "wired",
-	"site": "main_campus"
+	"site": "jabara_hall"
     },
     "156.26.10.128/25": {
 	"subnet_nickname": "cs_pink",
-	"building": "JB_2ndFloor",
+	"location": "JB_2ndFloor",
 	"vlan": "802",
 	"link_type": "wired",
-	"site": "main_campus"
+	"site": "jabara_hall"
     },
     "156.26.11.0/24": {
 	"subnet_nickname": "cs_ext",
-	"building": "JB_2ndFloor",
+	"location": "JB_2ndFloor",
 	"vlan": "unknown",
 	"link_type": "wired",
-	"site": "main_campus"
+	"site": "jabara_hall"
     },
     "156.26.43.0/24": {
 	"subnet_nickname": "engineering",
-	"building": "JB_2ndFloor",
+	"location": "JB_2ndFloor",
 	"vlan": "43",
 	"link_type": "wired",
-	"site": "main_campus"
-    },
-    "156.26.250.0/26": {
-	"subnet_nickname": "dc_teaching",
-	"building": "JB_DataCenter",
-	"vlan": "970",
-	"link_type": "wired",
-	"site": "main_campus"
-    },
-    "156.26.250.64/26": {
-	"subnet_nickname": "dc_research",
-	"building": "JB_DataCenter",
-	"vlan": "971",
-	"link_type": "wired",
-	"site": "main_campus"
-    },
-    "192.168.250.0/24": {
-	"subnet_nickname": "dc_private",
-	"building": "JB_DataCenter",
-	"vlan": "972",
-	"link_type": "wired",
-	"site": "main_campus"
+	"site": "jabara_hall"
     },
     "192.168.1.0/24": {
 	"subnet_nickname": "ltsp_private",
-	"building": "JB_2ndFloor",
+	"location": "JB_2ndFloor",
 	"vlan": "805",
 	"link_type": "wired",
-	"site": "main_campus"
+	"site": "jabara_hall"
     }
+
     "172.18.208.0/24": {
 	"subnet_nickname": "wsu_labs",
-	"building": "EE_328",
+	"location": "EE_328",
 	"vlan": "undefined",
 	"link_type": "wired",
-	"site": "main_campus"
+	"site": "experiential_engineering_building"
     }
     "172.27.0.0/16": {
 	"subnet_nickname": "wsu_secure",
+	"location": "campus_wireless",
 	"vlan": "undefined",
 	"link_type": "wireless",
-	"site": "main_campus"
+	"site": "campus_wide"
     }
     "10.1.1.0/24": {
 	"subnet_nickname": "wsu_vpn",
+	"location": "off_campus",
 	"vlan": "undefined",
 	"link_type": "wireless",
 	"site": "off_campus"
     }
+
+    "156.26.250.0/26": {
+	"subnet_nickname": "dc_legacy_public",
+	"location": "dc_left_rack",
+	"vlan": "970",
+	"link_type": "wired",
+	"site": "data_centre"
+    },
+    "156.26.250.64/26": {
+	"subnet_nickname": "os_public",
+	"location": "dc_openstack",
+	"vlan": "971",
+	"link_type": "wired",
+	"site": "data_centre"
+    },
+    "192.168.251.0/24": {
+	"subnet_nickname": "os_provisioning",
+	"location": "dc_openstack",
+	"vlan": "973",
+	"link_type": "wired",
+	"site": "data_centre"
+    }
+    "192.168.250.0/24": {
+	"subnet_nickname": "os_ipmi",
+	"location": "dc_openstack",
+	"vlan": "972",
+	"link_type": "wired",
+	"site": "data_centre"
+    }
+
+    "10.10.10.0/24": {
+	"subnet_nickname": "os_testing",
+	"location": "dc_openstack",
+	"vlan": "testing",
+	"link_type": "neutron",
+	"site": "data_centre"
+    }
+
 }

@@ -22,7 +22,7 @@ bundle common classify_host
     "hosts_json_str" string => format("%S", host_data);
     	       	         # Just for printing seralized version of data container for debugging (note its JSON).
 
-    "canonified_host" string => canonify("$(sys.host)");
+    "canonified_host" string => canonify("$(sys.uqhost)");
 
     "host_machine"
       string => "$(host_data[$(hosts)][machine])",
@@ -77,13 +77,13 @@ bundle common classify_host
       slist => getindices("wsu_users"),
       ifvarclass => isvariable("host_data[$(canonified_host)][users]");
 
-    "user_configs"
-      data => mergedata( "host_data[$(canonified_host)][user_configs]" ),
-      ifvarclass => isvariable("host_data[$(canonified_host)][user_configs]"),
-      comment => "create data subset of users with config directory in host_by_key directories from host_data.json file";
+    "user_configuration"
+      data => mergedata( "host_data[$(canonified_host)][user_configuration]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][user_configuration]"),
+      comment => "create data subset of users with config files in /srv/cfengine/configs/ from host_data.json file";
  
-    "user_configs_json_str" string => format("%S", "user_configs"),
-      ifvarclass => isvariable("host_data[$(canonified_host)][user_configs]");
+    "user_configuration_json_str" string => format("%S", "user_configuration"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][user_configuration]");
  
     "extra_packages"
       data => mergedata( "host_data[$(canonified_host)][extra_repository_packages]" ),
@@ -152,20 +152,20 @@ bundle common classify_host
       	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	comment => "Add classes for all custom_packages if found for host from external data file.";
       
-      #    "configure_interfaces"
-      #      expression => isvariable("net_interfaces"),
-      #      meta => { "derived-from=sys.host,hardclass and host_data file" },
-      #      comment => "Add class configure_interfaces if found for host from external data file.";
+      # "configure_interfaces"
+      #   expression => isvariable("net_interfaces"),
+      #   meta => { "derived-from=sys.host,hardclass and host_data file" },
+      #   comment => "Add class configure_interfaces if found for host from external data file.";
 
       "custom_security_rules"
 	expression => isvariable("security_rules"),
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
-	comment => "Add class security_rules if found for host from external data file.";
+	comment => "Add class custom_security_rules if found for host from external data file.";
 
-      "install_user_configs"
-	expression => isvariable("user_configs"),
+      "manage_user_configuration"
+	expression => isvariable("user_configuration"),
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
-	comment => "Add class install_user_configs if found for host from external data file.";
+	comment => "Add class manage_user_configuration if found for host from external data file.";
 
       "install_extra_packages"
 	expression => isvariable("extra_packages"),
@@ -196,23 +196,18 @@ bundle common classify_host
       "=== $(this.bundle) ===";
       "Found hostname: $(sys.host)";
       "Found machine type: $(host_machine)";
-      "Found machine type: $(host_machine)";
       "Found purpose: $(host_purpose)";
       "Found role: $(host_role)";
       "Found owner: $(host_owner)";
-      "Found authentication: $(host_authentication)";
-      "Found users: $(user_list)";
+      "Found authentication type: $(host_authentication)"
+	ifvarclass => canonify("$(host_data[$(hosts)][authentication])");
+
+      # "Found users: $(user_list)";
       
-#       "Contents of 'external file' data container: '$(hosts_json_str)'";
-#       "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
-#       "Contents of 'wsu_users' data container: '$(users_json_str)'";
-#       "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
-#       "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
-#       "Contents of 'printers' data container: '$(printers_json_str)'";
-
-#    (DEBUG|DEBUG_classify_host).server::
-#      "$(this.bundle): Host found in host_roles.json, so server class defined";
-
-#    (DEBUG|DEBUG_classify_host).workstation::
-#      "$(this.bundle): Host not found in host_roles.json, so workstation class defined";
+      #  "Contents of 'external file' data container: '$(hosts_json_str)'";
+      #  "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
+      #  "Contents of 'wsu_users' data container: '$(users_json_str)'";
+      #  "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";
+      #  "Contents of 'custom_packages' data container: '$(custom_packages_json_str)'";
+      #  "Contents of 'printers' data container: '$(printers_json_str)'";
 }

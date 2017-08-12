@@ -12,6 +12,7 @@ bundle common manage_main_file_control
 #    "input[testing]" string => "$(this.promise_dirname)/iptables/testing.cf";
 
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
+      "input[guacamole]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
@@ -20,10 +21,12 @@ bundle common manage_main_file_control
       "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
       "input[repositories]" string => "$(this.promise_dirname)/repositories/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
+      "input[system_users]" string => "$(this.promise_dirname)/system_users/main.cf";
       "input[tftp]" string => "$(this.promise_dirname)/tftp/main.cf";
       "input[uaf2]" string => "$(this.promise_dirname)/uaf2/main.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
+      "input[web_server]" string => "$(this.promise_dirname)/web_server/main.cf";
 
     #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
     #"input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
@@ -47,39 +50,142 @@ body file control
 }
 
 bundle agent manage_main
+# @description: break down overall management by machine type as defined in host_data.json file
 {
 
+  classes:
+      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|server|workstation|laptop";
+      
   methods:
+
+    ## DEFINE MACHINE TYPE
+    os_node::
+      "all physical undercloud nodes within openstack" usebundle => manage_os_node_host;
+
+    os_tenant_cluster::
+      "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
+
+    server::
+      "all isolated/legacy physical servers and VMs" usebundle => manage_server_host;
+
+    workstation::
+      "all isolated physical workstations and desktops" usebundle => manage_workstation_host;
+
+    laptop::
+      "all isolated physical laptops and mobile devices" usebundle => manage_laptop_host;
+
+  reports:
+    NO_MACHINE_TYPE::
+      "ALERT: No machine type found for host $(sys.host). Ensure host is configured in host_data.cf";
+}
+
+###################################
+
+bundle agent manage_os_node_host
+{
+# NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!! 
+      
+  methods:
+
+      "configure login motd" usebundle => config_login_banner;
+      "configure sshd" usebundle => config_sshd;
+
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+      
+      "system/admin user management" usebundle => manage_sys_users;
+
+    install_software.!NO_INSTALLS::
+      "package management" usebundle => manage_packages;
+
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
+    testing::
+      # insert bundles here for testing hosts only
+}
+
+###################################
+
+bundle agent manage_os_tenant_cluster
+{
+# NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!!
+      
+  methods:
+
+    ## ALL NODE GLOBAL CONFIGURATION
+    any::
+      "configure login motd"     usebundle => config_login_banner;
+      "configure sshd"           usebundle => config_sshd;
+      "configure login defaults" usebundle => config_login_defs;
+
+      "manage root password"     usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+
+      "admin user management"    usebundle => manage_sys_users;
+
+    install_software.!NO_INSTALLS::
+      "repository management"    usebundle => manage_repositories;
+      "package management"       usebundle => manage_packages;
+
+    ## DEFINE ROLE SUBSETS
+    guac_gateway::
+      "turn on guacamole service"  usebundle => guacamole_server("on");
+      "turn on apache web service" usebundle => web_server("on");
+
+    dev_cluster.!uaf2_client::
+      "standard user management"   usebundle => manage_users;
+
+    dev_cluster.uaf2_client::
+      "uaf2 user management"       usebundle => install_uaf2_client,
+	comment => "install and configure tom's uaf2_client if defined in custom packages";
+
+      
+    ## SYSTEM CONTROL AND SCHEDULED TASKS
+    uaf2_client.run_uaf2_client::
+      "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
+    reboot_allowed::
+      "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
+	usebundle => reboot_required;
+
+    testing::
+      # insert bundles here for testing hosts only
+
+}
+
+###################################
+
+bundle agent manage_server_host
+{
+  methods:
+
+      "configure login motd" usebundle => config_login_banner;
+      "configure sshd" usebundle => config_sshd;
+      "configure login defaults" usebundle => config_login_defs;
+
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+
+      "system/admin user management" usebundle => manage_sys_users;
+      
+    !uaf2_client|!uaf2_legacy::
+      "standard user management" usebundle => manage_users;
 
     (testing|research).install_software.!NO_INSTALLS::
       "repository management" usebundle => manage_repositories;
 
     install_software.!NO_INSTALLS::
-      "package_management" usebundle => manage_packages;
+      "package management" usebundle => manage_packages;
 
     any::
-      "user_management" usebundle => manage_users;
-      "configure_rc_local" usebundle => config_rc_local;
-      "configure_motd" usebundle => config_login_banner;
-      "configure_login_defs" usebundle => config_login_defs;
-      "configure_hosts_file" usebundle => config_hosts_file;
+      "configure rc.local for autostart at boot" usebundle => config_rc_local;
+
       "configure_firewall" usebundle => config_iptables;
-
-#    !testing::
-#    testing::
-
-    server::
-      "configure_sshd" usebundle => sshd_config;
       "use_custom_network_interfaces" usebundle => config_net_interfaces;
+      "configure_hosts_file" usebundle => config_hosts_file;
 
     tftp_server::
-      "install and configure tftp server" usebundle => config_tftp_server;
-
-    install_printers::
-      "printer_management" usebundle => manage_printers;
-
-    install_user_configs::
-      "user_config_installation" usebundle => install_user_configs;
+      "install and configure tftp server if defined in custom packages" usebundle => config_tftp_server;
 
     uaf2_client::
       "install and configure tom's uaf2_client if defined in custom packages" usebundle => install_uaf2_client;
@@ -87,11 +193,64 @@ bundle agent manage_main
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
+
+    testing::
+      # insert bundles here for testing hosts only
+}
+
+###################################
+
+bundle agent manage_workstation_host
+{
+  methods:
+
+      "configure login motd" usebundle => config_login_banner;
+      "configure login defaults" usebundle => config_login_defs;
+
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+
+      "system/admin user management" usebundle => manage_sys_users;
       
-    #nickanderson_thinkpad_w520::
-    #  "emacs"
-    #  usebundle => emacs_config("nickanderson_emacs_config_settings");
+    !uaf2_client|!uaf2_legacy::
+      "standard user management" usebundle => manage_users;
+
+    (testing|research).install_software.!NO_INSTALLS::
+      "repository management" usebundle => manage_repositories;
+
+    install_software.!NO_INSTALLS::
+      "package management" usebundle => manage_packages;
+
+    any::
+      "configure rc.local for autostart at boot" usebundle => config_rc_local;
+      "configure_firewall" usebundle => config_iptables;
+
+    install_printers::
+      "printer management defined in printers within host_data.json" usebundle => manage_printers;
+      
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
+    reboot_allowed::
+      "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
+	usebundle => reboot_required;
+
+    testing::
+      # insert bundles here for testing hosts only
+}
+
+###################################
+
+bundle agent manage_laptop_host
+# UNUSED BUT AVAILABLE FOR FUTURE POLICIES
+{
+  methods:
+      "call the same bundles as workstation" usebundle => manage_workstation_host;
+      
 }

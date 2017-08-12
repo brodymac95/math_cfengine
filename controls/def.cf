@@ -94,6 +94,9 @@ bundle common def
                    # Assume /16 LAN clients: WSU 156.26.0.0/16 subnet
                    "$(sys.policy_hub)/16",
 
+		   # allow for OpenStack provisioning subnet in datacentre (VLAN 973)
+		   "192.168.251.0/24",
+
 		   # allow for WSU internal "labs" subnet (used in the EEB building)
 		   "172.18.0.0/16",
 
@@ -130,8 +133,9 @@ bundle common def
                    #"0.0.0.0/0", # allow any IP
 		   
 		   "156.26.10.0/25", # allow only CS bluenet IPs to be trusted for bootstrapping
-		   "156.26.250.0/25", # allow only CS data center IPs to be trusted for bootstrapping
-		   
+		   "156.26.250.0/25", # allow only CS data center public IPs to be trusted for bootstrapping
+		   "192.168.251.0/24", # allow only OpenStack provisioning subnet in datacentre (VLAN 973)
+
 		   #"172.18.208.152/32", # TURNED OFF: allow bootstrapping barclay VM server in R&S lab, EE-328D
         },
         comment => "Define from which machines keys can be trusted",
@@ -251,14 +255,6 @@ bundle common def
 
     !enable_cfengine_enterprise_hub_ha::
       "policy_servers" slist => {"$(sys.policy_hub)"};
-
-    # EECS CUSTOM SOFTWARE REPO!!
-    policy_server::
-      "dir_software_packages"
-        string => "/srv/cfengine/packages",
-        comment => "Define software files source location",
-        handle => "common_def_vars_dir_software_packages";
-
 
   classes:
 

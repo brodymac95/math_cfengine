@@ -1,11 +1,11 @@
 {
     "hostname": {
-	"machine": "server OR workstation OR laptop OR mobile"
-	"purpose": "teaching OR research OR infrastructure",
+	"machine": "os_tenant_cluster OR os_node OR server OR workstation OR laptop"
+	"purpose": "testing OR teaching OR research OR infrastructure",
         "role": "role",
         "owner": "client",
 	"security": [ "ssh_public", "rdp_public", ],
-	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups",
+	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups OR uaf2_client or uaf2_legacy",
         "users": { "myWSU ID OR local_user": "full name" },
 	"extra_repository_packages": [ "package1", "package2" ],
 	"custom_packages": [ "package1", "package2" ],
@@ -24,12 +24,19 @@
             "roose": "Ben Roose",
 	   },
     },
+    "testing_box": {
+	"machine": "os_tenant_cluster",
+	"purpose": "testing",
+        "role": "guac_gateway",
+        "owner": "eecs",
+    },
     "cstesting": {
 	"machine": "server",
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
-	"custom_packages": [ "ad_authentication", "python_graphics_lib", "uaf2_client", ],
+	"authentication": "uaf2_client",
+	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
 	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
     },
     "cs_ubuntu_testing": {
@@ -43,6 +50,7 @@
 	},
 	"custom_packages": [ "deep_learning", "ubuntu_make", ],
     },
+
     "oldtesting": {
 	"machine": "server",
 	"purpose": "infrastructure",
@@ -63,6 +71,7 @@
 	},
 	"custom_packages": [ "ldap_removal", "ad_authentication", ],
     },
+
     "jb_223_3432_lt1": {
 	"machine": "workstation",
 	"purpose": "personal",
@@ -72,7 +81,7 @@
 	"users": {
 	    "roose": "Ben Roose",
 	},
-	"user_configs": [ "roose", ],
+	"user_configuration": [ "roose", ],
 	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", "fbreader", ],
 	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", ],
      	"security": [ "linux_show_player", ],
@@ -86,7 +95,7 @@
 	"users": {
 	    "roose": "Ben Roose",
 	},
-	"user_configs": [ "roose", ],
+	"user_configuration": [ "roose", ],
        "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", ],
         "custom_packages": [ "linux_show_player", "etc_offline_editor", ],
        	"security": [ "linux_show_player", ],
@@ -100,9 +109,32 @@
 	"users": {
 	    "roose": "Ben Roose",
 	},
-	"user_configs": [ "roose", ],
-       "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "asunder", "audacity", "soundconverter", "git", ],
+	"user_configuration": [ "roose", ],
+        "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "asunder", "audacity", "soundconverter", "git", ],
     },
+
+
+    "OPENSTACK": {}
+    "os_kvm": {
+	"machine": "os_node",
+	"purpose": "infrastructure",
+        "role": "undercloud",
+        "owner": "eecs",
+    },
+    "os_director": {
+	"machine": "os_node",
+	"purpose": "infrastructure",
+        "role": "undercloud",
+        "owner": "eecs",
+	"user_configuration": [ "roose", ],
+    },
+    "os_radosgw": {
+	"machine": "os_node",
+	"purpose": "infrastructure",
+        "role": "undercloud",
+        "owner": "eecs",
+    },
+
     
     "SERVERS": {},
     "policyhub_prod": {
@@ -129,8 +161,9 @@
 	"purpose": "teaching",
         "role": "rslabsrv",
         "owner": "eecs",
+	"authentication": "uaf2_client",
 	"extra_repository_packages": [ "telnet", ],
-	"custom_packages": [ "wsu_local_repo", "ad_authentication", "uaf2_client", "tftp_server", ],
+	"custom_packages": [ "wsu_local_repo", "ad_authentication", "tftp_server", ],
 	"security": [ "tftp_rslab_internal", ],
     },
     "roger": {
@@ -138,6 +171,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -146,6 +180,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -154,6 +189,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private" ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -162,6 +198,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private", "ltsp_geeks_open", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -170,6 +207,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -178,6 +216,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -186,6 +225,7 @@
 	"purpose": "teaching",
         "role": "ltspsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "ltsp_private", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -194,6 +234,7 @@
 	"purpose": "teaching",
         "role": "rdpsrv",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
 	"security": [ "ssh_public", "rdp_public", ],
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
@@ -220,6 +261,7 @@
 	    "q647m988": "Hui Li",
 	    "v252v594": "Yashar Zargari Zonouz",
 	    "a767p375": "Nathan Baker",
+	    "s767f543": "Anindya Maiti",
 	},
     },
     "crypto_ltsp": {
@@ -246,6 +288,17 @@
     },
     
     "WORKSTATIONS": {},
+    "ee_328c_lab1": {
+	"machine": "workstation",
+	"purpose": "teaching",
+        "role": "rslab_wireshark",
+        "owner": "eecs",
+	"authentication": "local_users_own_group",
+	"users": {
+	    "wireshark": "wireshark",
+	},
+	"extra_repository_packages": [ "wireshark", ],
+    },
     "jb_216_6340_lt11": {
 	"machine": "workstation",
 	"purpose": "research",

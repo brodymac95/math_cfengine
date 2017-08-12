@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   manage/users/ldap.cf - EECS manual installer for LDAP user authentication
+#   manage/users/.cf - EECS manual installer for LDAP user authentication
 #   Maintained: Ben Roose, ver 0.1
 #
 ###############################################################################
@@ -24,18 +24,19 @@ bundle common user_settings
 {
   vars:
 
-      "password_dist"
-        string => "$(sys.workdir)/host_by_key/$(connection.key)/root.hash",
-        comment => "This is where agents look for their root password hash.";
+      # MOVED TO sys_users.cf
+      # "password_dist"
+      #   string => "$(sys.workdir)/host_by_key/$(connection.key)/root.hash",
+      #   comment => "This is where agents look for their root password hash.";
+
+      # "password_cache"
+      #   string => "$(sys.workdir)/state/passwd/root.hash",
+      #   comment => "This is where agents will cache the hashed root password locally
+      #   (for offline enforcement).";
 
       "ssh_key_dist"
         string => "$(sys.workdir)/host_by_key/$(connection.key)/ssh_keys/",
         comment => "This is where agents look for each user ssh public key.";
-
-      "password_cache"
-        string => "$(sys.workdir)/state/passwd/root.hash",
-        comment => "This is where agents will cache the hashed root password locally
-        (for offline enforcement).";
 
       "ssh_key_cache"
         string => "$(sys.workdir)/state/ssh_key_cache/$(user).pub",
@@ -90,11 +91,11 @@ bundle agent manage_users
       # then build a user list from .pub files in that directory!
       
   methods:      
-      "manage root password"
-      usebundle => manage_root_passwd("user_settings");
+      # "manage root password"
+      # usebundle => manage_root_passwd("user_settings");
 
-#      "manage system users"
-#      usebundle => manage_system_users("root_passwd_settings");
+      # "manage system users"
+      # usebundle => manage_system_users("root_passwd_settings");
 
     local_users_shared_group::
       "manage local users in shared group"
@@ -123,55 +124,56 @@ bundle agent manage_users
 
 ########################################################
 
-bundle agent manage_root_passwd(settings)
-# @brief This bundle is run by agents to enforce the local root password.
-{
-  vars:
-    any::
-      "passwd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/root.hash";
-      "passwd_cache" string => "$($(settings).password_cache)";
-      "passwd_cache_dir" string => dirname("$(passwd_cache)");
+# MOVED BUNDLE TO sys_users.cf
+# bundle agent manage_root_passwd(settings)
+# # @brief This bundle is run by agents to enforce the local root password.
+# {
+#   vars:
+#     any::
+#       "passwd_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/root.hash";
+#       "passwd_cache" string => "$($(settings).password_cache)";
+#       "passwd_cache_dir" string => dirname("$(passwd_cache)");
 
-    have_cached_hashed_passwd::
-      "root_hash" string => readfile($(passwd_cache), 4096);
+#     have_cached_hashed_passwd::
+#       "root_hash" string => readfile($(passwd_cache), 4096);
 
-  classes:
-      "have_cached_hashed_passwd"
-      expression => fileexists($(passwd_cache));
+#   classes:
+#       "have_cached_hashed_passwd"
+#       expression => fileexists($(passwd_cache));
 
-  files:
-      "$(passwd_cache_dir)/."
-      create => "true";
+#   files:
+#       "$(passwd_cache_dir)/."
+#       create => "true";
       
-    policy_server::
-      "$(passwd_cache)"
-      perms => mo("600","root"),
-      copy_from => local_dcp( $(passwd_dist) ),
-      action => if_elapsed("60"),
-      comment => "if host is the policy server then perform a local copy of the passwd hash file";
+#     policy_server::
+#       "$(passwd_cache)"
+#       perms => mo("600","root"),
+#       copy_from => local_dcp( $(passwd_dist) ),
+#       action => if_elapsed("60"),
+#       comment => "if host is the policy server then perform a local copy of the passwd hash file";
 
-    !policy_server::
-      "$(passwd_cache)"
-      perms => mo("600","root"),
-      copy_from => secure_cp( $(passwd_dist), $(sys.policy_hub) ),
-      action => if_elapsed("60"),
-      comment => "if host is any other client then perform a secure remote copy of the passwd hash file";
+#     !policy_server::
+#       "$(passwd_cache)"
+#       perms => mo("600","root"),
+#       copy_from => secure_cp( $(passwd_dist), $(sys.policy_hub) ),
+#       action => if_elapsed("60"),
+#       comment => "if host is any other client then perform a secure remote copy of the passwd hash file";
 
-  users:
-      "root"
-      policy => "present",
-      password => hashed_password($(root_hash));
+#   users:
+#       "root"
+#       policy => "present",
+#       password => hashed_password($(root_hash));
 
-  reports:
-    (inform_mode|verbose_mode)::
-      "$(this.bundle): Activated";
+#   reports:
+#     (inform_mode|verbose_mode)::
+#       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_manage_root_passwd)::
-      "=== $(this.bundle) ===";
-      "Password dist file: $(passwd_dist)";
-      "Password cached file: $(passwd_cache)";
-#      "root hash: $(root_hash)";
-}
+#     (DEBUG|DEBUG_manage_root_passwd)::
+#       "=== $(this.bundle) ===";
+#       "Password dist file: $(passwd_dist)";
+#       "Password cached file: $(passwd_cache)";
+# #      "root hash: $(root_hash)";
+# }
 
 ########################################################
 

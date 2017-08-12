@@ -46,8 +46,44 @@ bundle server host_key_access
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_config)::
+    (DEBUG|DEBUG_access)::
 
 }
 
 ######################################################################
+bundle server srv_paths_access
+# @description: share specific directories in /srv/cfengine on policy hub to all hosts
+{
+
+  vars:
+
+    policy_server::
+      "path[software_packages]"
+        string => "/srv/cfengine/packages",
+        comment => "Define software repository source location";
+
+      "path[system_configs]"
+        string => "/srv/cfengine/configs",
+        comment => "Define system and user configuration repository source location";
+
+      "paths"
+        slist => getvalues(path);
+      
+  access:
+
+    any::
+      "$(paths)"
+      handle => "server_access_grant_locations_to_hosts",
+      admit => { ".*$(def.domain)", @(def.acl) },
+      comment => "Grant access to directory paths for all hosts";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_access)::
+
+}
+
+######################################################################
+

@@ -19,7 +19,7 @@
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1.
+# 1. PROBLEM, due to emptying file, copying from template and then inserting the autostart lines, we end up running the full bundle every time it runs. Need to check this and fix. Slowed it down with 60 min action elapse time, but need a better fix
 
 bundle agent config_rc_local
 # @description: sets /etc/rc.local from a template file and inserts autostart commands
@@ -32,12 +32,12 @@ bundle agent config_rc_local
       "iptables_filter" string => "$(sys.workdir)/state/security/iptables/filter/cf.iptables.filter.policy";
 
       "autostart[iptables]" string => "
-echo 'Added by CFEngine to restore iptables firewall at boot time'
+echo 'restore iptables firewall at boot time [CFEngine configured]'
 /sbin/iptables-restore < $(iptables_filter)";
 
     autostart_scmmanager::
       "autostart[scmmanager]" string => "
-echo 'Added by CFEngine to start scmmanager at boot time'
+echo 'start scmmanager at boot time [CFEngine configured]'
 /etc/init.d/scm-server start";
       
       
@@ -51,15 +51,18 @@ echo 'Added by CFEngine to start scmmanager at boot time'
       "insertions" slist => getvalues( "autostart" );
       
   files:
+    debian::
       "$(rclocal_file)"
       handle => "set_rc_local",
       create => "true",
       perms => mog ("755", "root", "root"),
       edit_defaults => empty,
       edit_line => expand_template("$(template_file)"),
+      action => if_elapsed("60"),
       comment => "Ensure rc.local file is configured correctly";
 
   methods:
+    debian::
       "insert autostart elements into file"
       usebundle => edit_rc_local( $(rclocal_file), @(insertions) );
       
@@ -69,6 +72,11 @@ echo 'Added by CFEngine to start scmmanager at boot time'
 
     (DEBUG|DEBUG_config_rc_local)::
       "$(this.bundle): autostart items: $(insertions)";
+      "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_config_rc_local).debian::
+      "autostart items: $(insertions)";
+    (DEBUG|DEBUG_config_rc_local).redhat::
+      "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 }
 
 ###############################################################################

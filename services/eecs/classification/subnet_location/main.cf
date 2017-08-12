@@ -18,10 +18,10 @@ bundle common classify_subnet_location
 	ifvarclass => canonify("$(subnet_data[$(subnets)][subnet_nickname])"),
 	meta => { "inventory", "attribute_name=subnet nickname" };
 
-      "building"
-	string => "$(subnet_data[$(subnets)][building])",
-	ifvarclass => canonify("$(subnet_data[$(subnets)][building])"),
-	meta => { "inventory", "attribute_name=building" };
+      "location"
+	string => "$(subnet_data[$(subnets)][location])",
+	ifvarclass => canonify("$(subnet_data[$(subnets)][location])"),
+	meta => { "inventory", "attribute_name=location" };
 
       "vlan"
 	string => "$(subnet_data[$(subnets)][vlan])",
@@ -50,7 +50,7 @@ bundle common classify_subnet_location
                     with 'subnet_' to clearly identify it as a subnet. We also
                     set a meta tag to associate it back to the numeric subnet.";
 
-      "$(subnet_data[$(subnets)][building])"
+      "$(subnet_data[$(subnets)][location])"
 	expression => iprange( $(subnets) ),
 	meta => { "derived-from=$(subnets)" };
 
@@ -72,10 +72,10 @@ bundle common classify_subnet_location
       
     (DEBUG|DEBUG_classify_subnet_location)::
       "=== $(this.bundle) ===";
-      "Found subnet $(sys.ip_addresses)";
+      "Found IP address: $(sys.ip_addresses)";
       "Found subnet nickname: subnet_$(subnet_data[$(subnets)][subnet_nickname])"
 	ifvarclass => "subnet_$(subnet_data[$(subnets)][subnet_nickname])";
-      "Found subnet building: $(building)";
+      "Found subnet location: $(location)";
       "Found subnet vlan: $(vlan)"
 	ifvarclass => "subnet_$(subnet_data[$(subnets)][vlan])";
       "Found subnet link_type: $(link_type)"

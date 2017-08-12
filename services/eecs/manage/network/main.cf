@@ -34,8 +34,12 @@ bundle common net_settings
       string => "$(sys.workdir)/state/network/interfaces",
               comment => "This is where agents will cache the interfaces file locally
                           (for offline enforcement).";
+    debian::
+      "interfaces_file" string => "/etc/network/interfaces";
 
-      "interfaces_file" string => "/etc/network/interfaces"; 
+      # red_hat stores data in interface specific files within /etc/sysconfig/network-scripts
+
+    linux::
       "hosts_file"      string => "/etc/hosts";
 
 }
@@ -44,7 +48,7 @@ bundle common net_settings
 ######################################################################
 
 bundle agent config_net_interfaces
-# @description: 
+# @description: copies a custom interfaces file if found in host_by_key directory to host
 {
 
   vars:
@@ -63,21 +67,21 @@ bundle agent config_net_interfaces
       "$(interfaces_cache_dir)/."
       create => "true";
 
-    policy_server::
+    policy_server.debian::
       "$(interfaces_cache)"
       perms => mo("600","root"),
       copy_from => local_dcp( $(interfaces_dist) ),
       action => if_elapsed("60"),
       comment => "if host is the policy server then perform a local copy of the file";
 
-    !policy_server::
+    !policy_server.debian::
       "$(interfaces_cache)"
       perms => mo("600","root"),
       copy_from => secure_cp( $(interfaces_dist), $(sys.policy_hub) ),
       action => if_elapsed("60"),
       comment => "if host is any other client then perform a secure remote copy of thefile";
 
-    have_cached_interfaces::
+    have_cached_interfaces.debian::
       "$(net_settings.interfaces_file)"
       perms => mog("644","root","root"),
       copy_from => local_dcp( $(interfaces_cache) ),
@@ -89,14 +93,20 @@ bundle agent config_net_interfaces
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
+    (DEBUG|DEBUG_config_net_interfaces)::
+      "=== $(this.bundle) ===";
+      
     (DEBUG|DEBUG_config_net_interfaces).have_cached_interfaces::
-      "$(this.bundle): custom interfaces file found on policy hub for this host";      
+      "$(this.bundle): custom interfaces file found on policy hub for this host";
+
+    (DEBUG|DEBUG_config_net_interfaces).redhat::
+      "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 }
 
 ######################################################################
 
 bundle agent config_hosts_file
-# @description: adds custom hosts to hosts file 
+# @description: adds manually defined custom hosts to hosts file 
 {
 
   vars:
@@ -121,8 +131,7 @@ bundle agent config_hosts_file
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_config_login_banner)::
+    (DEBUG|DEBUG_config_hosts)::
       "=== $(this.bundle) ===";
       "hosts added to $(net_settings.hosts_file): $(custom_hosts)";
-
 }

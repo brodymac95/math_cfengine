@@ -63,12 +63,6 @@ bundle server access_rules()
 
     any::
 
-      # ACCESS TO EECS CUSTOM REPO!!
-      "$(def.dir_software_packages)"
-      handle => "server_access_grant_locations_files_software_packages_for_hosts",
-      admit => { ".*$(def.domain)", @(def.acl) },
-      comment => "Hosts need to download software files from the central location";
-
       "$(def.dir_masterfiles)"
       handle => "server_access_grant_access_policy",
       shortcut => "masterfiles",

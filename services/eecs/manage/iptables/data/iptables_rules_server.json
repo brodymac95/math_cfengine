@@ -188,6 +188,15 @@
             "target": "ACCEPT",
 	    "context": "policy_server",
         },
+        "1805":
+        {
+	    "comment": "allow incoming CFEngine connections from openstack provisioning subnet (VLAN 973) for policy_server only"
+            "chain": "INPUT"
+            "source_ip": "192.168.251.0/24",
+            "destination_port": "5308",
+            "target": "ACCEPT",
+	    "context": "policy_server",
+        },
         "1999":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"

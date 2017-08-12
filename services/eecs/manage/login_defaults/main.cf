@@ -18,6 +18,10 @@ bundle agent config_login_banner
       "motd_file"     string => "/etc/motd";
       "support"       string => "EECS: Ben Roose (ben.roose@wichita.edu)";
 
+    os_tenant::
+      "type" string => "OpenStack Tenant";
+    os_node::
+      "type" string => "OpenStack Node";
     server::
       "type" string => "Server";
     workstation::
@@ -42,12 +46,23 @@ bundle agent config_login_banner
 ###############################################################################
 
 bundle agent config_login_defs
+# @description: sets default umask for all users. May be expanded to change other login defaults
 {
   vars:
       # files to edit
+    debian::
+      # Debian/Ubuntu set umask in /etc/login.defs if pam_umask.so is enabled
       "files[login_defs]"   string => "/etc/login.defs";
       "files[common_session]"   string => "/etc/pam.d/common-session";
 
+      "pam_umask_enable" string => "session optional        pam_umask.so";
+
+    redhat::
+      # RHEL 6 and 7 seem to set umask in /etc/bashrc
+      # Need to add RHEL configuration to this bundle when it's wanted!
+      # see https://linuxaria.com/article/linux-shell-understanding-umask-with-examples
+      
+    any::
       # login.defs configuration to set
       "login_defs[UMASK]"    string => "0027",
 	policy => "free",
@@ -56,11 +71,11 @@ bundle agent config_login_defs
       "login_defs[UMASK]" string => "$(user_settings.custom_umask)",
 	policy => "free",
 	ifvarclass => and( isvariable("user_settings.custom_umask") ),
-	comment => "set the default umask setting to 027 unless custom_umask in user_settings bundle is set";
-
-      "pam_umask_enable" string => "session optional        pam_umask.so";
+	comment => "set the default umask setting to 027 unless custom_umask in
+                    manage/user/main.cf user_settings bundle is set";
 
   methods:
+    debian::
       "edit login.defs"    usebundle => edit_login_defs;
 
   reports:
@@ -69,7 +84,10 @@ bundle agent config_login_defs
 
     (DEBUG|DEBUG_config_login_defs)::
       "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_config_login_defs).debian::
       "default umask value: $(login_defs[UMASK])";
+    (DEBUG|DEBUG_config_login_defs).redhat::
+      "WARNING: $(this.bundle) has not been configured for Red Hat OS";
 
 }
 
