@@ -62,25 +62,27 @@ bundle agent web_server(state)
       
       "generate virtual host site config files from templates"
     	usebundle => generate_sites("web_server_vars.conf"),
-        classes => results("bundle", "sites_generated");
+        comment => "bundle generates its own global class site_configuration_repaired";
       
     ## ENABLE SITES/MODULES AND GENERATING SSL CERTIFICATES
-    on.sites_generated_repaired::
+    on.site_configuration_repaired::
       "enable apache sites"
     	usebundle => manage_apache_site("$(web_server_vars.conf[sites_enabled])", enable),
-        classes => results("bundle", "enable_site");
+        classes => if_ok("enable_site");
 
       "enable apache modules"
     	usebundle => manage_apache_module("$(web_server_vars.install[modules_enabled])", enable),
-        classes => results("bundle", "enable_module");
+        classes => if_ok("enable_module");
 
+      # "install SSL/TLS certificates using EFF certbot"
+      # 	usebundle => manage_certbot("web_server_vars.conf", install),
+      #   inherit => "true",
+      #   classes => results("bundle", "install_cert");
+
+    on.(enable_site_repaired|install_cert_repaired)::
       "reload apache2 service after generating and enabling new sites"
       	usebundle => standard_services( "apache2", "reload" ),
       	classes => if_ok("web_server_reload");
-
-      "install SSL/TLS certificates using EFF certbot"
-      	usebundle => manage_certbot("web_server_vars.conf", install),
-        classes => results("bundle", "install_certs");
 
     on.enable_module_repaired::
       "restart apache2 service after enabling new modules"
@@ -125,9 +127,11 @@ bundle agent web_server(state)
         ifvarclass => "web_server_reload";
 
       "site generated from templates and enabled: $(web_server_vars.conf[sites_enabled])"
-        ifvarclass => "enable_sites_repaired";
+        ifvarclass => "enable_sites";
       "module enabled: $(web_server_vars.install[modules_enabled])"
-        ifvarclass => "enable_modules_repaired";
+        ifvarclass => "enable_modules";
+      "certbot install configuration repaired"
+        ifvarclass => "install_cert_repaired";
       "$(web_server_vars.install[dependent_packages]) installed"
         ifvarclass => "dependent_packages_install_repaired";
 
@@ -150,14 +154,14 @@ bundle agent web_server_vars(params1, params2)
 
     ## EFF LET'S ENCRYPT CERTBOT CONFIGURATION PARAMETERS
       "conf[certbot_config_file]" string => "/etc/letsencrypt/cli.ini";
-      "conf[certbot_config_template]" string => "$(this.promise_dirname)/data/certbot_config.tpl.txt";
+      "conf[certbot_config_template]" string => "$(this.promise_dirname)/data/certbot_config.tpl.conf";
       "conf[certbot_registered_email]" string => "root@cs.wichita.edu";
       "conf[certbot_cert_dir]" string => "/etc/letsencrypt/live/"; #certs are in each domain subdirectory
 
       "conf[certbot_include_path]" string => "/etc/letsencrypt/options-ssl-apache.conf";
       "conf[certbot_cert_chain_file]" string => "fullchain.pem";
       "conf[certbot_cert_key_file]" string => "privkey.pem";
-      "conf[certbot_domains_to_register]" string => "testing-guac.cs.wichita.edu";
+      "conf[certbot_domains_to_register]" string => "testing-gateway.cs.wichita.edu";
 
       "conf[apache_serveradmin_email]" string => "root@cs.wichita.edu";
       "conf[apache_available_sites_dir]" string => "/etc/apache2/sites-available/";
@@ -170,26 +174,27 @@ bundle agent web_server_vars(params1, params2)
       # whitelist the location in /etc/apache2/apache2.conf
 
     ## GUACAMOLE PROXY VIRTUAL HOST CONFIGURATION PARAMETERS
-      "conf[site_data][guac][site_file]" string => "guacamole.conf";
-      "conf[site_data][guac][site_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.txt";
-      "conf[site_data][guac][domain_hostname]" string => "testing-guac.cs.wichita.edu";
+      "conf[site_data][guac][site_conf_file]" string => "guacamole.conf";
+      "conf[site_data][guac][site_conf_cache]" string => "$(sys.workdir)/state/web_sites/guacamole_proxy.conf";
+      "conf[site_data][guac][site_conf_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.conf";
+      "conf[site_data][guac][domain_hostname]" string => "testing-gateway.cs.wichita.edu";
       "conf[site_data][guac][document_root]" string => "$(conf[apache_root_dir])/guacamole/public_html/";
       "conf[site_data][guac][custom_apache_log]" string => "/var/log/apache2/guac.log";
 
     ## TESTING ONLY INSECURE AND SSL VIRTUAL HOST CONFIGURATION PARAMETERS
-      # "conf[site_data][test][site_file]" string => "testing_insecure.conf";
-      # "conf[site_data][test][site_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.txt";
+      # "conf[site_data][test][site_conf_file]" string => "testing_insecure.conf";
+      # "conf[site_data][test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.conf";
 
-      # "conf[site_data][test][site_file]" string => "testing_ssl.conf";
-      # "conf[site_data][test][site_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.txt";
+      # "conf[site_data][test][site_conf_file]" string => "testing_ssl.conf";
+      # "conf[site_data][test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.conf";
       # "conf[site_data][test][domain_hostname]" string => "testing-guac.cs.wichita.edu";
       # "conf[site_data][test][document_root]" string => "$(conf[apache_root_dir])/testing/public_html/";
       # "conf[site_data][test][custom_apache_log]" string => "/var/log/apache2/testing.log";
 
       
     ## VIRTUAL HOST SITES ENABLED IN WEB SERVER
-      "conf[sites_enabled]" slist => { "$(conf[site_data][guac][site_file])" };
-      # "conf[sites_enabled]" slist => { "$(conf[site_data][test][site_file])" };
+      "conf[sites_enabled]" slist => { "$(conf[site_data][guac][site_conf_file])" };
+      # "conf[sites_enabled]" slist => { "$(conf[site_data][test][site_conf_file])" };
       
     any::
       # Copy configuration parameters passed, into a local array
@@ -226,9 +231,9 @@ bundle agent manage_certbot(params, action)
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --non-interactive --cert-path ";
 
     testing_cert::
-      "certbot_install_cmd" string => "$(certbot_exec) run --testing --apache --config ";
-      "certbot_renew_cmd" string => "$(certbot_exec) renew --testing --non-interactive --config ";
-      "certbot_revoke_cmd" string => "$(certbot_exec) revoke --testing --non-interactive --cert-path ";
+      "certbot_install_cmd" string => "$(certbot_exec) run --test-cert --apache --config ";
+      "certbot_renew_cmd" string => "$(certbot_exec) renew --test-cert --non-interactive --config ";
+      "certbot_revoke_cmd" string => "$(certbot_exec) revoke --test-cert --non-interactive --cert-path ";
       
 
   classes:
@@ -299,8 +304,10 @@ bundle agent generate_sites(params)
     debian::
       "site_keys_unsorted" slist => getindices("$(params)[site_data]");
       "site_keys" slist => sort( site_keys_unsorted, "lex" );
-      "$(site_keys)_site_file" string => "$($(params)[site_data][$(site_keys)][site_file])";
-      "$(site_keys)_site_template" string => "$($(params)[site_data][$(site_keys)][site_template])";
+      "$(site_keys)_site_file" string => "$($(params)[site_data][$(site_keys)][site_conf_file])";
+      "$(site_keys)_site_cache" string => "$($(params)[site_data][$(site_keys)][site_conf_cache])";
+      "$(site_keys)_site_cache_dir" string => dirname( "$($(site_keys)_site_cache)" );
+      "$(site_keys)_site_template" string => "$($(params)[site_data][$(site_keys)][site_conf_template])";
       "$(site_keys)_document_root" string => "$($(params)[site_data][$(site_keys)][document_root])";
       
       "sites_dir" string => "$($(params)[apache_available_sites_dir])";
@@ -308,28 +315,48 @@ bundle agent generate_sites(params)
       "site_index_template" string => "$($(params)[apache_site_index_template])";
 
   classes:
+      "have_cached_site_conf"
+	expression => fileexists( "$($(site_keys)_site_cache)" );
 
+      "site_configuration_repaired"
+        or => { "conf_file_repaired" },
+        scope => "namespace",
+        comment => "set global class for underlying bundle if a site configuration has changed";
+      
   files:
     ## BUILD AVAILABLE SITE CONF FILE AND DEFAULT INDEX.HTML FILE FROM TEMPLATES
+      "$($(site_keys)_site_cache_dir)/."
+        create => "true",
+        comment => "ensure the cache directory exists";
+
       "$($(site_keys)_document_root)/."
         create => "true",
 	perms => mog("755", "root", "root" ),
         comment => "ensure the site document root directory has been created and is globally readable";
 
-      "$(sites_dir)/$($(site_keys)_site_file)"
-        create => "true",
-	perms => mog("644", "root", "root" ),
-        edit_template => "$($(site_keys)_site_template)",
-        classes => results("bundle", "$(site_keys)_file_create"),
-      	comment => "expand site file in available sites directory using template from staging cache in this promise dir";
-      
       "$($(site_keys)_document_root)/$(site_index_file)"
         create => "true",
 	perms => mog("644", "root", "root" ),
         edit_template => "$(site_index_template)",
-        classes => results("bundle", "$(site_keys)_index_create"),
+        classes => results("bundle", "$(site_keys)_index_html"),
       	comment => "expand default index.html in site document root directory using template from staging cache in this promise dir";
 
+      "$($(site_keys)_site_cache)"
+        create => "true",
+        edit_template => "$($(site_keys)_site_template)",
+        classes => results("bundle", "site_conf_cache"),
+      	comment => "expand site cached file using template in this promise dir";
+
+      conf_cache_repaired.have_cached_site_conf::
+      "$(sites_dir)/$($(site_keys)_site_file)"
+        create => "true",
+        copy_from => no_backup_dcp( "$($(site_keys)_site_cache)" ),
+	perms => mog("644", "root", "root" ),
+        classes => results("bundle", "site_conf_file"),
+      	comment => "cp site file from staging cache to available sites dir ONLY if cached file has been modified
+                    (do not create backup since it confuses certbot)";
+        # ifvarclass => "$(site_keys)_conf_cache_repaired.$(site_keys)_have_cached_site_conf";
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -341,12 +368,13 @@ bundle agent generate_sites(params)
       "Found $(site_keys) file: $($(site_keys)_site_file) using template: $($(site_keys)_site_template)";
       "Directory for site documents root: $($(site_keys)_document_root)";
       "Site configuration file generated: $($(site_keys)_site_file)"
-        ifvarclass => "$(site_keys)_file_create_repaired";
+        ifvarclass => "$(site_keys)_conf_file_repaired";
       "Site testing index file generated: $($(site_keys)_document_root)/$(site_index_file)"
-        ifvarclass => "$(site_keys)_index_create_repaired";
+        ifvarclass => "$(site_keys)_index_html_repaired";
 
-      # "DEBUG: site_files $(site_data[$(site_keys)][site_file])";
-      # "DEBUG: template_files $(site_data[$(site_keys)][template_file])";
+      "DEBUG: site_files $(sites_dir)/$($(site_keys)_site_file)";
+      "DEBUG: site_template $($(site_keys)_site_template)";
+      "DEBUG: site_cache $($(site_keys)_site_cache)";
 }
 
 ######################################################################
