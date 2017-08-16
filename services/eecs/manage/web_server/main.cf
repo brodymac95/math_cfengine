@@ -60,31 +60,31 @@ bundle agent web_server(state)
 
       "generate all web server variables"  usebundle => web_server_vars;
       
-      "generate virtual host site config files from templates"
-    	usebundle => generate_sites("web_server_vars.conf"),
-        comment => "bundle generates its own global class site_configuration_repaired";
+      "generate virtual host site config files for each site defined in web_server_vars"
+    	usebundle => generate_site_files( "web_server_vars", "$(web_server_vars.site_keys)" ),
+        comment => "bundle generates its own global results classes: site_conf_file";
       
     ## ENABLE SITES/MODULES AND GENERATING SSL CERTIFICATES
-    on.site_configuration_repaired::
+    on.site_conf_file_repaired::
       "enable apache sites"
-    	usebundle => manage_apache_site("$(web_server_vars.conf[sites_enabled])", enable),
+    	usebundle => manage_apache_site("$(web_server_vars.sites_enabled)", enable),
         classes => if_ok("enable_site");
 
       "enable apache modules"
-    	usebundle => manage_apache_module("$(web_server_vars.install[modules_enabled])", enable),
+    	usebundle => manage_apache_module("$(web_server_vars.modules_enabled)", enable),
         classes => if_ok("enable_module");
 
-      # "install SSL/TLS certificates using EFF certbot"
-      # 	usebundle => manage_certbot("web_server_vars.conf", install),
-      #   inherit => "true",
-      #   classes => results("bundle", "install_cert");
+      "configure SSL/TLS certificates for each site using EFF certbot"
+      	usebundle => manage_certbot( "web_server_vars", "$(web_server_vars.site_keys)", install ),
+        inherit => "true",
+        classes => results("bundle", "install_cert");
 
-    on.(enable_site_repaired|install_cert_repaired)::
+    on.(enable_site|install_cert_repaired)::
       "reload apache2 service after generating and enabling new sites"
       	usebundle => standard_services( "apache2", "reload" ),
       	classes => if_ok("web_server_reload");
 
-    on.enable_module_repaired::
+    on.enable_module::
       "restart apache2 service after enabling new modules"
       	usebundle => standard_services( "apache2", "restart" ),
       	classes => if_ok("web_server_restart");
@@ -94,18 +94,18 @@ bundle agent web_server(state)
       "generate all web server variables"  usebundle => web_server_vars;
 
       "install dependent packages"
-    	usebundle => package_latest("$(web_server_vars.install[dependent_packages])"),
+    	usebundle => package_latest("$(web_server_vars.dependent_packages)"),
         classes => results("bundle", "dependent_packages_install");
         # classes => if_ok("software_ok");
 
       "disable default apache testing site"
-    	usebundle => manage_apache_site("$(web_server_vars.conf[apache_default_site])", disable),
+    	usebundle => manage_apache_site("$(web_server_vars.apache_default_site)", disable),
         classes => results("bundle", "disable_default_site");
 
     ## SSL CERTIFICATE RENEWAL
     on.ssl_cert_renew::
       "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
-    	usebundle => manage_certbot("web_server_vars.conf", renew),
+    	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
         classes => results("bundle", "renew_certs");
       
   reports:
@@ -117,22 +117,22 @@ bundle agent web_server(state)
 
       "web server (apache2) is not installed on this host"
         ifvarclass => "!apache_exists";
-      "web server is turned off"
+      "web server (apache2) is turned off"
         ifvarclass => "web_server_off";
-      "web server is turned on and running"
+      "web server (apache2) is turned on and running"
         ifvarclass => "web_server_on";
-      "web server restarted due to configuration change"
+      "web server (apache2) restarted due to configuration change"
         ifvarclass => "web_server_restart";
-      "web server reloaded due to configuration change"
+      "web server (apache2) reloaded due to configuration change"
         ifvarclass => "web_server_reload";
 
-      "site generated from templates and enabled: $(web_server_vars.conf[sites_enabled])"
+      "site generated from templates and enabled: $(web_server_vars.sites_enabled)"
         ifvarclass => "enable_sites";
-      "module enabled: $(web_server_vars.install[modules_enabled])"
+      "module enabled: $(web_server_vars.modules_enabled)"
         ifvarclass => "enable_modules";
       "certbot install configuration repaired"
         ifvarclass => "install_cert_repaired";
-      "$(web_server_vars.install[dependent_packages]) installed"
+      "$(web_server_vars.dependent_packages) installed"
         ifvarclass => "dependent_packages_install_repaired";
 
 }
@@ -145,63 +145,66 @@ bundle agent web_server_vars(params1, params2)
 
     ## INSTALL PARAMETERS FOR ALL SOFTWARE
     debian::
-      "install[dependent_packages]" slist => { "apache2", "certbot", "python-certbot-apache", },
+      "dependent_packages" slist => { "apache2", "certbot", "python-certbot-apache", },
         comment => "set of packages for apache web server and let's encrypt SSL certbot";
 
-      "install[modules_enabled]" slist => { "ssl", "proxy", "proxy_http", "proxy_wstunnel", },
+      "modules_enabled" slist => { "ssl", "proxy", "proxy_http", "proxy_wstunnel", },
         comment => "set of modules to enable for ssl and proxy";
         # original modules required: mod_proxy and mod_proxy_wstunnel. Debian removes the 'mod_'
 
     ## EFF LET'S ENCRYPT CERTBOT CONFIGURATION PARAMETERS
-      "conf[certbot_config_file]" string => "/etc/letsencrypt/cli.ini";
-      "conf[certbot_config_template]" string => "$(this.promise_dirname)/data/certbot_config.tpl.conf";
-      "conf[certbot_registered_email]" string => "root@cs.wichita.edu";
-      "conf[certbot_cert_dir]" string => "/etc/letsencrypt/live/"; #certs are in each domain subdirectory
+      "certbot_config_file" string => "/etc/letsencrypt/cli.ini";
+      "certbot_config_template" string => "$(this.promise_dirname)/data/certbot_config.tpl.conf";
+      "certbot_registered_email" string => "root@cs.wichita.edu";
+      "certbot_cert_dir" string => "/etc/letsencrypt/live/"; #certs are in each domain subdirectory
 
-      "conf[certbot_include_path]" string => "/etc/letsencrypt/options-ssl-apache.conf";
-      "conf[certbot_cert_chain_file]" string => "fullchain.pem";
-      "conf[certbot_cert_key_file]" string => "privkey.pem";
-      "conf[certbot_domains_to_register]" string => "testing-gateway.cs.wichita.edu";
+      "certbot_include_path" string => "/etc/letsencrypt/options-ssl-apache.conf";
+      "certbot_cert_chain_file" string => "fullchain.pem";
+      "certbot_cert_key_file" string => "privkey.pem";
+      "certbot_domains_to_register" string => "testing-gateway.cs.wichita.edu";
 
-      "conf[apache_serveradmin_email]" string => "root@cs.wichita.edu";
-      "conf[apache_available_sites_dir]" string => "/etc/apache2/sites-available/";
-      "conf[apache_site_index_file]" string => "index.html";
-      "conf[apache_site_index_template]" string => "$(this.promise_dirname)/data/default_index_html.tpl.txt";
-      "conf[apache_default_site]" string => "000-default.conf";
+      "apache_serveradmin_email" string => "root@cs.wichita.edu";
+      "apache_available_sites_dir" string => "/etc/apache2/sites-available/";
+      "apache_site_index_file" string => "index.html";
+      "apache_site_index_template" string => "$(this.promise_dirname)/data/default_index_html.tpl.txt";
+      "apache_default_site" string => "000-default.conf";
 
-      "conf[apache_root_dir]" string => "/var/www/";
+      "apache_root_dir" string => "/var/www/";
       # NOTE: if you move root dir location to different from /var/www, then you need to
       # whitelist the location in /etc/apache2/apache2.conf
 
     ## GUACAMOLE PROXY VIRTUAL HOST CONFIGURATION PARAMETERS
-      "conf[site_data][guac][site_conf_file]" string => "guacamole.conf";
-      "conf[site_data][guac][site_conf_cache]" string => "$(sys.workdir)/state/web_sites/guacamole_proxy.conf";
-      "conf[site_data][guac][site_conf_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.conf";
-      "conf[site_data][guac][domain_hostname]" string => "testing-gateway.cs.wichita.edu";
-      "conf[site_data][guac][document_root]" string => "$(conf[apache_root_dir])/guacamole/public_html/";
-      "conf[site_data][guac][custom_apache_log]" string => "/var/log/apache2/guac.log";
+      "site_data[guac][site_conf_file]" string => "guacamole.conf";
+      "site_data[guac][site_conf_cache]" string => "$(sys.workdir)/state/web_sites/guacamole_proxy.conf";
+      "site_data[guac][site_conf_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.conf";
+      "site_data[guac][domain_hostname]" string => "testing-gateway.cs.wichita.edu";
+      "site_data[guac][document_root]" string => "$(apache_root_dir)/guacamole/public_html/";
+      "site_data[guac][custom_apache_log]" string => "/var/log/apache2/guac.log";
 
     ## TESTING ONLY INSECURE AND SSL VIRTUAL HOST CONFIGURATION PARAMETERS
-      # "conf[site_data][test][site_conf_file]" string => "testing_insecure.conf";
-      # "conf[site_data][test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.conf";
+      # "site_data[test][site_conf_file]" string => "testing_insecure.conf";
+      # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.conf";
 
-      # "conf[site_data][test][site_conf_file]" string => "testing_ssl.conf";
-      # "conf[site_data][test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.conf";
-      # "conf[site_data][test][domain_hostname]" string => "testing-guac.cs.wichita.edu";
-      # "conf[site_data][test][document_root]" string => "$(conf[apache_root_dir])/testing/public_html/";
-      # "conf[site_data][test][custom_apache_log]" string => "/var/log/apache2/testing.log";
+      # "site_data[test][site_conf_file]" string => "testing_ssl.conf";
+      # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.conf";
+      # "site_data[test][domain_hostname]" string => "testing-guac.cs.wichita.edu";
+      # "site_data[test][document_root]" string => "$(apache_root_dir)/testing/public_html/";
+      # "site_data[test][custom_apache_log]" string => "/var/log/apache2/testing.log";
+
+      "site_keys_unsorted" slist => getindices("site_data");
+      "site_keys" slist => sort( site_keys_unsorted, "lex" );
 
       
     ## VIRTUAL HOST SITES ENABLED IN WEB SERVER
-      "conf[sites_enabled]" slist => { "$(conf[site_data][guac][site_conf_file])" };
-      # "conf[sites_enabled]" slist => { "$(conf[site_data][test][site_conf_file])" };
+      "sites_enabled" slist => { "$(site_data[guac][site_conf_file])" };
+      # "sites_enabled" slist => { "$(site_data[test[site_conf_file])" };
       
     any::
       # Copy configuration parameters passed, into a local array
-      "param1_keys"          slist  => getindices("$(params1)");   
-      "param2_keys"          slist  => getindices("$(params2)");   
-      "install[$(param1_keys)]" string => "$($(params1)[$(param1_keys)])";
-      "conf[$(param2_keys)]" string => "$($(params2)[$(param2_keys)])";
+      # "param1_keys"          slist  => getindices("$(params1)");   
+      # "param2_keys"          slist  => getindices("$(params2)");   
+      # "install[$(param1_keys)]" string => "$($(params1)[$(param1_keys)])";
+      # "conf[$(param2_keys)]" string => "$($(params2)[$(param2_keys)])";
 
       
   reports:
@@ -211,16 +214,13 @@ bundle agent web_server_vars(params1, params2)
 
 ######################################################################
 
-bundle agent manage_certbot(params, action)
+bundle agent manage_certbot(params, site, action)
 # @description: run EFF Let's Encrypt certbot for SSL/TLS certificate deployment
 {
   vars:
     debian::
-      "site_keys_unsorted" slist => getindices("$(params)[site_data]");
-      "site_keys" slist => sort( site_keys_unsorted, "lex" );
-      "$(site_keys)_domain_hostname" string => "$($(params)[site_data][$(site_keys)][domain_hostname])";
-
-      "certificate_dir" string => "$($(params)[certbot_cert_dir])";
+      "domain_hostname" string => "$($(params).site_data[$(site)][domain_hostname])";
+      "cert_dir" string => "$($(params).certbot_cert_dir)";
       "cert_filename" string => "cert.pem";
 
       "certbot_exec" string => "/usr/bin/certbot";
@@ -245,36 +245,38 @@ bundle agent manage_certbot(params, action)
 	expression => fileexists( "$(certbot_exec)" );
 
       "certbot_config_exists"
-	expression => fileexists( "$($(params)[certbot_config_file])" );
+	expression => fileexists( "$($(params).certbot_config_file)" );
 
       "certificate_for_domain_exists"
-	expression => fileexists( "$(certificate_dir)/$(domain_hostnames[$(domains)])/$(cert_filename)" );
+	expression => fileexists( "$(cert_dir)/$(domain_hostname)/$(cert_filename)" );
 
   files:
     ## SET CERTBOT CONFIGURATION FROM TEMPLATE
-      "$($(params)[certbot_config_file])"
+      "$($(params).certbot_config_file)"
         create => "true",
-        edit_template => "$($(params)[certbot_config_template])",
-	# action => if_elapsed("60"),
+        edit_template => "$($(params).certbot_config_template)",
+	action => if_elapsed("60"),
         classes => results("bundle", "certbot_config"),
 	comment => "expand certbot config file using template from staging cache in this promise directory";
 
   commands:
     ## CERTBOT CERTIFICATE COMMANDS
     install_cert.!certificate_for_domain_exists.certbot_exists.certbot_config_exists.debian::
-      "$(certbot_install_cmd) $($(params)[certbot_config_file])"
-        classes => results("bundle", "certbot_install"),
-        comment => "run certbot to install apache SSL certificates using config file";
+      "$(certbot_install_cmd)"
+        args => "$($(params).certbot_config_file)",
+	classes => results("bundle", "certbot_install"),
+        comment => "run certbot to install apache SSL certificates using config file if cert does not exist";
 
     renew_cert.certbot_exists.debian::
       "$(certbot_renew_cmd)"
         classes => results("bundle", "certbot_renew"),
         comment => "run certbot to check for SSL certificate renewal";
 
-    revoke_cert.certbot_exists.debian::
-      "$(certbot_revoke_cmd) $($(params)[certbot_cert_dir])/DOMAIN??/$(cert_filename)"
-        classes => results("bundle", "certbot_renew"),
-        comment => "run certbot to check for SSL certificate renewal";
+    revoke_cert.certificate_for_domain_exists.certbot_exists.debian::
+      "$(certbot_revoke_cmd)"
+        args => "$(cert_dir)/$(domain_hostname)/$(cert_filename)",
+	classes => results("bundle", "certbot_renew"),
+        comment => "revoke certificate  if cert exists";
       
   reports:
     (inform_mode|verbose_mode)::
@@ -283,12 +285,14 @@ bundle agent manage_certbot(params, action)
     (DEBUG|DEBUG_web_server)::
       "=== $(this.bundle) ===";
 
-      "certbot config not found at $($(params)[certbot_config_file])"
+      "certbot not installed since $(certbot_exec) not found"
+        ifvarclass => "!certbot_exists";
+      "certbot config not found at $($(params).certbot_config_file)"
         ifvarclass => "!certbot_config_exists";
 
-      "certbot has certificate for domain: $(domain_hostnames[$(domains)])"
+      "certbot has certificate for domain: $(domain_hostname)"
         ifvarclass => "certificate_for_domain_exists";
-      "certbot installed apache SSL certificates using config file $($(params)[certbot_config_file])"
+      "certbot installed apache SSL certificates using config file $($(params).certbot_config_file)"
         ifvarclass => "certbot_install_repaired";
 
       "certbot run to check for SSL certificate renewal"
@@ -297,65 +301,64 @@ bundle agent manage_certbot(params, action)
 
 ######################################################################
 
-bundle agent generate_sites(params)
+bundle agent generate_site_files(params, site)
 # @description: generate virtual host site .conf and index.html files from templates
 {
   vars:
     debian::
-      "site_keys_unsorted" slist => getindices("$(params)[site_data]");
-      "site_keys" slist => sort( site_keys_unsorted, "lex" );
-      "$(site_keys)_site_file" string => "$($(params)[site_data][$(site_keys)][site_conf_file])";
-      "$(site_keys)_site_cache" string => "$($(params)[site_data][$(site_keys)][site_conf_cache])";
-      "$(site_keys)_site_cache_dir" string => dirname( "$($(site_keys)_site_cache)" );
-      "$(site_keys)_site_template" string => "$($(params)[site_data][$(site_keys)][site_conf_template])";
-      "$(site_keys)_document_root" string => "$($(params)[site_data][$(site_keys)][document_root])";
+      "site_file" string => "$($(params).site_data[$(site)][site_conf_file])";
+      "site_cache" string => "$($(params).site_data[$(site)][site_conf_cache])";
+      "site_cache_dir" string => dirname( "$(site_cache)" );
+      "site_template" string => "$($(params).site_data[$(site)][site_conf_template])";
+      "document_root" string => "$($(params).site_data[$(site)][document_root])";
       
-      "sites_dir" string => "$($(params)[apache_available_sites_dir])";
-      "site_index_file" string => "$($(params)[apache_site_index_file])";
-      "site_index_template" string => "$($(params)[apache_site_index_template])";
+      "sites_dir" string => "$($(params).apache_available_sites_dir)";
+      "site_index_file" string => "$($(params).apache_site_index_file)";
+      "site_index_template" string => "$($(params).apache_site_index_template)";
 
   classes:
       "have_cached_site_conf"
-	expression => fileexists( "$($(site_keys)_site_cache)" );
+	expression => fileexists( "$(site_cache)" );
 
-      "site_configuration_repaired"
-        or => { "conf_file_repaired" },
-        scope => "namespace",
-        comment => "set global class for underlying bundle if a site configuration has changed";
+      # "site_configuration_repaired"
+      #   expression => { "conf_file_repaired" },
+      #   scope => "namespace",
+      #   comment => "set global class for underlying bundle if a site configuration has changed";
       
   files:
     ## BUILD AVAILABLE SITE CONF FILE AND DEFAULT INDEX.HTML FILE FROM TEMPLATES
-      "$($(site_keys)_site_cache_dir)/."
+      "$(site_cache_dir)/."
         create => "true",
         comment => "ensure the cache directory exists";
 
-      "$($(site_keys)_document_root)/."
+      "$(document_root)/."
         create => "true",
 	perms => mog("755", "root", "root" ),
         comment => "ensure the site document root directory has been created and is globally readable";
 
-      "$($(site_keys)_document_root)/$(site_index_file)"
+      "$(document_root)/$(site_index_file)"
         create => "true",
 	perms => mog("644", "root", "root" ),
         edit_template => "$(site_index_template)",
-        classes => results("bundle", "$(site_keys)_index_html"),
+        classes => results("bundle", "index_html"),
       	comment => "expand default index.html in site document root directory using template from staging cache in this promise dir";
 
-      "$($(site_keys)_site_cache)"
+      "$(site_cache)"
         create => "true",
-        edit_template => "$($(site_keys)_site_template)",
+        edit_template => "$(site_template)",
         classes => results("bundle", "site_conf_cache"),
       	comment => "expand site cached file using template in this promise dir";
 
-      conf_cache_repaired.have_cached_site_conf::
-      "$(sites_dir)/$($(site_keys)_site_file)"
+      site_conf_cache_repaired.have_cached_site_conf::
+      "$(sites_dir)/$(site_file)"
         create => "true",
-        copy_from => no_backup_dcp( "$($(site_keys)_site_cache)" ),
+        copy_from => no_backup_dcp( "$(site_cache)" ),
 	perms => mog("644", "root", "root" ),
-        classes => results("bundle", "site_conf_file"),
+        classes => results("namespace", "site_conf_file"),
       	comment => "cp site file from staging cache to available sites dir ONLY if cached file has been modified
+                    create global class for underlying bundle to access
                     (do not create backup since it confuses certbot)";
-        # ifvarclass => "$(site_keys)_conf_cache_repaired.$(site_keys)_have_cached_site_conf";
+        # ifvarclass => "conf_cache_repaired.have_cached_site_conf";
       
   reports:
     (inform_mode|verbose_mode)::
@@ -365,16 +368,15 @@ bundle agent generate_sites(params)
       "=== $(this.bundle) ===";
 
       "Directory to store available sites: $(sites_dir)";
-      "Found $(site_keys) file: $($(site_keys)_site_file) using template: $($(site_keys)_site_template)";
-      "Directory for site documents root: $($(site_keys)_document_root)";
-      "Site configuration file generated: $($(site_keys)_site_file)"
-        ifvarclass => "$(site_keys)_conf_file_repaired";
-      "Site testing index file generated: $($(site_keys)_document_root)/$(site_index_file)"
-        ifvarclass => "$(site_keys)_index_html_repaired";
+      "Directory for site documents root: $(document_root)";
+      "Generated $(site) site conf file: $(site_file) using template: $(site_template)"
+        ifvarclass => "site_conf_file_repaired";
+      "Site testing index file generated: $(document_root)/$(site_index_file)"
+        ifvarclass => "index_html_repaired";
 
-      "DEBUG: site_files $(sites_dir)/$($(site_keys)_site_file)";
-      "DEBUG: site_template $($(site_keys)_site_template)";
-      "DEBUG: site_cache $($(site_keys)_site_cache)";
+      # "DEBUG: site_files $(sites_dir)/$(site_file)";
+      # "DEBUG: site_template $(site_template)";
+      # "DEBUG: site_cache $(site_cache)";
 }
 
 ######################################################################
@@ -383,19 +385,36 @@ bundle agent manage_apache_module(module, action)
 # @description: enable or disable apache module
 {
   vars:
+      "mods_enabled_dir" string => "/etc/apache2/mods-enabled";
+      "mods_available_dir" string => "/etc/apache2/mods-available";
+      "mod_file_extension" string => ".load";
 
   classes:
       "enable"  expression => strcmp("$(action)","enable");
       "disable" expression => strcmp("$(action)","disable");
+
+      "mod_is_enabled"
+	expression => fileexists( "$(mods_enabled_dir)/$(module)$(mod_file_extension)" );
+      "mod_is_available"
+	expression => fileexists( "$(mods_available_dir)/$(module)$(mod_file_extension)" );
       
   commands:
     enable.debian::
       "/usr/sbin/a2enmod $(module)"
-        comment => "use debian a2enmod to enable apache module";
+        comment => "use debian a2enmod to enable apache module",
+        ifvarclass => "mod_is_available.!mod_is_enabled";
 
     disable.debian::
       "/usr/sbin/a2dismod $(module)"
-        comment => "use debian a2enmod to disable apache module";
+        comment => "use debian a2enmod to disable apache module",
+        ifvarclass => "mod_is_enabled";
+
+    (DEBUG|DEBUG_web_server)::
+      "WARNING: mod $(module) not found in $(mods_available_dir)!"
+        ifvarclass => "!mod_is_available";      
+
+      "WARNING: $(this.bundle) is only configured for debian OS"
+        ifvarclass => "!debian";      
 }
 
 ######################################################################
@@ -404,19 +423,36 @@ bundle agent manage_apache_site(site, action)
 # @description: enable or disable apache virtual host sites
 {
   vars:
-
+      "sites_enabled_dir" string => "/etc/apache2/sites-enabled";
+      "sites_available_dir" string => "/etc/apache2/sites-available";
+      
   classes:
       "enable"  expression => strcmp("$(action)","enable");
       "disable" expression => strcmp("$(action)","disable");
+
+      "site_is_enabled"
+	expression => fileexists( "$(sites_enabled_dir)/$(site)" );
+      "site_is_available"
+	expression => fileexists( "$(sites_available_dir)/$(site)" );
       
   commands:
     enable.debian::
       "/usr/sbin/a2ensite $(site)"
-        comment => "use debian a2ensite to enable apache virtual host site";
+        comment => "use debian a2ensite to enable apache virtual host site if not already enabled",
+        ifvarclass => "site_is_available.!site_is_enabled";
 
     disable.debian::
       "/usr/sbin/a2dissite $(site)"
-        comment => "use debian a2enmod to disable apache virtual host site";
+        comment => "use debian a2enmod to disable apache virtual host site if enabled",
+        ifvarclass => "site_is_enabled";
+
+  reports:
+    (DEBUG|DEBUG_web_server)::
+      "WARNING: site $(site) not found in $(sites_available_dir)!"
+        ifvarclass => "!site_is_available";      
+
+      "WARNING: $(this.bundle) is only configured for debian OS"
+        ifvarclass => "!debian";      
 }
 
 ######################################################################

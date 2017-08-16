@@ -67,7 +67,7 @@ bundle agent autofs(state)
         classes => results("bundle", "autofs_config");
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
-    on.autofs_config_repaired).!NO_RESTARTS::
+    on.autofs_config_repaired.!NO_RESTARTS::
       "restart autofs service if configuration changed"
       	usebundle => standard_services( "autofs", "restart" ),
       	classes => if_ok("autofs_restart");

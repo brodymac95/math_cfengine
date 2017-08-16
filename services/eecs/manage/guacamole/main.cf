@@ -455,10 +455,12 @@ bundle agent configure_guac_authentication(params)
   files:
     ## COPY GUAC MYSQL DB AND AD SEARCH BIND PASSWORDS FROM POLICYHUB
       "$($(params)[guac_mysql_passwd_cache_dir])/."
-	create => "true";
-
+	create => "true",
+        comment => "ensure the cache directory exists";
+      
       "$($(params)[guac_ad_passwd_cache_dir])/."
-	create => "true";
+	create => "true",
+        comment => "ensure the cache directory exists";
 
       "$($(params)[guac_mysql_passwd_cache])"
 	perms => mo("400","root"),
@@ -472,15 +474,17 @@ bundle agent configure_guac_authentication(params)
 	action => if_elapsed("60"),
 	comment => "perform a secure remote copy of the ad domain search bind password file";
 
-    ## SET GUAC PROPERTIES FROM TEMPLATE
+    ## SET GUAC PROPERTIES FROM TEMPLATE ONCE ALL PASSWORDS ARE CACHED
+    have_cached_mysql_passwd.have_cached_ad_passwd::
       "$($(params)[guac_props_file])"
         create => "true",
         edit_template => "$($(params)[guac_template_file])",
         classes => results("bundle", "guac_config"),
 	comment => "expand guacamole.properies file using template from staging cache in this promise directory";
       
-    ## CREATE GUAC DATABASE AND ADDING GUAC SCHEMA INTO DB
+    ## CREATE GUAC DATABASE AND ADDING GUAC SCHEMA INTO DB ONCE MYSQL PASSWORD IS CACHED
   methods:
+    have_cached_mysql_passwd::
       "create guacamole user and database in mysql"
       	usebundle => create_mysql_db( "$($(params)[guac_props][mysql-database])", "$($(params)[guac_props][mysql-username])", "$(mysql_passwd)" ),
       	classes => results("bundle", "mysql_db"),
