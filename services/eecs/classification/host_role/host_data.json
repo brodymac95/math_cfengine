@@ -24,13 +24,20 @@
             "roose": "Ben Roose",
 	   },
     },
-    "testing_box": {
+    "csdev_web_gateway": {
 	"machine": "os_tenant_cluster",
 	"purpose": "testing",
         "role": "guac_gateway",
         "owner": "eecs",
     },
-    "cstesting": {
+    "csdev_cluster": {
+	"machine": "os_tenant_cluster",
+	"purpose": "testing",
+        "role": "dev_cluster",
+        "owner": "eecs",
+	"authentication": "uaf2_client",
+    },
+    "cstest": {
 	"machine": "server",
 	"purpose": "testing",
         "role": "testingsystem",
