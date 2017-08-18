@@ -1,0 +1,259 @@
+##############################################################################
+#
+#   manage/guacamole/database.cf - EECS guacamole mySQL database manipulation
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+	inputs => { "$(sys.libdir)/stdlib.cf",
+		    "database.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: 
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle agent guac_database
+# bundle agent web_server(state)
+# @description: manipulates underlying mySQL database for Guacamole server
+# NOTE: uses the CFE service state on/off for enabling configuration!!
+{
+
+  vars:      
+      "apache_exec" string => "/usr/sbin/apache2";
+
+      "connection_name" string => "test1";
+      "host_ip" string => "10.10.10.10";
+      "protocol" string => "RDP";
+      "parent_group" string => "";
+      
+  classes:
+
+      # DEFINE SERVER STATES
+      # "on"  expression => "any";
+      # "on"  expression => strcmp("$(state)","on");
+      # "off" expression => strcmp("$(state)","off");
+
+      # "apache_exists"
+      # 	expression => fileexists( "$(apache_exec)" );
+
+  methods:
+      "create a test connection"
+    	usebundle => create_guac_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group) ),
+        classes => if_ok("enable_site");      
+
+
+    # off.apache_exists::
+    #   "ensure apache2 service is stopped if web_server is off"
+    #   	usebundle => standard_services( "apache2", "stop" ),
+    #   	classes => if_ok("web_server_off");
+
+    # ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    # on.apache_exists::
+    #   "ensure apache2 service is running if web_server is on"
+    #   	usebundle => standard_services( "apache2", "start" ),
+    #   	classes => if_ok("web_server_on");
+
+    #   "generate all web server variables"  usebundle => web_server_vars;
+      
+    #   "generate virtual host site config files for each site defined in web_server_vars"
+    # 	usebundle => generate_site_files( "web_server_vars", "$(web_server_vars.site_keys)" ),
+    #     comment => "bundle generates its own global results classes: site_conf_file";
+      
+    # ## ENABLE SITES/MODULES AND GENERATING SSL CERTIFICATES
+    # on.site_conf_file_repaired::
+    #   "enable apache sites"
+    # 	usebundle => manage_apache_site("$(web_server_vars.sites_enabled)", enable),
+    #     classes => if_ok("enable_site");
+
+    #   "enable apache modules"
+    # 	usebundle => manage_apache_module("$(web_server_vars.modules_enabled)", enable),
+    #     classes => if_ok("enable_module");
+
+    #   "configure SSL/TLS certificates for each site using EFF certbot"
+    #   	usebundle => manage_certbot( "web_server_vars", "$(web_server_vars.site_keys)", install ),
+    #     inherit => "true",
+    #     classes => results("bundle", "install_cert");
+
+    # on.(enable_site|install_cert_repaired)::
+    #   "reload apache2 service after generating and enabling new sites"
+    #   	usebundle => standard_services( "apache2", "reload" ),
+    #   	classes => if_ok("web_server_reload");
+
+    # on.enable_module::
+    #   "restart apache2 service after enabling new modules"
+    #   	usebundle => standard_services( "apache2", "restart" ),
+    #   	classes => if_ok("web_server_restart");
+
+    # ## INSTALL ALL SOFTWARE FOR WEB SERVER
+    # on.install_software::
+    #   "generate all web server variables"  usebundle => web_server_vars;
+
+    #   "install dependent packages"
+    # 	usebundle => package_latest("$(web_server_vars.dependent_packages)"),
+    #     classes => results("bundle", "dependent_packages_install");
+
+    #   "disable default apache testing site"
+    # 	usebundle => manage_apache_site("$(web_server_vars.apache_default_site)", disable),
+    #     classes => results("bundle", "disable_default_site");
+
+    # ## SSL CERTIFICATE RENEWAL
+    # on.ssl_cert_renew::
+    #   "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
+    # 	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
+    #     classes => results("bundle", "renew_certs");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_web_server)::
+      "=== $(this.bundle) ===";
+
+      "web server (apache2) is not installed on this host"
+        ifvarclass => "!apache_exists";
+      "web server (apache2) is turned off"
+        ifvarclass => "web_server_off";
+      "web server (apache2) is turned on and running"
+        ifvarclass => "web_server_on";
+      "web server (apache2) restarted due to configuration change"
+        ifvarclass => "web_server_restart";
+      "web server (apache2) reloaded due to configuration change"
+        ifvarclass => "web_server_reload";
+
+      "site generated from templates and enabled: $(web_server_vars.sites_enabled)"
+        ifvarclass => "enable_sites";
+      "module enabled: $(web_server_vars.modules_enabled)"
+        ifvarclass => "enable_modules";
+      "certbot install configuration repaired"
+        ifvarclass => "install_cert_repaired";
+      "$(web_server_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+
+}
+
+######################################################################
+
+# bundle agent guac_database_vars(params)
+# {
+#   vars:
+
+#     ## INSTALL PARAMETERS FOR ALL SOFTWARE
+#     debian::
+#       "dependent_packages" slist => { "apache2", "certbot", "python-certbot-apache", },
+#         comment => "set of packages for apache web server and let's encrypt SSL certbot";
+
+#       "modules_enabled" slist => { "ssl", "proxy", "proxy_http", "proxy_wstunnel", },
+#         comment => "set of modules to enable for ssl and proxy";
+#         # original modules required: mod_proxy and mod_proxy_wstunnel. Debian removes the 'mod_'
+
+#     ## EFF LET'S ENCRYPT CERTBOT CONFIGURATION PARAMETERS
+#       "certbot_config_file" string => "/etc/letsencrypt/cli.ini";
+#       "certbot_config_template" string => "$(this.promise_dirname)/data/certbot_config.tpl.conf";
+#       "certbot_registered_email" string => "root@cs.wichita.edu";
+#       "certbot_cert_dir" string => "/etc/letsencrypt/live/"; #certs are in each domain subdirectory
+
+#       "certbot_include_path" string => "/etc/letsencrypt/options-ssl-apache.conf";
+#       "certbot_cert_chain_file" string => "fullchain.pem";
+#       "certbot_cert_key_file" string => "privkey.pem";
+#       "certbot_domains_to_register" string => "testing-gateway.cs.wichita.edu";
+
+#       "apache_serveradmin_email" string => "root@cs.wichita.edu";
+#       "apache_available_sites_dir" string => "/etc/apache2/sites-available/";
+#       "apache_site_index_file" string => "index.html";
+#       "apache_site_index_template" string => "$(this.promise_dirname)/data/default_index_html.tpl.txt";
+#       "apache_default_site" string => "000-default.conf";
+
+#       "apache_root_dir" string => "/var/www/";
+#       # NOTE: if you move root dir location to different from /var/www, then you need to
+#       # whitelist the location in /etc/apache2/apache2.conf
+
+#     ## GUACAMOLE PROXY VIRTUAL HOST CONFIGURATION PARAMETERS
+#       "site_data[guac][site_conf_file]" string => "guacamole.conf";
+#       "site_data[guac][site_conf_cache]" string => "$(sys.workdir)/state/web_sites/guacamole_proxy.conf";
+#       "site_data[guac][site_conf_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.conf";
+#       "site_data[guac][domain_hostname]" string => "testing-gateway.cs.wichita.edu";
+#       "site_data[guac][document_root]" string => "$(apache_root_dir)/guacamole/public_html/";
+#       "site_data[guac][custom_apache_log]" string => "/var/log/apache2/guac.log";
+
+#     ## TESTING ONLY INSECURE AND SSL VIRTUAL HOST CONFIGURATION PARAMETERS
+#       # "site_data[test][site_conf_file]" string => "testing_insecure.conf";
+#       # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.conf";
+
+#       # "site_data[test][site_conf_file]" string => "testing_ssl.conf";
+#       # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.conf";
+#       # "site_data[test][domain_hostname]" string => "testing-guac.cs.wichita.edu";
+#       # "site_data[test][document_root]" string => "$(apache_root_dir)/testing/public_html/";
+#       # "site_data[test][custom_apache_log]" string => "/var/log/apache2/testing.log";
+
+#       "site_keys_unsorted" slist => getindices("site_data");
+#       "site_keys" slist => sort( site_keys_unsorted, "lex" );
+
+      
+#     ## VIRTUAL HOST SITES ENABLED IN WEB SERVER
+#       "sites_enabled" slist => { "$(site_data[guac][site_conf_file])" };
+#       # "sites_enabled" slist => { "$(site_data[test[site_conf_file])" };
+      
+#     any::
+#       # Copy configuration parameters passed, into a local array
+#       # "param1_keys"          slist  => getindices("$(params1)");   
+#       # "param2_keys"          slist  => getindices("$(params2)");   
+#       # "install[$(param1_keys)]" string => "$($(params1)[$(param1_keys)])";
+#       # "conf[$(param2_keys)]" string => "$($(params2)[$(param2_keys)])";
+
+      
+#   reports:
+#     (inform_mode|verbose_mode)::
+#       "$(this.bundle): Activated";
+# }
+
+######################################################################
+
+
+######################################################################
+
+
+bundle agent create_guac_connection(name, host, protocol, parent_group)
+# @description: add entry (row) into required mySQL tables for a guacamole connection "name" with "host" (ip address) using "protocol" (VNC, RDP, SSH) under a "parent group" (connection group ID)
+{
+  vars:
+      "db_type" string => "sql";
+
+      "database" string => "guacamole_db";
+      "connection_table" string => "$(database)/guacamole_connection";
+      "parameter_table" string => "$(database)/guacamole_connection_parameter";
+      "max_connections" string => "",
+        comment => "leave null to use default value in global guacamole.properties file";
+      "max_connections_per_user" string => "",
+        comment => "leave null to use default value in global guacamole.properties file";
+      
+      
+  databases:
+
+      ## CREATE CONNECTION     
+      "$(connection_table)"
+        database_operation => "create",
+        database_type => "$(db_type)",
+        database_rows => {
+			      "connection_name,$(name)",
+			      "protocol,$(protocol)",
+			      "parent_id,$(parent_group)",
+			      "max_connections,$(max_connections)",
+			      "max_connections_per_user,$(max_connections_per_user)"
+	},
+        database_server => local_mysql( "root", "" ),
+        comment => "using lib/databases.cf bundle with no password due to authsocket on root user";
+        # NOTE: could change root user to guacamole_user!
+}

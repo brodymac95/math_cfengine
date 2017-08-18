@@ -1,6 +1,7 @@
 ##############################################################################
 #
-#   manage/<service>/main.cf - EECS <service> configuration
+#   manage/web_server/main.cf - EECS web_server (apache2) install and configuration
+#                               including SSL/HTTPS CA cert install via certbot
 #   Maintained: Ben Roose, ver 0.1
 #
 ###############################################################################
