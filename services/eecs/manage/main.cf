@@ -52,7 +52,7 @@ bundle agent manage_main
 {
 
   classes:
-      "NO_MACHINE_TYPE" not => "os_node|os_tenant|server|workstation|laptop";
+      "NO_MACHINE_TYPE" not => "os_node|os_tenant|minimal_server|server|workstation|laptop";
       
   methods:
 
@@ -162,8 +162,8 @@ bundle agent manage_minimal_server_host
       "manage root password" usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
       
-    # install_software.!NO_INSTALLS::
-    #   "package management" usebundle => manage_packages;
+    install_software.!NO_INSTALLS::
+      "package management" usebundle => manage_packages;
          
     testing::
       # insert bundles here for testing hosts only
