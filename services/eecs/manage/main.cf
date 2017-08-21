@@ -56,11 +56,15 @@ bundle agent manage_main
       
   methods:
 
+    ## DEFINE MACHINE TYPE
+    os_tenant_cluster::
+      "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
+
     os_node::
       "all physical server nodes within openstack cluster" usebundle => manage_os_node_host;
 
-    os_tenant::
-      "all tenant VMs within openstack cluster" usebundle => manage_os_node_host;
+    minimal_server::
+      "legacy infrastructure servers with minimal management" usebundle => manage_minimal_server_host;
 
     server::
       "all isolated/legacy physical servers and VMs" usebundle => manage_server_host;
@@ -139,6 +143,28 @@ bundle agent manage_os_tenant_host
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
 
+    testing::
+      # insert bundles here for testing hosts only
+}
+
+###################################
+
+bundle agent manage_minimal_server_host
+{
+# NOTE: legacy servers manually set up by Tom with own networking and firewall rules!!
+# ONLY use for legacy infrastructure servers such as emcity
+      
+  methods:
+
+      "configure login motd" usebundle => config_login_banner;
+      "configure sshd" usebundle => config_sshd;
+
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+      
+    # install_software.!NO_INSTALLS::
+    #   "package management" usebundle => manage_packages;
+         
     testing::
       # insert bundles here for testing hosts only
 }

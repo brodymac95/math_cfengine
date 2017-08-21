@@ -147,6 +147,14 @@
             "roose": "Ben Roose",
 	   },
     },
+
+    "emcity": {
+	"machine": "minimal_server",
+	"purpose": "infrastructure",
+        "role": "file_server",
+        "owner": "eecs",
+    },
+
     "cudasrv": {
 	"machine": "server",
 	"purpose": "teaching",
