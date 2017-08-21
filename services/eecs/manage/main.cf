@@ -108,7 +108,7 @@ bundle agent manage_os_node_host
 
 ###################################
 
-bundle agent manage_os_tenant_host
+bundle agent manage_os_tenant_cluster
 {
 # NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!!
       
