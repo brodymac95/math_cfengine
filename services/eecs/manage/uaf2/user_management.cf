@@ -67,10 +67,11 @@ bundle agent uaf2_user_management
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
-      "json data found for grader_users: $(json_str_grader_user_data)";
 
       "$(grader_users) account reset"
         ifvarclass => "$(grader_users)_grader_reset_repaired";
+
+      # "json data found for grader_users: $(json_str_grader_user_data)";
 }
 
 ######################################################################
@@ -140,7 +141,6 @@ bundle agent reset_grader(user, grader_home)
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
-      "files_in_assign_dir $(files_in_assign_dir)";
       "assign directory exists. Assuming data needs to be tarballed before removal"
         ifvarclass => "assign_dir_exists";
       "tarball of assign directory created: $(grader_home)/$(user)/$(assign_tarball)"
