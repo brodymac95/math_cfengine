@@ -39,12 +39,6 @@ bundle common ssh_settings
         comment => "local directory where agents cache the user ssh authorized_keys file
         (for offline enforcement).";
 
-      "default_mode" string => "600";
-
-      "home_skeleton" string => "/etc/skel";
-
-      "shared_group_primary" string => "sysusers";
-
 }
 
 ########################################################
@@ -115,13 +109,12 @@ bundle agent edit_sshd
 
 ########################################################
 
-bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
+bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
 # @description: ensure user specific ssh authorized_keys files are deployed
 {
   vars:
-      "user_home_dir" string => "$(system_home)/$(user)";
-      "user_ssh_dir" string => "$(user_home_dir)/.ssh";
-      "user_auth_keys_file" string => "$(user_home_dir)/.ssh/authorized_keys";
+      "user_ssh_dir" string => "$(user_home)/.ssh";
+      "user_auth_keys_file" string => "$(user_home)/.ssh/authorized_keys";
 
       "auth_keys_dist" string => "$(ssh_settings.authorized_keys_dist)/$(user)/authorized_keys";
       "auth_keys_cache" string => "$(ssh_settings.authorized_keys_cache)/$(user)_authorized_keys";
@@ -132,8 +125,8 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
       comment => "-R = recursive";
       
   classes:
-      "user_home_dir_exists"
-	expression => fileexists( "$(user_home_dir)/." );
+      "user_home_exists"
+	expression => fileexists( "$(user_home)/." );
 
       "have_cached_auth_keys"
 	expression => fileexists( "$(auth_keys_cache)" );
@@ -157,13 +150,13 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
     	action => if_elapsed("60"),
     	comment => "if host is another client then perform secure remote copy of the authorized_keys file for local staging";
 
-    user_home_dir_exists::
+    user_home_exists::
       "$(user_ssh_dir)/."
     	create => "true",
     	perms => mog( "700","$(user)","$(group)" ),
     	comment => "ensure existence and correct permissions for user .ssh directory";
 
-    user_home_dir_exists.have_cached_auth_keys:: 
+    user_home_exists.have_cached_auth_keys:: 
       "$(user_auth_keys_file)"
     	copy_from => local_dcp( $(auth_keys_cache) ),
     	perms => mog( "400","$(user)","$(group)" ),
@@ -175,7 +168,7 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
       "$(restorecon_cmd) $(user_ssh_dir)"
         classes => results("bundle", "restorecon"),
         comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
-      	ifvarclass => "$(user)_auth_keys_file_repaired";
+      	ifvarclass => "auth_keys_file_repaired";
   
   reports:
     (inform_mode|verbose_mode)::

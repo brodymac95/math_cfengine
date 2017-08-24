@@ -48,17 +48,17 @@ bundle agent uaf2_user_management
       "grader_users" slist => getindices( "grader_user_data" ),
         comment => "get list of grader users";
 
-      "grader_home_dir" string => "/opt/homes/grader01/";
+      "grader_home_dir" string => "/home"; # "/opt/homes/grader01/";
 
   methods:
     RESET_GRADER_LIST::
       "CAREFUL!! reset uaf2 grader user accounts as defined in the json list"
-	usebundle => reset_grader( "$(grader_users)", "$(grader_home_dir)" ),
+	usebundle => reset_grader( "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
 	classes => results("bundle", "$(grader_users)_grader_reset");
 
     any::
       "ensure ssh authorized keys are copied into grader account (use bundle in manage/ssh/main.cf)"
-	usebundle => ensure_user_ssh_authorized_keys( "$(grader_users)", "$(grader_users)", "$(grader_home_dir)" ),
+	usebundle => ensure_user_ssh_authorized_keys( "$(grader_users)", "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
 	classes => results("bundle", "$(grader_users)_grader_reset");
       
   reports:
@@ -93,43 +93,43 @@ bundle agent reset_grader(user, grader_home)
       
   classes:
       "assign_dir_exists"
-	expression =>  fileexists( "$(grader_home)/$(user)/$(assign_dir)/." );
+	expression =>  fileexists( "$(grader_home)/$(assign_dir)/." );
 
       "handin_exec_exists"
-	expression =>  fileexists( "$(grader_home)/$(user)/$(handin_exec)" );
+	expression =>  fileexists( "$(grader_home)/$(handin_exec)" );
       
   commands:
     assign_dir_exists::
       "$(tar_create_cmd)"
-        args => "$(grader_home)/$(user)/$(assign_tarball) $(grader_home)/$(user)/$(assign_dir)",
+        args => "$(grader_home)/$(assign_tarball) $(grader_home)/$(assign_dir)",
         classes => results("bundle", "tar_create"),
         comment => "tarball previous semester handin/assign";
         # ifvarclass => "$(user)_auth_keys_file_repaired";
 
   files:
     tar_create_repaired::
-      "$(grader_home)/$(user)/$(assign_tarball)"
+      "$(grader_home)/$(assign_tarball)"
         perms => mog( "$(default_mode)","$(user)", "$(user)" ),
         # action => if_elapsed("60"),
         comment => "ensure correct perms on old assign tarball";
 
     handin_exec_exists::
-      "$(grader_home)/$(user)/$(handin_exec)"
+      "$(grader_home)/$(handin_exec)"
 	perms => mog("4755","$(user)","$(user)"),
 	comment => "set setuid permissions for handin executable";
          
   methods:
     tar_create_repaired|tar_create_kept::
       "remove all files in grader home excluding wildcard regex for tarball archives"
-	usebundle => cleanup_ignore( "$(grader_home)/$(user)", ".*$(tarball_ext)" ),
+	usebundle => cleanup_ignore( "$(grader_home))", ".*$(tarball_ext)" ),
 	classes => results("bundle", "cleanup");
 
   users:
       "$(user)"
 	policy => "present",
 	shell => "/bin/bash",
-	home_dir => "$(grader_home)/$(user)",
-	home_bundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home_skeleton)" ),
+	home_dir => "$(grader_home)",
+	home_bundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home)", "$(grader_home_skeleton)" ),
 	group_primary => "$(user)",
         password => hashed_password( "!##lockedpassword-sshpublickeyonly##" ),
 	comment => "ensure grader user is present and copy default grader skel files into account after cleanup
@@ -144,7 +144,7 @@ bundle agent reset_grader(user, grader_home)
       "=== $(this.bundle) ===";
       "assign directory exists. Assuming data needs to be tarballed before removal"
         ifvarclass => "assign_dir_exists";
-      "tarball of assign directory created: $(grader_home)/$(user)/$(assign_tarball)"
+      "tarball of assign directory created: $(grader_home)/$(assign_tarball)"
         ifvarclass => "tar_create_repaired";
 }
 
