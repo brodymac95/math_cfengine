@@ -51,7 +51,7 @@ bundle agent uaf2_user_management
       "grader_home_dir" string => "/opt/homes/grader01/";
 
   methods:
-    RESET_GRADER::
+    RESET_GRADER_LIST::
       "CAREFUL!! reset uaf2 grader user accounts as defined in the json list"
 	usebundle => reset_grader( "$(grader_users)", "$(grader_home_dir)" ),
 	classes => results("bundle", "$(grader_users)_grader_reset");
@@ -131,8 +131,9 @@ bundle agent reset_grader(user, grader_home)
 	home_dir => "$(grader_home)/$(user)",
 	home_bundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home_skeleton)" ),
 	group_primary => "$(user)",
-        # password => hashed_password( "!##lockedpassword##" ),
+        password => hashed_password( "!##lockedpassword-sshpublickeyonly##" ),
 	comment => "ensure grader user is present and copy default grader skel files into account after cleanup
+                    Lock password access, so only ssh public key access works!
                     NOTE: using home_skel bundle from manage/users/main.cf";
 
   reports:
