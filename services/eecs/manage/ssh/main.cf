@@ -120,7 +120,7 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
       "auth_keys_cache" string => "$(ssh_settings.authorized_keys_cache)/$(user)_authorized_keys";
       "auth_keys_cache_dir" string => "$(ssh_settings.authorized_keys_cache)";
 
-    redhat::
+    redhat.!scientific::
       "restorecon_cmd" string => "/usr/sbin/restorecon -R ",
       comment => "-R = recursive";
       
@@ -164,7 +164,7 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
     	comment => "copy authorized_keys file from local staging cache and ensure correct permissions";
 
   commands:
-    redhat::
+    redhat.!scientific::
       "$(restorecon_cmd) $(user_ssh_dir)"
         classes => results("bundle", "restorecon"),
         comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
