@@ -124,6 +124,10 @@ bundle agent reset_grader(user, grader_home)
 	usebundle => cleanup_ignore( "$(grader_home))", ".*$(tarball_ext)" ),
 	classes => results("bundle", "cleanup");
 
+      "seed copy files from grader skel into empty grader home"
+	usebundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home)", "$(grader_home_skeleton)" ),
+	classes => results("bundle", "home_skel");
+
   users:
       "$(user)"
 	policy => "present",
