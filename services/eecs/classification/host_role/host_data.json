@@ -153,6 +153,7 @@
 	"purpose": "infrastructure",
         "role": "file_server",
         "owner": "eecs",
+	"authentication": "uaf2_legacy",
     },
 
     "cudasrv": {

@@ -16,7 +16,7 @@
 #}
 
 ######################################################################
-# Public entry point: config_sshd
+# Public entry point: config_sshd AND ensure_ssh_authorized_keys(user)
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -26,6 +26,28 @@
 # if the main config is repaired by the copy from the validated temporary
 # file. This improves resilience, and tries to avoid deploying a potentially
 # broken config.bundle agent configfiles
+
+bundle common ssh_settings
+{
+  vars:
+            
+      "authorized_keys_dist"
+        string => "/srv/cfengine/configs/ssh_authorized_keys/",
+        comment => "server location where agents look for each user ssh authorized_keys file.";
+      "authorized_keys_cache"
+        string => "$(sys.workdir)/state/ssh_key_cache/",
+        comment => "local directory where agents cache the user ssh authorized_keys file
+        (for offline enforcement).";
+
+      "default_mode" string => "600";
+
+      "home_skeleton" string => "/etc/skel";
+
+      "shared_group_primary" string => "sysusers";
+
+}
+
+########################################################
 
 bundle agent config_sshd
 {
@@ -64,6 +86,8 @@ bundle agent config_sshd
       
 }
 
+########################################################
+
 bundle agent edit_sshd
 {
   files:
@@ -88,3 +112,90 @@ bundle agent edit_sshd
     (DEBUG|DEBUG_config_files).sshd_restart_repaired::
       "sshd service restarted after $(config_sshd.files[sshd]) file repaired";
 }
+
+########################################################
+
+bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
+# @description: ensure user specific ssh authorized_keys files are deployed
+{
+  vars:
+      "user_home_dir" string => "$(system_home)/$(user)";
+      "user_ssh_dir" string => "$(user_home_dir)/.ssh";
+      "user_auth_keys_file" string => "$(user_home_dir)/.ssh/authorized_keys";
+
+      "auth_keys_dist" string => "$(ssh_settings.authorized_keys_dist)/$(user)/authorized_keys";
+      "auth_keys_cache" string => "$(ssh_settings.authorized_keys_cache)/$(user)_authorized_keys";
+      "auth_keys_cache_dir" string => "$(ssh_settings.authorized_keys_cache)";
+
+    redhat::
+      "restorecon_cmd" string => "/usr/sbin/restorecon -R ",
+      comment => "-R = recursive";
+      
+  classes:
+      "user_home_dir_exists"
+	expression => fileexists( "$(user_home_dir)/." );
+
+      "have_cached_auth_keys"
+	expression => fileexists( "$(auth_keys_cache)" );
+      
+  files:
+      "$(auth_keys_cache_dir)/."
+    	create => "true",
+        comment => "ensure the cache directory exists";
+
+    policy_server::
+      "$(auth_keys_cache)"
+        perms => mo("600","root"),
+        copy_from => local_dcp( $(auth_keys_dist) ),
+        action => if_elapsed("60"),
+        comment => "if host is policy server then perform local copy of the authorized_keys file for local staging";
+
+    !policy_server::
+      "$(auth_keys_cache)"
+    	perms => mo("600","root"),
+    	copy_from => secure_cp( $(auth_keys_dist), $(sys.policy_hub) ),
+    	action => if_elapsed("60"),
+    	comment => "if host is another client then perform secure remote copy of the authorized_keys file for local staging";
+
+    user_home_dir_exists::
+      "$(user_ssh_dir)/."
+    	create => "true",
+    	perms => mog( "700","$(user)","$(group)" ),
+    	comment => "ensure existence and correct permissions for user .ssh directory";
+
+    user_home_dir_exists.have_cached_auth_keys:: 
+      "$(user_auth_keys_file)"
+    	copy_from => local_dcp( $(auth_keys_cache) ),
+    	perms => mog( "400","$(user)","$(group)" ),
+        classes => results("bundle", "auth_keys_file"),
+    	comment => "copy authorized_keys file from local staging cache and ensure correct permissions";
+
+  commands:
+    redhat::
+      "$(restorecon_cmd) $(user_ssh_dir)"
+        classes => results("bundle", "restorecon"),
+        comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
+      	ifvarclass => "$(user)_auth_keys_file_repaired";
+  
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "auth_keys_dist: $(auth_keys_dist)";
+      "auth_keys_cache: $(auth_keys_cache)";
+      "user_auth_keys_file: $(user_auth_keys_file)";
+
+      "$(user_auth_keys_file) copied for $(user)"
+	ifvarclass => "auth_keys_file_repaired";
+
+      "$(user_auth_keys_file) exists for $(user)"
+	ifvarclass => "auth_keys_file_kept";
+
+      "SELinux restorecon ran on $(user_ssh_dir)"
+	ifvarclass => "restorecon_repaired";
+
+}
+
+########################################################

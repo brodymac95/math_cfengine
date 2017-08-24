@@ -1,0 +1,172 @@
+##############################################################################
+#
+#   manage/uaf2/user_management.cf - (LEGACY) EECS management of uaf2 user accounts 
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+# body file control
+# {
+# 	inputs => { "$(sys.libdir)/stdlib.cf",
+# 		    "$(sys.workdir)/inputs/services/eecs/manage/ssh/main.cf",
+# 		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+# }
+
+######################################################################
+# Public entry point: uaf2_user_management
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+
+bundle agent uaf2_user_management
+# NOTE: THESE BUNDLES ARE FOR HANDLING UAF2 LEGACY USERS IN EMCITY FILE_SERVER
+# BE VERY CAREFUL TO NOT OVERRIDE UAF2 ITSELF!!
+{
+
+  vars:
+      "uaf2_user_data" data => readjson("$(this.promise_dirname)/data/uaf2_users.json",1M),
+        comment => "pull in external json file containing uaf2 users defined by role";
+
+      "roles" slist => getindices( sys_user_data );
+
+      "grader_user_data"
+        data => mergedata( "uaf2_user_data[grader]" ),
+        ifvarclass => isvariable("uaf2_user_data[grader]"),
+        comment => "create data subset of grader users from uaf2_users.json file";
+
+      "json_str_grader_user_data" string => format("%S", "grader_user_data"),
+        ifvarclass => isvariable("uaf2_user_data[grader]");
+
+      "grader_users" slist => getindices( "grader_user_data" ),
+        comment => "get list of grader users";
+
+      "grader_home_dir" string => "/home"; # change to "/opt/homes/grader01/" on emcity!
+
+  methods:
+    RESET_GRADER::
+      "CAREFUL!! reset uaf2 grader user accounts as defined in the json list"
+	usebundle => reset_grader( "$(grader_users)", "$(grader_home_dir)" ),
+	classes => results("bundle", "$(grader_users)_grader_reset");
+
+    any::
+      "ensure ssh authorized keys are copied into grader account (use bundle in manage/ssh/main.cf)"
+	usebundle => ensure_user_ssh_authorized_keys( "$(grader_users)", "$(grader_users)", "$(grader_home_dir)" ),
+	classes => results("bundle", "$(grader_users)_grader_reset");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+      "json data found for grader_users: $(json_str_grader_user_data)";
+
+      "$(grader_users) account reset"
+        ifvarclass => "$(grader_users)_grader_reset_repaired";
+}
+
+######################################################################
+
+bundle agent reset_grader(user, grader_home)
+# @description: backup handin/assign dir, delete user account files and reset from custom skel dir
+{
+  vars:
+      "tar_create_cmd" string => "/bin/tar -cvjf ";
+
+      "grader_home_skeleton" string => "/etc/skel_grader";
+
+      "default_mode" string => "600";
+
+      "handin_exec" string => "bin/handin";
+      "assign_dir" string => "handin/assign";
+      "assign_tarball" string => "old_$(user)_assign_$(sys.cdate).tar.bz2";
+      "tarball_ext" string => ".tar.bz2";
+      
+  classes:
+      "assign_dir_exists"
+	expression =>  fileexists( "$(grader_home)/$(user)/$(assign_dir)/." );
+
+      "handin_exec_exists"
+	expression =>  fileexists( "$(grader_home)/$(user)/$(handin_exec)" );
+      
+  commands:
+    assign_dir_exists::
+      "$(tar_create_cmd)"
+        args => "$(grader_home)/$(user)/$(assign_tarball) $(grader_home)/$(user)/$(assign_dir)",
+        classes => results("bundle", "tar_create"),
+        comment => "tarball previous semester handin/assign";
+        # ifvarclass => "$(user)_auth_keys_file_repaired";
+
+  files:
+    tar_create_repaired::
+      "$(grader_home)/$(user)/$(assign_tarball)"
+        perms => mog( "$(default_mode)","$(user)", "$(user)" ),
+        # action => if_elapsed("60"),
+        comment => "ensure correct perms on old assign tarball";
+
+    handin_exec_exists::
+      "$(grader_home)/$(user)/$(handin_exec)"
+	perms => mog("4755","$(user)","$(user)"),
+	comment => "set setuid permissions for handin executable";
+         
+  methods:
+    tar_create_repaired|tar_create_kept::
+      "remove all files in grader home excluding wildcard regex for tarball archives"
+	usebundle => cleanup_ignore( "$(grader_home)/$(user)", ".*$(tarball_ext)" ),
+	classes => results("bundle", "cleanup");
+
+  users:
+      "$(user)"
+	policy => "present",
+	shell => "/bin/bash",
+	home_dir => "$(grader_home)/$(user)",
+	home_bundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home_skeleton)" ),
+	group_primary => "$(user)",
+        # password => hashed_password( "!##lockedpassword##" ),
+	comment => "ensure grader user is present and copy default grader skel files into account after cleanup
+                    NOTE: using home_skel bundle from manage/users/main.cf";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+      "files_in_assign_dir $(files_in_assign_dir)";
+      "assign directory exists. Assuming data needs to be tarballed before removal"
+        ifvarclass => "assign_dir_exists";
+      "tarball of assign directory created: $(grader_home)/$(user)/$(assign_tarball)"
+        ifvarclass => "tar_create_repaired";
+}
+
+######################################################################
+
+bundle agent cleanup_ignore(dir, ignore_list)
+{
+  files:
+      # Delete all files except ignore_list.
+      "$(dir)"
+        delete => tidy,
+        file_select => exclude( "$(ignore_list)" ),
+        depth_search => recurse( "inf" );
+
+      # Delete all subdirectories excluding ignore_list.
+      "$(dir)"
+        delete => tidy,
+        file_select => dirs,
+        depth_search => recurse_ignore( "inf","$(ignore_list)" );
+
+      # # do not delete parent.
+      # "$(dir)"
+      #   delete => tidy;
+}
+
+########################################################
