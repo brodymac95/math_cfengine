@@ -52,15 +52,16 @@ bundle agent uaf2_user_management
 
   methods:
     RESET_GRADER_LIST::
-      "CAREFUL!! reset uaf2 grader user accounts as defined in the json list"
+      "CAREFUL!! reset uaf2 grader user accounts as defined in the json grader list with 'reset' value defined!"
 	usebundle => reset_grader( "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
-	classes => results("bundle", "$(grader_users)_grader_reset");
+	classes => results("bundle", "$(grader_users)_grader_reset"),
+        ifvarclass => strcmp( "$(grader_user_data[$(grader_users)])", "reset" );
 
     any::
       "ensure ssh authorized keys are copied into grader account (use bundle in manage/ssh/main.cf)"
 	usebundle => ensure_user_ssh_authorized_keys( "$(grader_users)", "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
-	classes => results("bundle", "$(grader_users)_grader_reset");
-      
+	classes => results("bundle", "$(grader_users)_ssh_auth_keys");
+  
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
