@@ -104,7 +104,6 @@ bundle agent reset_grader(user, grader_home)
         args => "$(grader_home)/$(assign_tarball) $(grader_home)/$(assign_dir)",
         classes => results("bundle", "tar_create"),
         comment => "tarball previous semester handin/assign";
-        # ifvarclass => "$(user)_auth_keys_file_repaired";
 
   files:
     tar_create_repaired::
@@ -121,10 +120,9 @@ bundle agent reset_grader(user, grader_home)
   methods:
     tar_create_repaired|tar_create_kept::
       "remove all files in grader home excluding wildcard regex for tarball archives"
-	usebundle => cleanup_ignore( "$(grader_home))", ".*$(tarball_ext)" ),
+	usebundle => cleanup_ignore( "$(grader_home)", ".*$(tarball_ext)" ),
 	classes => results("bundle", "cleanup");
 
-    cleanup_repaired::
       "seed copy files from grader skel into empty grader home"
 	usebundle => home_skel( "$(user)", "$(user)", "$(default_mode)", "$(grader_home)", "$(grader_home_skeleton)" ),
 	classes => results("bundle", "home_skel");
