@@ -48,7 +48,7 @@ bundle agent uaf2_user_management
       "grader_users" slist => getindices( "grader_user_data" ),
         comment => "get list of grader users";
 
-      "grader_home_dir" string => "/home"; # change to "/opt/homes/grader01/" on emcity!
+      "grader_home_dir" string => "/opt/homes/grader01/";
 
   methods:
     RESET_GRADER::

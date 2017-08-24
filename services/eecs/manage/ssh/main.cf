@@ -183,9 +183,8 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, system_home)
 
     (DEBUG|DEBUG_sys_users)::
       "=== $(this.bundle) ===";
-      "auth_keys_dist: $(auth_keys_dist)";
-      "auth_keys_cache: $(auth_keys_cache)";
-      "user_auth_keys_file: $(user_auth_keys_file)";
+      "auth_keys_cache found at $(auth_keys_cache)";
+        ifvarclass => "have_cached_auth_keys";
 
       "$(user_auth_keys_file) copied for $(user)"
 	ifvarclass => "auth_keys_file_repaired";
