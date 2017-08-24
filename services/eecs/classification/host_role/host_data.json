@@ -40,7 +40,7 @@
 	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
     },
     "cs_ubuntu_testing": {
-	"machine": "server",
+	"machine": "minimal_server",
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
