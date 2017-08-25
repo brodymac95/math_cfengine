@@ -47,7 +47,7 @@
 	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
     },
     "cs_ubuntu_testing": {
-	"machine": "server",
+	"machine": "minimal_server",
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
@@ -154,6 +154,15 @@
             "roose": "Ben Roose",
 	   },
     },
+
+    "emcity": {
+	"machine": "minimal_server",
+	"purpose": "infrastructure",
+        "role": "file_server",
+        "owner": "eecs",
+	"authentication": "uaf2_legacy",
+    },
+
     "cudasrv": {
 	"machine": "server",
 	"purpose": "teaching",
@@ -268,6 +277,7 @@
 	    "q647m988": "Hui Li",
 	    "v252v594": "Yashar Zargari Zonouz",
 	    "a767p375": "Nathan Baker",
+	    "e757a666": "Seyed Ali Cheraghi",
 	    "s767f543": "Anindya Maiti",
 	},
     },

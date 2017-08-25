@@ -1,0 +1,9 @@
+{
+    "grader" : {
+	"cs211a": "reset"
+	"cs211b": "reset"
+	"cs211d": "reset"
+	"cs211n": "reset"
+	"cs411": "reset"
+    },
+}
