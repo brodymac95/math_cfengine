@@ -35,6 +35,7 @@ bundle agent install_deep_learning_packages
       "apt_packages" slist => {
 				"build-essential",
 				"python",
+				"python-sss",
 				"python-dev",
 				"python-pip",
 				"python-numpy",

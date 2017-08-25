@@ -27,6 +27,7 @@ bundle common manage_main_file_control
       "input[system_users]" string => "$(this.promise_dirname)/system_users/main.cf";
       "input[tftp]" string => "$(this.promise_dirname)/tftp/main.cf";
       "input[uaf2]" string => "$(this.promise_dirname)/uaf2/main.cf";
+      "input[uaf2_users]" string => "$(this.promise_dirname)/uaf2/user_management.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
       "input[web_server]" string => "$(this.promise_dirname)/web_server/main.cf";
@@ -57,16 +58,20 @@ bundle agent manage_main
 {
 
   classes:
-      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|server|workstation|laptop";
+
+      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|minimal_server|server|workstation|laptop";
       
   methods:
 
     ## DEFINE MACHINE TYPE
+    os_tenant_cluster::
+      "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
+
     os_node::
       "all physical undercloud nodes within openstack" usebundle => manage_os_node_host;
 
-    os_tenant_cluster::
-      "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
+    minimal_server::
+      "legacy infrastructure servers with minimal management" usebundle => manage_minimal_server_host;
 
     server::
       "all isolated/legacy physical servers and VMs" usebundle => manage_server_host;
@@ -78,6 +83,7 @@ bundle agent manage_main
       "all isolated physical laptops and mobile devices" usebundle => manage_laptop_host;
 
   reports:
+
     NO_MACHINE_TYPE::
       "ALERT: No machine type found for host $(sys.host). Ensure host is configured in host_data.cf";
 }
@@ -136,7 +142,7 @@ bundle agent manage_os_tenant_cluster
 
 ###################################
 
-bundle agent manage_os_node_host
+bundle agent manage_os_tenant_cluster
 {
 # NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!! 
       
@@ -155,6 +161,31 @@ bundle agent manage_os_node_host
 
     manage_user_configuration::
       "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
+    testing::
+      # insert bundles here for testing hosts only
+}
+
+###################################
+
+bundle agent manage_minimal_server_host
+{
+# NOTE: legacy servers manually set up by Tom with own networking and firewall rules!!
+# ONLY use for legacy infrastructure servers such as emcity
+      
+  methods:
+
+      "configure login motd" usebundle => config_login_banner;
+      "configure sshd"       usebundle => config_sshd;
+
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+      
+    install_software.!NO_INSTALLS::
+      "package management"   usebundle => manage_packages;
+
+    file_server.uaf2_legacy::
+      "manage uaf2 users (CAREFUL)" usebundle => uaf2_user_management;
          
     testing::
       # insert bundles here for testing hosts only
