@@ -24,20 +24,13 @@
             "roose": "Ben Roose",
 	   },
     },
-    "csdev_web_gateway": {
+    "testing_box": {
 	"machine": "os_tenant_cluster",
 	"purpose": "testing",
         "role": "guac_gateway",
         "owner": "eecs",
     },
-    "csdev_cluster": {
-	"machine": "os_tenant_cluster",
-	"purpose": "testing",
-        "role": "dev_cluster",
-        "owner": "eecs",
-	"authentication": "uaf2_client",
-    },
-    "cstest": {
+    "cstesting": {
 	"machine": "server",
 	"purpose": "testing",
         "role": "testingsystem",
@@ -47,7 +40,7 @@
 	"security": [ "NOT_USED_ltsp_wsu_only", "tftp_rslab_internal", ],
     },
     "cs_ubuntu_testing": {
-	"machine": "server",
+	"machine": "minimal_server",
 	"purpose": "testing",
         "role": "testingsystem",
         "owner": "eecs",
@@ -154,6 +147,15 @@
             "roose": "Ben Roose",
 	   },
     },
+
+    "emcity": {
+	"machine": "minimal_server",
+	"purpose": "infrastructure",
+        "role": "file_server",
+        "owner": "eecs",
+	"authentication": "uaf2_legacy",
+    },
+
     "cudasrv": {
 	"machine": "server",
 	"purpose": "teaching",
@@ -268,6 +270,7 @@
 	    "q647m988": "Hui Li",
 	    "v252v594": "Yashar Zargari Zonouz",
 	    "a767p375": "Nathan Baker",
+	    "e757a666": "Seyed Ali Cheraghi",
 	    "s767f543": "Anindya Maiti",
 	},
     },

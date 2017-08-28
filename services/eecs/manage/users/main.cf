@@ -48,6 +48,7 @@ bundle common user_settings
       "shared_group_primary" string => "users";
       "group_secondary" string => "audio,plugdev";
       "default_mode" string => "600";
+      "default_system_home" string => "/home";
 
     local_users_shared_group|local_users_own_group::
       "user" slist => getindices( "classify_host.wsu_users" );
@@ -185,15 +186,15 @@ bundle agent manage_local_users_shared_group(settings)
   vars:
       "user" slist => getindices( "classify_host.wsu_users" );
       "json_str_users" string => format("%S", "classify_host.wsu_users");
-
+      
   users:
     linux.shared_group_exists_kept.!crypto_ltsp::
       "$(user)"
       policy => "present",
       description => "$(classify_host.wsu_users[$(user)])",
       shell => "/bin/bash",
-      home_dir => "/home/$(user)",
-      home_bundle => home_skel( "$(user)", "$($(settings).shared_group_primary)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      home_dir => "$($(settings).default_system_home)/$(user)",
+      home_bundle => home_skel( "$(user)", "$($(settings).shared_group_primary)", "$($(settings).default_mode)", "$($(settings).default_system_home)/$(user)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).shared_group_primary)",
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
@@ -207,7 +208,7 @@ bundle agent manage_local_users_shared_group(settings)
       description => "$(classify_host.wsu_users[$(user)])",
       shell => "/bin/bash",
       home_dir => "/home/users/$(user)",
-      home_bundle => home_skel( "$(user)","$($(settings).shared_group_primary)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      home_bundle => home_skel( "$(user)","$($(settings).shared_group_primary)", "$($(settings).default_mode)", "/home/users/$(user)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).shared_group_primary)",
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
@@ -230,7 +231,7 @@ bundle agent manage_local_users_shared_group(settings)
       "Local user set on this system: $(user)";
       "Username: $(classify_host.wsu_users[$(user)])";
       "Shared group: $($(settings).shared_group_primary)";
-      "Contents of 'wsu_users' data container: $(json_str_users)";    
+      # "Contents of 'wsu_users' data container: $(json_str_users)";    
 }
 
 ########################################################
@@ -250,8 +251,8 @@ bundle agent manage_local_users_own_group(settings)
       policy => "present",
       description => "$(classify_host.wsu_users[$(user)])",
       shell => "/bin/bash",
-      home_dir => "/home/$(user)",
-      home_bundle => home_skel( "$(user)","$(user)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      home_dir => "$($(settings).default_system_home)/$(user)",
+      home_bundle => home_skel( "$(user)","$(user)", "$($(settings).default_mode)", "$($(settings).default_system_home)/$(user)", "$($(settings).home_skeleton)" ),
       groups_secondary => { "$($(settings).group_secondary)" },
       comment => "add local user (with group = user) from wsu_users dataset gained via external host file
                   user must be a myWSU ID if AD auth is wanted. fullname can be the person's name (set in description)
@@ -307,8 +308,8 @@ bundle agent manage_local_users_custom_groups(settings)
       policy => "present",
       description => "$(userdata_$(group)[$(user[$(group)])])",
       shell => "/bin/bash",
-      home_dir => "/home/$(user[$(group)])",
-      home_bundle => home_skel( "$(user[$(group)])","$(group)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      home_dir => "$($(settings).default_system_home)/$(user[$(group)])",
+      home_bundle => home_skel( "$(user[$(group)])","$(group)", "$($(settings).default_mode)", "$($(settings).default_system_home)/$(user[$(group)])", "$($(settings).home_skeleton)" ),
       group_primary => "$(group)",
       groups_secondary => { "$($(settings).group_secondary)" },
       classes => results("bundle", "user_exists"),
@@ -321,8 +322,8 @@ bundle agent manage_local_users_custom_groups(settings)
       policy => "present",
       description => "$(userdata_grader[$(user[grader])])",
       shell => "/bin/bash",
-      home_dir => "/home/$(user[grader])",
-      home_bundle => home_skel( "$(user[grader])","grader", "755", "$($(settings).home_skeleton)" ),
+      home_dir => "$($(settings).default_system_home)/$(user[grader])",
+      home_bundle => home_skel( "$(user[grader])","grader", "755", "$($(settings).default_system_home)/$(user[grader])", "$($(settings).home_skeleton)" ),
       group_primary => "grader",
       groups_secondary => { "$($(settings).group_secondary)" },
       classes => results("bundle", "user_exists"),
@@ -340,7 +341,7 @@ bundle agent manage_local_users_custom_groups(settings)
 	classes => results("bundle", "group_dirs");
 
       "install handin files into grader user profile"
-        usebundle => install_handin( "$(grader_user)", "grader", "/home/$(grader_user)" ),
+        usebundle => install_handin( "$(grader_user)", "grader", "$($(settings).default_system_home)/$(user[grader])" ),
 	classes => results("bundle", "handin_install");
 
       #"insert into user .bashrc file an automatic cd to group directory"
@@ -358,7 +359,7 @@ bundle agent manage_local_users_custom_groups(settings)
       "Grader user: $(grader_user)";
       
 #      "Username: $(classify_host.wsu_users[$(group)][$(user)])";
-      "Contents of 'groups' data container: $(group_json_str)";
+      # "Contents of 'groups' data container: $(group_json_str)";
 
     # user_exists_kept::
     #   "user_exists_kept";
@@ -428,21 +429,21 @@ bundle agent insert_autorun_command(user, command)
 
 ########################################################
 
-bundle agent home_skel(user, group, mode, skel)
+bundle agent home_skel(user, group, mode, user_home, skel)
 # @description: copies skeleton files to new user home path
 {
   files:
-      "/home/$(user)/."
-      create => "true",
-      copy_from => seed_cp( $(skel) ),
-      perms => mog("$(mode)", "$(user)", "$(group)"),
-      depth_search => recurse_with_base( "inf" );
+      "$(user_home)/."
+	create => "true",
+	copy_from => seed_cp( $(skel) ),
+	perms => mog("$(mode)", "$(user)", "$(group)"),
+	depth_search => recurse_with_base( "inf" );
 
   reports:
 
     (DEBUG|DEBUG_home_skel)::
       "=== $(this.bundle) ===";
-      "Creating home for user and group: $(user):$(group)";
+      "Creating $(user_home) for user and group: $(user):$(group)";
       "Using skeleton path: $(skel)";
 }
 

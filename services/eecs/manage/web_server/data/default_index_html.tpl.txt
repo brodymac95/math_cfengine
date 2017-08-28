@@ -1,8 +1,0 @@
-<html>
-  <head>
-      <title>SITE TEST INDEX PAGE</title>
-  </head>
-  <body>
-      <h1>Success! This virtual host is working!</h1>
-  </body>
-</html>

@@ -36,11 +36,11 @@ bundle common sys_user_settings
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.debian_uaf2",
         comment => "server location where agents look for Debian sudoers file.";
-    redhat.!os_tenant_cluster::
+    redhat.!os_tenant::
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat",
         comment => "server location where agents look for Red Hat sudoers file.";
-    redhat.os_tenant_cluster::
+    redhat.os_tenant::
       "sudoers_dist"
         string => "/srv/cfengine/configs/sudoers_files/sudoers.redhat_cloudimg",
         comment => "server location where agents look for OpenStack undercloud sudoers file.";
@@ -52,7 +52,7 @@ bundle common sys_user_settings
         (for offline enforcement).";
       
       "ssh_authorized_keys_dist"
-        string => "/srv/cfengine/configs/system_users/",
+        string => "/srv/cfengine/configs/ssh_authorized_keys/",
         comment => "server location where agents look for each user ssh authorized_keys file.";
       "ssh_authorized_keys_cache"
         string => "$(sys.workdir)/state/ssh_key_cache/",
