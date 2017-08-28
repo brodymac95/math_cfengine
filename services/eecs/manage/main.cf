@@ -103,8 +103,8 @@ bundle agent manage_os_tenant_cluster
       "configure login defaults" usebundle => config_login_defs;
 
       # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts! 
-      # "manage root password"     usebundle => manage_root_passwd,
-      #   comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+      "manage root password"     usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
       
     install_software.!NO_INSTALLS::
       "repository management"      usebundle => manage_repositories;
@@ -142,7 +142,7 @@ bundle agent manage_os_tenant_cluster
 
 ###################################
 
-bundle agent manage_os_tenant_cluster
+bundle agent manage_os_node_host
 {
 # NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!! 
       

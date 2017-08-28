@@ -34,10 +34,13 @@ bundle agent guac_database
   vars:      
       "apache_exec" string => "/usr/sbin/apache2";
 
-      "connection_name" string => "test1";
+      # "username" string => "guacadmin";
+      "username" string => "d693f574";
+      "connection_name" string => "sshtest3";
       "host_ip" string => "10.10.10.10";
-      "protocol" string => "RDP";
+      "protocol" string => "ssh";
       "parent_group" string => "";
+      "params" string => "guac_database_vars";
       
   classes:
 
@@ -51,8 +54,12 @@ bundle agent guac_database
 
   methods:
       "create a test connection"
-    	usebundle => create_guac_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group) ),
-        classes => if_ok("enable_site");      
+      	usebundle => guac_create_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group), $(params) ),
+        classes => if_ok("connection_created");
+
+      "add user to test connection"
+      	usebundle => guac_add_user_to_connection( $(username),$(connection_name), $(params) ),
+        classes => if_ok("add_user_to_connection");
 
 
     # off.apache_exists::
@@ -122,138 +129,179 @@ bundle agent guac_database
     (DEBUG|DEBUG_web_server)::
       "=== $(this.bundle) ===";
 
-      "web server (apache2) is not installed on this host"
-        ifvarclass => "!apache_exists";
-      "web server (apache2) is turned off"
-        ifvarclass => "web_server_off";
-      "web server (apache2) is turned on and running"
-        ifvarclass => "web_server_on";
-      "web server (apache2) restarted due to configuration change"
-        ifvarclass => "web_server_restart";
-      "web server (apache2) reloaded due to configuration change"
-        ifvarclass => "web_server_reload";
+      # "web server (apache2) is not installed on this host"
+      #   ifvarclass => "!apache_exists";
+      # "web server (apache2) is turned off"
+      #   ifvarclass => "web_server_off";
+      # "web server (apache2) is turned on and running"
+      #   ifvarclass => "web_server_on";
+      # "web server (apache2) restarted due to configuration change"
+      #   ifvarclass => "web_server_restart";
+      # "web server (apache2) reloaded due to configuration change"
+      #   ifvarclass => "web_server_reload";
 
-      "site generated from templates and enabled: $(web_server_vars.sites_enabled)"
-        ifvarclass => "enable_sites";
-      "module enabled: $(web_server_vars.modules_enabled)"
-        ifvarclass => "enable_modules";
-      "certbot install configuration repaired"
-        ifvarclass => "install_cert_repaired";
-      "$(web_server_vars.dependent_packages) installed"
-        ifvarclass => "dependent_packages_install_repaired";
+      "test connection 1 created"
+        ifvarclass => "connection_created";
+      "user added to test connection"
+        ifvarclass => "add_user_to_connection";
 
 }
 
 ######################################################################
 
-# bundle agent guac_database_vars(params)
-# {
-#   vars:
-
-#     ## INSTALL PARAMETERS FOR ALL SOFTWARE
-#     debian::
-#       "dependent_packages" slist => { "apache2", "certbot", "python-certbot-apache", },
-#         comment => "set of packages for apache web server and let's encrypt SSL certbot";
-
-#       "modules_enabled" slist => { "ssl", "proxy", "proxy_http", "proxy_wstunnel", },
-#         comment => "set of modules to enable for ssl and proxy";
-#         # original modules required: mod_proxy and mod_proxy_wstunnel. Debian removes the 'mod_'
-
-#     ## EFF LET'S ENCRYPT CERTBOT CONFIGURATION PARAMETERS
-#       "certbot_config_file" string => "/etc/letsencrypt/cli.ini";
-#       "certbot_config_template" string => "$(this.promise_dirname)/data/certbot_config.tpl.conf";
-#       "certbot_registered_email" string => "root@cs.wichita.edu";
-#       "certbot_cert_dir" string => "/etc/letsencrypt/live/"; #certs are in each domain subdirectory
-
-#       "certbot_include_path" string => "/etc/letsencrypt/options-ssl-apache.conf";
-#       "certbot_cert_chain_file" string => "fullchain.pem";
-#       "certbot_cert_key_file" string => "privkey.pem";
-#       "certbot_domains_to_register" string => "testing-gateway.cs.wichita.edu";
-
-#       "apache_serveradmin_email" string => "root@cs.wichita.edu";
-#       "apache_available_sites_dir" string => "/etc/apache2/sites-available/";
-#       "apache_site_index_file" string => "index.html";
-#       "apache_site_index_template" string => "$(this.promise_dirname)/data/default_index_html.tpl.txt";
-#       "apache_default_site" string => "000-default.conf";
-
-#       "apache_root_dir" string => "/var/www/";
-#       # NOTE: if you move root dir location to different from /var/www, then you need to
-#       # whitelist the location in /etc/apache2/apache2.conf
-
-#     ## GUACAMOLE PROXY VIRTUAL HOST CONFIGURATION PARAMETERS
-#       "site_data[guac][site_conf_file]" string => "guacamole.conf";
-#       "site_data[guac][site_conf_cache]" string => "$(sys.workdir)/state/web_sites/guacamole_proxy.conf";
-#       "site_data[guac][site_conf_template]" string => "$(this.promise_dirname)/data/guacamole_proxy.tpl.conf";
-#       "site_data[guac][domain_hostname]" string => "testing-gateway.cs.wichita.edu";
-#       "site_data[guac][document_root]" string => "$(apache_root_dir)/guacamole/public_html/";
-#       "site_data[guac][custom_apache_log]" string => "/var/log/apache2/guac.log";
-
-#     ## TESTING ONLY INSECURE AND SSL VIRTUAL HOST CONFIGURATION PARAMETERS
-#       # "site_data[test][site_conf_file]" string => "testing_insecure.conf";
-#       # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_insecure.tpl.conf";
-
-#       # "site_data[test][site_conf_file]" string => "testing_ssl.conf";
-#       # "site_data[test][site_conf_template]" string => "$(this.promise_dirname)/data/testing_ssl.tpl.conf";
-#       # "site_data[test][domain_hostname]" string => "testing-guac.cs.wichita.edu";
-#       # "site_data[test][document_root]" string => "$(apache_root_dir)/testing/public_html/";
-#       # "site_data[test][custom_apache_log]" string => "/var/log/apache2/testing.log";
-
-#       "site_keys_unsorted" slist => getindices("site_data");
-#       "site_keys" slist => sort( site_keys_unsorted, "lex" );
-
-      
-#     ## VIRTUAL HOST SITES ENABLED IN WEB SERVER
-#       "sites_enabled" slist => { "$(site_data[guac][site_conf_file])" };
-#       # "sites_enabled" slist => { "$(site_data[test[site_conf_file])" };
-      
-#     any::
-#       # Copy configuration parameters passed, into a local array
-#       # "param1_keys"          slist  => getindices("$(params1)");   
-#       # "param2_keys"          slist  => getindices("$(params2)");   
-#       # "install[$(param1_keys)]" string => "$($(params1)[$(param1_keys)])";
-#       # "conf[$(param2_keys)]" string => "$($(params2)[$(param2_keys)])";
-
-      
-#   reports:
-#     (inform_mode|verbose_mode)::
-#       "$(this.bundle): Activated";
-# }
-
-######################################################################
-
-
-######################################################################
-
-
-bundle agent create_guac_connection(name, host, protocol, parent_group)
-# @description: add entry (row) into required mySQL tables for a guacamole connection "name" with "host" (ip address) using "protocol" (VNC, RDP, SSH) under a "parent group" (connection group ID)
+bundle agent guac_database_vars
 {
   vars:
-      "db_type" string => "sql";
-
+    ## FILE PARAMETERS
+      "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection.sql";
+      "create_connection_template" string => "$(this.promise_dirname)/data/create_connection.sql.mustache";
+      "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection.sql";
+      "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
+      
+    ## GLOBAL PARAMETERS FOR DATABASE
       "database" string => "guacamole_db";
-      "connection_table" string => "$(database)/guacamole_connection";
-      "parameter_table" string => "$(database)/guacamole_connection_parameter";
-      "max_connections" string => "",
-        comment => "leave null to use default value in global guacamole.properties file";
-      "max_connections_per_user" string => "",
-        comment => "leave null to use default value in global guacamole.properties file";
-      
-      
-  databases:
 
-      ## CREATE CONNECTION     
-      "$(connection_table)"
-        database_operation => "create",
-        database_type => "$(db_type)",
-        database_rows => {
-			      "connection_name,$(name)",
-			      "protocol,$(protocol)",
-			      "parent_id,$(parent_group)",
-			      "max_connections,$(max_connections)",
-			      "max_connections_per_user,$(max_connections_per_user)"
-	},
-        database_server => local_mysql( "root", "" ),
-        comment => "using lib/databases.cf bundle with no password due to authsocket on root user";
-        # NOTE: could change root user to guacamole_user!
+    ## GLOBAL PARAMETERS FOR ALL CONNECTIONS
+      "username" string => "${GUAC_USERNAME}",
+        comment => "Parameter token: ${GUAC_USERNAME} = username of the current Guacamole user";
+      "password" string => "${GUAC_PASSWORD}",
+        comment => "Parameter token: ${GUAC_PASSWORD} = password of the current Guacamole user";
+
+      "max_connections" string => "",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time regardless of user
+                    NULL will use the default value specified in guacamole.properties";
+      "max_connections_per_user" string => "",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time from a single user
+                    NULL will use the default value specified in guacamole.properties";
+
+      "enable_sftp" string => "true",
+        comment => "If set to true, the user will be allowed to upload or download files from the SSH server using SFTP";
+
+    ## GLOBAL PARAMETERS SPECIFIC FOR SSH CONNECTIONS
+      "ssh_port" string => "22",
+        comment => "port the SSH server is listening on. If not specified, default of 22 will be used";
+      "ssh_color_scheme" string => "green-black",
+        comment => "color scheme to use for the terminal emulator used by SSH connections
+                    options: black-white, gray-black, green-black, white-black";
+      "ssh_font_name" string => "monospace",
+        comment => "name of the font to use. If not specified, default of monospace will be used";
+      "ssh_font_size" string => "12",
+        comment => "size of the font to use, in points. If not specified, default of 12 will be used";
+      "ssh_command" string => "",
+        comment => "DISABLED IN TEMPLATE: command to execute over the SSH session.
+                    If not specified, the SSH session will use the user's default shell";
+
+    ## GLOBAL PARAMETERS SPECIFIC FOR RDP CONNECTIONS
+      "rdp_port" string => "3389",
+        comment => "The port the RDP server is listening on. If not specified, default of 3389 will be used";
+      "rdp_security" string => "rdp",
+        comment => "security mode to use for the RDP connection.
+                    This mode dictates how data will be encrypted and what type of authentication will be performed";
+      "rdp_domain" string => "",
+        comment => "DISABLED IN TEMPLATE: domain to use when attempting authentication, if any";
+      "rdp_color_depth" string => "",
+        comment => "DISABLED IN TEMPLATE: color depth to request in bits-per-pixel: must be 8, 16, or 24";
+      "rdp_width" string => "",
+        comment => "DISABLED IN TEMPLATE: width of the display to request in pixels.
+                    If not specified, the width of the connecting client display will be used";
+      "rdp_height" string => "",
+        comment => "DISABLED IN TEMPLATE: height of the display to request in pixels.
+                    If not specified, the height of the connecting client display will be used";
+      "rdp_dpi" string => "",
+        comment => "DISABLED IN TEMPLATE: desired effective resolution of the client display in DPI.
+                    If not specified, resolution and size of the client display will be used together to determine, heuristically, an appropriate resolution for the RDP session";
+      "rdp_resize_method" string => "",
+        comment => "DISABLED IN TEMPLATE: method to use to update the RDP server when the width or height of the client display changes. If not specified, no action will be taken when the client display changes size. options: display-update, reconnect";
+
+      "rdp_sftp_directory" string => "",
+        comment => "DISABLED IN TEMPLATE: directory to upload files to if they are simply dragged and dropped, and thus otherwise lack a specific upload location. If not specified, default upload location of the SSH server providing SFTP will be used";
+      
+      "rdp_command" string => "",
+        comment => "DISABLED IN TEMPLATE: full path to the program to run immediately upon connecting.
+                    In guacamole_db this parameter is called initial-program";
+
+      "rdp_enable_printing" string => "true",
+        comment => "when true, RDP users can print to a virtual printer that sends a PDF containing the document printed to the Guacamole client";
+
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent guac_create_connection(conname, hostname, protocol, parent_group, params)
+# @description: use a mustache template to add entries into required mySQL tables for a guacamole connection "name" with "host" (ip address) using "protocol" (VNC, RDP, SSH) under a "parent group" (connection group name?), using a set of global parameters
+{
+  vars:
+      "mysql_cmd" string => "/usr/bin/mysql -u root ";
+      "mysql_import_cmd" string => "$(mysql_cmd) \"$($(params).database)\" < ";
+
+  classes:
+      "ssh_connection"  expression => strcmp("$(protocol)","ssh");
+      "rdp_connection"  expression => strcmp("$(protocol)","rdp");
+      
+      
+  files:
+      "$($(params).create_connection_sql)"
+        create => "true",
+        template_method => "mustache",
+        edit_template => "$($(params).create_connection_template)",
+        classes => results("bundle", "create_connection_sql"),
+	comment => "expand create_connection sql file using template from staging cache in this promise directory";
+
+  commands:
+    create_connection_sql_repaired|create_connection_sql_kept::
+      "$(mysql_import_cmd)"
+        args => "$($(params).create_connection_sql)",
+        contain => in_shell,
+      	classes => results("bundle", "create_connection"),
+        comment => "add connection $(conname) into guacamole database";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_web_server)::
+      "=== $(this.bundle) ===";
+      "$(conname) connection created in $($(params).database)"
+        ifvarclass => "create_connection_repaired";
+      
+}
+
+######################################################################
+
+bundle agent guac_add_user_to_connection(username, conname, params)
+# @description: use a mustache template to add entries into required mySQL tables for giving a user permission to access a connection
+{
+  vars:
+      "mysql_cmd" string => "/usr/bin/mysql -u root ";
+      "mysql_import_cmd" string => "$(mysql_cmd) \"$($(params).database)\" < ";
+      
+  files:
+      "$($(params).add_user_to_connection_sql)"
+        create => "true",
+        template_method => "mustache",
+        edit_template => "$($(params).add_user_to_connection_template)",
+        classes => results("bundle", "add_user_to_connection_sql"),
+	comment => "expand add_user_to_connection sql file using template from staging cache in this promise directory";
+
+  commands:
+    add_user_to_connection_sql_repaired|add_user_to_connection_sql_kept::
+      "$(mysql_import_cmd)"
+        args => "$($(params).add_user_to_connection_sql)",
+        contain => in_shell,
+      	classes => results("bundle", "add_user_to_connection"),
+        comment => "give user permission to access connection $(name) into guacamole database";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_web_server)::
+      "=== $(this.bundle) ===";
+      "$(username) has been given READ access to $(conname) connection"
+        ifvarclass => "add_user_to_connection_repaired";
+      
 }
