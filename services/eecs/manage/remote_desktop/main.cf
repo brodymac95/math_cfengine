@@ -1,0 +1,191 @@
+##############################################################################
+#
+#   manage/remote_desktop/main.cf - EECS xrdp service and desktop environment install and configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: xrdp(on) or xrdp(off)
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. 
+
+# bundle agent xrdp
+bundle agent xrdp(state)
+# @description: install and configure the xrdp service.
+{
+  vars:
+      
+      "xrdp_exec" string => "/usr/sbin/xrdp";
+
+  classes:
+    ## DEFINE SERVER STATES
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "xrdp_exists"
+      	expression => fileexists( "$(xrdp_exec)" );
+   
+  methods:
+
+    off.xrdp_exists::
+      "ensure xrdp service is stopped if xrdp bundle is off"
+      	usebundle => standard_services( "xrdp", "stop" ),
+      	classes => if_ok("xrdp_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.xrdp_exists::
+      "ensure xrdp service is running if xrdp bundle is on"
+      	usebundle => standard_services( "xrdp", "start" ),
+      	classes => if_ok("xrdp_on");
+
+      "generate all xrdp variables"  usebundle => xrdp_vars,
+        inherit=> "true";
+
+      "configure xrdp files"
+      	usebundle => configure_xrdp("xrdp_vars"),
+        inherit=> "true",
+        classes => results("bundle", "xrdp_config");
+
+    ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
+    on.xrdp_config_repaired.!NO_RESTARTS::
+      "restart xrdp service if configuration changed"
+      	usebundle => standard_services( "xrdp", "restart" ),
+      	classes => if_ok("xrdp_restart");
+
+    ## INSTALL ALL SOFTWARE
+    on.install_software::
+      "generate all xrdp variables"  usebundle => xrdp_vars,
+        inherit=> "true";
+
+      "ensure dependent packages are installed"
+    	usebundle => package_latest("$(xrdp_vars.dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install"),
+        comment => "pull package list from xrdp_vars";
+
+      "ensure absent packages are removed"
+    	usebundle => package_absent("$(xrdp_vars.absent_packages)"),
+        classes => results("bundle", "absent_packages_remove"),
+        comment => "pull package list from xrdp_vars";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      "xrdp is not installed on this host"
+        ifvarclass => "!xrdp_exists";
+      "xrdp is turned off"
+        ifvarclass => "xrdp_off";
+      "xrdp is turned on and running"
+        ifvarclass => "xrdp_on";
+      "xrdp restarted due to configuration change"
+        ifvarclass => "xrdp_restart";
+
+      "$(xrdp_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+      "$(xrdp_vars.absent_packages) removed"
+        ifvarclass => "absent_packages_remove_repaired";
+      "xrdp configured"
+        ifvarclass => "xrdp_repaired";
+}
+
+######################################################################
+
+bundle agent xrdp_vars(params)
+{
+  vars:
+    ## INSTALL/REMOVE PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "dependent_packages" slist => { "xrdp", "lxde", },
+        comment => "install xrdp service and lxde desktop environment";
+
+      "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", },
+        comment => "remove all desktop/GUI-based network, screenlock, screensaver packages from server";
+
+    ## XWRAPPER CONFIGURATION
+      "xwrapper_config_file" string => "/etc/X11/Xwrapper.config";
+      "xwrapper_config_template" string => "$(this.promise_dirname)/data/xwrapper.config.mustache";
+
+      # "xwrapper_allowed_users" string => "console"; # default value
+      "xwrapper_allowed_users" string => "anybody"; # xrdp required value
+
+      ## LXDE CONFGURATION
+      "lxde_autostart_file" string => "/etc/xdg/lxsession/LXDE/autostart";
+      "lxde_autostart_template" string => "$(this.promise_dirname)/data/lxde_autostart.mustache";
+
+      "lxde_logout_script" string => "/usr/bin/lxde-logout";
+      "lxde_logout_template" string => "$(this.promise_dirname)/data/lxde_logout.mustache";
+      
+
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent configure_xrdp(params)
+# @description: configure xrdp files
+{
+  vars:
+            
+  files:
+    debian::
+      "$($(params).xwrapper_config_file)"
+        create => "true",
+	perms => mog("644", "root", "root" ),
+        template_method => "mustache",
+        edit_template => "$($(params).xwrapper_config_template)",
+        classes => results("bundle", "xwrapper_config"),
+	comment => "expand /etc/X11/xwrapper.config file using template from staging cache in this promise directory";
+
+      "$($(params).lxde_autostart_file)"
+        create => "true",
+	perms => mog("644", "root", "root" ),
+        template_method => "mustache",
+        edit_template => "$($(params).lxde_autostart_template)",
+        classes => results("bundle", "lxde_autostart"),
+	comment => "expand /etc/xdg/lxsession/LXDE/autostart file using template from staging cache in this promise directory";
+
+      "$($(params).lxde_logout_script)"
+        create => "true",
+	perms => mog("755", "root", "root" ),
+        template_method => "mustache",
+        edit_template => "$($(params).lxde_logout_template)",
+        classes => results("bundle", "lxde_logout"),
+	comment => "expand /usr/bin/lxde-logout script using template from staging cache in this promise directory
+                    NOTE: for a terminal server we want for user to only have the ability to logout!";
+     
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      "$($(params).xwrapper_config_file) edited"
+        ifvarclass => "xwrapper_config_repaired";
+      "$($(params).lxde_autostart_file) edited"
+        ifvarclass => "lxde_autostart_repaired";
+}
+
+######################################################################
