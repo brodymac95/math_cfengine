@@ -111,14 +111,7 @@ bundle common classify_host
 
       
   classes:
-    ## DEFINE CLUSTER CLASSES FOR INDIVIDUAL HOSTNAMES USING REGEX
-      "csdev_cluster" expression => classmatch( "csdev_cluster.*", hardclass ),
-        comment => "create generic cluster class on each csdev_cluster host";
 
-      "cstest" expression => classmatch( "cstest.*", hardclass ),
-        comment => "testing classmatch for cstesting host";
-
-    ## DEFINE HOST SPECIFIC CLASSES
       "$(host_data[$(hosts)][machine])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
@@ -209,9 +202,6 @@ bundle common classify_host
       "Found authentication type: $(host_authentication)"
 	ifvarclass => canonify("$(host_data[$(hosts)][authentication])");
 
-      "cstest class defined"
-        ifvarclass => "cstest";
-      
       # "Found users: $(user_list)";
       
       #  "Contents of 'external file' data container: '$(hosts_json_str)'";

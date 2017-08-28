@@ -44,18 +44,14 @@ bundle common uaf2_settings
 	comment => "database user to define in uaf2_dbpass_client.conf file";
       
       "password_cache"
-        string => "$(sys.workdir)/state/passwd/uaf2_db_passwd",
+        string => "$(sys.workdir)/state/passwd/uaf2.secret",
         comment => "This is where agents will cache the uaf2 database password locally (for offline enforcement).";
 
        "uaf2_client_file"
        string => "uaf2_client_sequence.dat",
        comment => "This file is created once host has run the uaf2_client.";
       
-  classes:
-
-      "wsu_local_repo" expression => "uaf2_client",
-      comment => "ensure wsu_local_repo class defined for managing repository";
-
+  # classes:
   #     "host_joined_to_ad"
   #     expression => fileexists( $(keytab_file) ),
   #     comment => "Checks existence of file which is created on host upon successful joining of AD domain";
@@ -72,12 +68,12 @@ bundle agent install_uaf2_client
       "install_dir" string => "/root/";
 
       "server_public_keys" string => "wsu-eecs-server-public-keys-1.0-20_all.deb";
-      "dependent_packages" slist => { "perl", "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", };
+      "dependent_packages" slist => { "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", };
       "uaf2_client_package" string => "vtw10-uaf2-client";
 
       "dpkg_install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
 
-      "password_dist" string => "/srv/cfengine/configs/service_credentials/uaf2_db_passwd";
+      "password_dist" string => "$(sys.workdir)/host_by_key/$(sys.key_digest)/uaf2.secret";
       "passwd_cache" string => "$(uaf2_settings.password_cache)";
       "passwd_cache_dir" string => dirname("$(passwd_cache)");
 
@@ -101,33 +97,14 @@ bundle agent install_uaf2_client
         expression => fileexists( $(executable_file) );
       
   methods:
-    # install_software.wsu_local_repo::
-    #   "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
-    #     classes => results("bundle", "dependent_packages_installed");
-
-    # # install_software.(server_public_keys_repaired|uaf2_client_installed)::
-    # #   "install uaf2_client_package after server public keys are installed or run an update if already installed"
-    # # 	usebundle => package_latest("$(uaf2_client_package)");
-
-  packages:
-    install_software.wsu_local_repo::
-      "$(dependent_packages)"
-        policy => "present",
-        package_module => apt_get,
-        options => { " --allow-unauthenticated " },
-        classes => results("bundle", "dependent_packages_installed"),
-        comment => "install dependent packages from wsu_local_repo
-                    need to allow unauthenticated repos in Debian 9";
+    install_software::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_installed");
 
     install_software.(server_public_keys_repaired|uaf2_client_installed)::
-      "$(uaf2_client_package)"
-        policy => "present",
-        package_module => apt_get,
-        options => { "--allow-unauthenticated" },
-        classes => results("bundle", "dependent_packages_installed"),
-        comment => "install uaf2_client_package after server public keys are installed from wsu_local_repo
-                    need to allow unauthenticated repos in Debian 9";
-      
+      "install uaf2_client_package after server public keys are installed or run an update if already installed"
+	usebundle => package_latest("$(uaf2_client_package)");
+
   files:
     uaf2_client_installed::
       "$(passwd_cache_dir)/."

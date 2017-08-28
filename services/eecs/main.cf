@@ -14,7 +14,6 @@ bundle common eecs_main_file_control
 	"$(this.promise_dirname)/classification/main.cf",
 	"$(this.promise_dirname)/scheduler/main.cf",
 	"$(this.promise_dirname)/inventory/main.cf",
-	"$(this.promise_dirname)/lib/main.cf",
 	"$(this.promise_dirname)/manage/main.cf",
 	"$(this.promise_dirname)/server/main.cf",
       };

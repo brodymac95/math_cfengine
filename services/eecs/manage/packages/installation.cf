@@ -72,25 +72,6 @@ bundle agent manage_repository_packages
 				 "tmux",
                                 };
 
-    ## NEED TO CLEAN ALL OF THESE INSTALL LISTS UP - THINK ABOUT A MORE GENERIC METHOD!!
-    dev_cluster.(debian)::
-      "server_installs" slist => {
-				   "openssh-server",
-				   "build-essential",
-				   "tree",
-				   "terminator",
-				   "default-jre",
-				   "default-jdk",
-				   "eclipse",
-				   "eclipse-cdt",
-				   "geany",
-				   "geany-plugins",
-				   "subversion",
-				   "git",
-				   "git-el",
-                                 };
-
-
     server.infrastructure.(redhat)::
       "server_installs" slist => {
 				   "openssh-server",

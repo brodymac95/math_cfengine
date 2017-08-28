@@ -11,17 +11,13 @@ bundle common manage_main_file_control
 
 #    "input[testing]" string => "$(this.promise_dirname)/iptables/testing.cf";
 
-      "input[active_directory_auth]" string => "$(this.promise_dirname)/ad_auth/main.cf";
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
-      "input[guacamole]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
-      "input[network file system]" string => "$(this.promise_dirname)/nfs/main.cf";
       "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
       "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
       "input[reboot]" string => "$(this.promise_dirname)/reboot/main.cf";
-      "input[remote_desktop]" string => "$(this.promise_dirname)/remote_desktop/main.cf";
       "input[repositories]" string => "$(this.promise_dirname)/repositories/main.cf";
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
       "input[system_users]" string => "$(this.promise_dirname)/system_users/main.cf";
@@ -30,7 +26,6 @@ bundle common manage_main_file_control
       "input[uaf2_users]" string => "$(this.promise_dirname)/uaf2/user_management.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
       "input[user_config]" string => "$(this.promise_dirname)/users/user_config.cf";
-      "input[web_server]" string => "$(this.promise_dirname)/web_server/main.cf";
 
     #OLD LDAP CONFIGURATION IS NO LONGER USED. NOW REPLACED WITH SSSD/AD CONFIG
     #"input[ldap]" string => "$(this.promise_dirname)/users/ldap.cf";
@@ -58,7 +53,6 @@ bundle agent manage_main
 {
 
   classes:
-
       "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|minimal_server|server|workstation|laptop";
       
   methods:
@@ -96,53 +90,42 @@ bundle agent manage_os_tenant_cluster
       
   methods:
 
-    ## ALL HOST GLOBAL CONFIGURATION
-    any::
-      "configure login motd"     usebundle => config_login_banner;
-      "configure sshd"           usebundle => config_sshd;
+      "configure login motd" usebundle => config_login_banner;
+      "configure sshd" usebundle => config_sshd;
       "configure login defaults" usebundle => config_login_defs;
 
-      # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts! 
-      # "manage root password"     usebundle => manage_root_passwd,
-      #   comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
-      
+      "manage root password" usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+
+      "system/admin user management" usebundle => manage_sys_users;
+
+    !uaf2_client::
+      "standard user management" usebundle => manage_users;
+
     install_software.!NO_INSTALLS::
-      "repository management"      usebundle => manage_repositories;
-      # "package management"       usebundle => manage_packages;
+      "repository management" usebundle => manage_repositories;
+      "package management" usebundle => manage_packages;
 
+    uaf2_client::
+      "install and configure tom's uaf2_client if defined in custom packages" usebundle => install_uaf2_client;
       
-    ## DEFINE ROLE SUBSETS
-    guac_gateway::
-      "admin user management"      usebundle => manage_sys_users;
-      "turn on guacamole service"  usebundle => guacamole_server("on");
-      "turn on apache web service" usebundle => web_server("on");
-
-    dev_cluster.!uaf2_client::
-      "admin user management"      usebundle => manage_sys_users;
-      "standard user management"   usebundle => manage_users;
-
-    dev_cluster.uaf2_client::
-      "uaf2 user management"       usebundle => install_uaf2_client,
-      	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
-      "join host to ad domain"     usebundle => join_host_to_ad;
-      "mount emcity nfs shares"    usebundle => autofs("on");
-      "turn on xrdp remote access" usebundle => xrdp("on");
-      
-    ## SYSTEM CONTROL AND SCHEDULED TASKS
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
+
+    manage_user_configuration::
+      "user config files defined in user_configuration within host_data.json" usebundle => manage_user_configurations;
+         
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
 
     testing::
       # insert bundles here for testing hosts only
-
 }
 
 ###################################
 
-bundle agent manage_os_tenant_cluster
+bundle agent manage_os_node_host
 {
 # NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!! 
       

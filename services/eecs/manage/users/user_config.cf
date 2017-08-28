@@ -182,7 +182,7 @@ bundle agent ensure_user_templates(settings)
       comment => "assume the group will be the the same as the user home directory";
 
       "file_path[$(user)][ssh_config]" string => "$(user_dir[$(user)])/.ssh/config";
-      "template_path[$(user)][ssh_config]" string => "$(templates_cache[$(user)])ssh_config.tpl.txt";
+      "template_path[$(user)][ssh_config]" string => "$(templates_cache[$(user)])ssh_config.template";
 
 
       "file_paths[$(user)]" slist => getvalues( file_path );
