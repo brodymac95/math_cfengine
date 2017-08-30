@@ -23,7 +23,7 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1.
+# 1. how to get feedback from database?
 
 bundle agent guac_database
 # bundle agent web_server(state)
@@ -36,14 +36,16 @@ bundle agent guac_database
 
       # "username" string => "guacadmin";
       "username" string => "d693f574";
-      "connection_name" string => "sshtest3";
+      "group_name" string => "testsubgroup";
+      "connection_name" string => "sshtestsub1";
       "host_ip" string => "10.10.10.10";
       "protocol" string => "ssh";
-      "parent_group" string => "";
+      # "parent_group" string => "";
+      "parent_group" string => "testgroup2";
       "params" string => "guac_database_vars";
       
-  classes:
-
+  classes:      
+      
       # DEFINE SERVER STATES
       # "on"  expression => "any";
       # "on"  expression => strcmp("$(state)","on");
@@ -53,75 +55,19 @@ bundle agent guac_database
       # 	expression => fileexists( "$(apache_exec)" );
 
   methods:
+      # "create a test connection group"
+      # 	usebundle => guac_create_connection_group( $(group_name), "ORGANIZATIONAL", $(parent_group), "FALSE", $(params) ),
+      #   classes => if_ok("connection_group_created");
+      
       "create a test connection"
       	usebundle => guac_create_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group), $(params) ),
         classes => if_ok("connection_created");
 
-      "add user to test connection"
-      	usebundle => guac_add_user_to_connection( $(username),$(connection_name), $(params) ),
-        classes => if_ok("add_user_to_connection");
+      # "add user to test connection"
+      # 	usebundle => guac_add_user_to_connection( $(username),$(connection_name), $(params) ),
+      #   classes => if_ok("add_user_to_connection");
 
 
-    # off.apache_exists::
-    #   "ensure apache2 service is stopped if web_server is off"
-    #   	usebundle => standard_services( "apache2", "stop" ),
-    #   	classes => if_ok("web_server_off");
-
-    # ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
-    # on.apache_exists::
-    #   "ensure apache2 service is running if web_server is on"
-    #   	usebundle => standard_services( "apache2", "start" ),
-    #   	classes => if_ok("web_server_on");
-
-    #   "generate all web server variables"  usebundle => web_server_vars;
-      
-    #   "generate virtual host site config files for each site defined in web_server_vars"
-    # 	usebundle => generate_site_files( "web_server_vars", "$(web_server_vars.site_keys)" ),
-    #     comment => "bundle generates its own global results classes: site_conf_file";
-      
-    # ## ENABLE SITES/MODULES AND GENERATING SSL CERTIFICATES
-    # on.site_conf_file_repaired::
-    #   "enable apache sites"
-    # 	usebundle => manage_apache_site("$(web_server_vars.sites_enabled)", enable),
-    #     classes => if_ok("enable_site");
-
-    #   "enable apache modules"
-    # 	usebundle => manage_apache_module("$(web_server_vars.modules_enabled)", enable),
-    #     classes => if_ok("enable_module");
-
-    #   "configure SSL/TLS certificates for each site using EFF certbot"
-    #   	usebundle => manage_certbot( "web_server_vars", "$(web_server_vars.site_keys)", install ),
-    #     inherit => "true",
-    #     classes => results("bundle", "install_cert");
-
-    # on.(enable_site|install_cert_repaired)::
-    #   "reload apache2 service after generating and enabling new sites"
-    #   	usebundle => standard_services( "apache2", "reload" ),
-    #   	classes => if_ok("web_server_reload");
-
-    # on.enable_module::
-    #   "restart apache2 service after enabling new modules"
-    #   	usebundle => standard_services( "apache2", "restart" ),
-    #   	classes => if_ok("web_server_restart");
-
-    # ## INSTALL ALL SOFTWARE FOR WEB SERVER
-    # on.install_software::
-    #   "generate all web server variables"  usebundle => web_server_vars;
-
-    #   "install dependent packages"
-    # 	usebundle => package_latest("$(web_server_vars.dependent_packages)"),
-    #     classes => results("bundle", "dependent_packages_install");
-
-    #   "disable default apache testing site"
-    # 	usebundle => manage_apache_site("$(web_server_vars.apache_default_site)", disable),
-    #     classes => results("bundle", "disable_default_site");
-
-    # ## SSL CERTIFICATE RENEWAL
-    # on.ssl_cert_renew::
-    #   "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
-    # 	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
-    #     classes => results("bundle", "renew_certs");
-      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
@@ -139,12 +85,6 @@ bundle agent guac_database
       #   ifvarclass => "web_server_restart";
       # "web server (apache2) reloaded due to configuration change"
       #   ifvarclass => "web_server_reload";
-
-      "test connection 1 created"
-        ifvarclass => "connection_created";
-      "user added to test connection"
-        ifvarclass => "add_user_to_connection";
-
 }
 
 ######################################################################
@@ -153,6 +93,8 @@ bundle agent guac_database_vars
 {
   vars:
     ## FILE PARAMETERS
+      "create_connection_group_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection_group.sql";
+      "create_connection_group_template" string => "$(this.promise_dirname)/data/create_connection_group.sql.mustache";
       "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection.sql";
       "create_connection_template" string => "$(this.promise_dirname)/data/create_connection.sql.mustache";
       "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection.sql";
@@ -231,19 +173,116 @@ bundle agent guac_database_vars
 
 ######################################################################
 
+bundle agent guac_create_connection_group(groupname, type, parent_group, session_afinity, params)
+# @description: use a mustache template to add entries into required mySQL tables for a guacamole connection group "name" with "type" under a "parent group" (connection group name?), and whether "session_afinity" is required using a set of global parameters
+{
+  vars:
+      "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
+      "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
+
+      "mysql_group_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(groupname)';\" ";
+      "mysql_group_result" string => execresult("$(mysql_execute_cmd) $(mysql_group_query)","useshell");
+
+    parent_group_defined::
+      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(parent_group)';\" ";
+      "mysql_parent_id_result" string => execresult("$(mysql_execute_cmd) $(mysql_parent_query)","useshell");
+
+  classes:
+      "group_does_not_exist"
+	not => regcmp(".+","$(mysql_group_result)"),
+        comment => "check mysql query result does not contain one or more characters";
+
+      # "group_exists"
+      # 	expression => regcmp(".*$(groupname).*","$(mysql_group_result)"),
+      #   comment => "check mysql query result contains $(groupname)";
+
+      "parent_group_not_defined"
+	not => regcmp(".+","$(parent_group)"),
+        comment => "check parent_group does not contain one or more characters";
+
+      "parent_group_defined"
+	expression => regcmp(".+","$(parent_group)"),
+        comment => "check parent_group does contain one or more characters";
+
+      "parent_group_exists"
+	expression => regcmp(".+","$(mysql_parent_id_result)"),
+        comment => "check mysql query result contains a value";
+       
+  files:
+    group_does_not_exist.(parent_group_exists|!parent_group_defined)::
+      "$($(params).create_connection_group_sql)"
+        create => "true",
+        template_method => "mustache",
+        edit_template => "$($(params).create_connection_group_template)",
+        classes => results("bundle", "create_connection_group_sql"),
+	comment => "expand create_connection_group sql file using template from staging cache in this promise directory
+                    only if group does not already exist, and its parent group exists or it does not require a parent group";
+
+  commands:
+    create_connection_group_sql_repaired|create_connection_group_sql_kept::
+      "$(mysql_import_cmd)"
+        args => "$($(params).create_connection_group_sql)",
+        contain => in_shell,
+      	classes => results("bundle", "create_connection_group"),
+        comment => "add connection group $(groupname) into guacamole database";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_web_server)::
+      "=== $(this.bundle) ===";
+      "$(groupname) connection group created in $($(params).database)"
+        ifvarclass => "create_connection_group_repaired";
+
+      "WARNING: Not adding group. $(groupname) connection group exists in database: $(const.n) $(mysql_group_result)"
+        ifvarclass => "!group_does_not_exist";
+
+      "WARNING: Not adding group. $(groupname) requires parent group $(parent_group) but parent does not exist"
+        ifvarclass => "parent_group_defined.!parent_group_exists";
+
+      "$(groupname) connection group exists in database: $(const.n) $(mysql_group_result)"
+        ifvarclass => "group_exists";
+}
+
+######################################################################
+
 bundle agent guac_create_connection(conname, hostname, protocol, parent_group, params)
 # @description: use a mustache template to add entries into required mySQL tables for a guacamole connection "name" with "host" (ip address) using "protocol" (VNC, RDP, SSH) under a "parent group" (connection group name?), using a set of global parameters
 {
   vars:
-      "mysql_cmd" string => "/usr/bin/mysql -u root ";
-      "mysql_import_cmd" string => "$(mysql_cmd) \"$($(params).database)\" < ";
+      "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
+      "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
 
-  classes:
+      "mysql_con_query" string => " \"select connection_id from guacamole_connection where connection_name = '$(conname)';\" ";
+      "mysql_con_result" string => execresult("$(mysql_execute_cmd) $(mysql_con_query)","useshell");
+
+    parent_group_defined::
+      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(parent_group)';\" ";
+      "mysql_parent_id_result" string => execresult("$(mysql_execute_cmd) $(mysql_parent_query)","useshell");
+
+  classes:      
       "ssh_connection"  expression => strcmp("$(protocol)","ssh");
       "rdp_connection"  expression => strcmp("$(protocol)","rdp");
-      
+
+      "connection_does_not_exist"
+	not => regcmp(".+","$(mysql_con_result)"),
+        comment => "check mysql query result does not contain one or more characters";
+
+      "parent_group_not_defined"
+	not => regcmp(".+","$(parent_group)"),
+        comment => "check parent_group does not contain one or more characters";
+
+      "parent_group_defined"
+	expression => regcmp(".+","$(parent_group)"),
+        comment => "check parent_group does contain one or more characters";
+
+      "parent_group_exists"
+	expression => regcmp(".+","$(mysql_parent_id_result)"),
+        comment => "check mysql query result contains a value";
       
   files:
+    connection_does_not_exist.(parent_group_exists|!parent_group_defined)::
       "$($(params).create_connection_sql)"
         create => "true",
         template_method => "mustache",
@@ -268,16 +307,25 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
       "$(conname) connection created in $($(params).database)"
         ifvarclass => "create_connection_repaired";
       
+      "WARNING: Not adding connection. $(conname) connection exists in database: $(const.n) $(mysql_con_result)"
+        ifvarclass => "!connection_does_not_exist";
+
+      "WARNING: Not adding connection. $(conname) requires parent group $(parent_group) but parent does not exist"
+        ifvarclass => "parent_group_defined.!parent_group_exists";
 }
 
 ######################################################################
 
-bundle agent guac_add_user_to_connection(username, conname, params)
-# @description: use a mustache template to add entries into required mySQL tables for giving a user permission to access a connection
+bundle agent guac_add_user_to_connection(username, conname, type, params)
+# @description: use a mustache template to add entries into required mySQL tables for giving a user permission to access a connection or connection group by defining type as 'connection' or 'group'
 {
   vars:
       "mysql_cmd" string => "/usr/bin/mysql -u root ";
       "mysql_import_cmd" string => "$(mysql_cmd) \"$($(params).database)\" < ";
+
+  classes:
+      "guac_connection"  expression => strcmp("$(type)","connection");
+      "guac_group"  expression => strcmp("$(type)","group");
       
   files:
       "$($(params).add_user_to_connection_sql)"
@@ -293,7 +341,7 @@ bundle agent guac_add_user_to_connection(username, conname, params)
         args => "$($(params).add_user_to_connection_sql)",
         contain => in_shell,
       	classes => results("bundle", "add_user_to_connection"),
-        comment => "give user permission to access connection $(name) into guacamole database";
+        comment => "give user permission to access connection or group $(conname) into guacamole database";
 
   reports:
     (inform_mode|verbose_mode)::
@@ -302,6 +350,11 @@ bundle agent guac_add_user_to_connection(username, conname, params)
     (DEBUG|DEBUG_web_server)::
       "=== $(this.bundle) ===";
       "$(username) has been given READ access to $(conname) connection"
-        ifvarclass => "add_user_to_connection_repaired";
+        ifvarclass => "guac_connection.add_user_to_connection_repaired";
+      "$(username) has been given READ access to $(conname) connection group"
+        ifvarclass => "guac_group.add_user_to_connection_repaired";
+      
+      "ERROR: type of $(type) found. Type must be defined as 'connection' or 'group'"
+        ifvarclass => "!guac_connection.!guac_group";
       
 }

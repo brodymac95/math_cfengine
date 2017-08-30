@@ -108,7 +108,7 @@ bundle agent manage_os_tenant_cluster
       
     install_software.!NO_INSTALLS::
       "repository management"      usebundle => manage_repositories;
-      # "package management"       usebundle => manage_packages;
+      "package management"       usebundle => manage_packages;
 
       
     ## DEFINE ROLE SUBSETS

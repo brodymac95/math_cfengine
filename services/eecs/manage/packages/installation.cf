@@ -45,6 +45,7 @@ bundle agent manage_repository_packages
      "server_removals" slist => {},
       policy => "overridable";
 
+    ## NEED TO CLEAN ALL OF THESE INSTALL LISTS UP - THINK ABOUT A MORE GENERIC METHOD!!
     ## Required packages to be INSTALLED
     install_extra_packages::
       "extra_installs" slist => getvalues( "classify_host.extra_packages" );
@@ -72,7 +73,6 @@ bundle agent manage_repository_packages
 				 "tmux",
                                 };
 
-    ## NEED TO CLEAN ALL OF THESE INSTALL LISTS UP - THINK ABOUT A MORE GENERIC METHOD!!
     dev_cluster.(debian)::
       "server_installs" slist => {
 				   "openssh-server",

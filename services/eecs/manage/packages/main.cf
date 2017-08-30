@@ -11,7 +11,7 @@ bundle common packages_main_file_control
     # "input[ad]" string => "$(this.promise_dirname)/ad.cf";
     "input[custom_install]" string => "$(this.promise_dirname)/custom_install.cf";
     "input[deep_learning]" string => "$(this.promise_dirname)/deep_learning.cf";
-    "input[install]" string => "$(this.promise_dirname)/installation.cf";
+    "input[standard_install]" string => "$(this.promise_dirname)/installation.cf";
     "input[ldap_removal]" string => "$(this.promise_dirname)/ldap_removal.cf";
     #"input[upgrade]" string => "$(this.promise_dirname)/packages/upgrades.cf";
 
