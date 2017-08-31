@@ -34,6 +34,7 @@ bundle agent guac_database
   vars:      
       "apache_exec" string => "/usr/sbin/apache2";
 
+      ## TESTING VARS ONLY
       # "username" string => "guacadmin";
       "username" string => "d693f574";
       "group_name" string => "testsubgroup";
@@ -43,6 +44,24 @@ bundle agent guac_database
       # "parent_group" string => "";
       "parent_group" string => "testgroup2";
       "params" string => "guac_database_vars";
+
+      ## OPENSTACK METADATA
+      "openstack_metadata_link" string => "http://169.254.169.254/openstack/latest/meta_data.json";
+      "openstack_metadata_cache" string => "meta_data.json";
+      "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
+
+      "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
+        comment => "pull in external json file from OpenStack Nova API",
+        ifvarclass => "metadata_cache_exists";
+
+      "json_str_openstack_metadata" string => format("%S", "openstack_metadata");
+      
+      "cluster_host_data"
+        data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
+        comment => "create data subset of cluster host ip addresses from openstack metadata";
+
+      # "cleaned_cluster_host_ips" string => regex_replace( "$(cluster_host_data)", "[\"", "", "T" );
+      "cluster_host_ips" slist => splitstring( "$(cleaned_cluster_host_ips)", ",", "1000" );
       
   classes:      
       
@@ -51,17 +70,32 @@ bundle agent guac_database
       # "on"  expression => strcmp("$(state)","on");
       # "off" expression => strcmp("$(state)","off");
 
-      # "apache_exists"
-      # 	expression => fileexists( "$(apache_exec)" );
+      "openstack_cache_exists"
+      	expression => fileexists( "$(openstack_cache_dir)/." );
+
+      "metadata_cache_exists"
+      	expression => fileexists( "$(openstack_cache_dir)$(openstack_metadata_cache)" );
+
+  files:
+      "$(openstack_cache_dir)/."
+        create => "true";
+      
+  commands:
+    openstack_cache_exists::
+      "/usr/bin/wget -q --timeout=10 -O $(openstack_metadata_cache) $(openstack_metadata_link)" 
+        contain => in_dir_shell("$(openstack_cache_dir)"),
+        classes => results("bundle", "copy metadata"),
+        comment => "download metadata file from openstack nova api link";
+
 
   methods:
       # "create a test connection group"
       # 	usebundle => guac_create_connection_group( $(group_name), "ORGANIZATIONAL", $(parent_group), "FALSE", $(params) ),
       #   classes => if_ok("connection_group_created");
       
-      "create a test connection"
-      	usebundle => guac_create_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group), $(params) ),
-        classes => if_ok("connection_created");
+      # "create a test connection"
+      # 	usebundle => guac_create_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group), $(params) ),
+      #   classes => if_ok("connection_created");
 
       # "add user to test connection"
       # 	usebundle => guac_add_user_to_connection( $(username),$(connection_name), $(params) ),
@@ -72,8 +106,10 @@ bundle agent guac_database
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_web_server)::
+    (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
+
+      "cluster host ips found in openstack metadata: $(cluster_host_ips)";
 
       # "web server (apache2) is not installed on this host"
       #   ifvarclass => "!apache_exists";
@@ -230,7 +266,7 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, session
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_web_server)::
+    (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
       "$(groupname) connection group created in $($(params).database)"
         ifvarclass => "create_connection_group_repaired";
@@ -302,7 +338,7 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_web_server)::
+    (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
       "$(conname) connection created in $($(params).database)"
         ifvarclass => "create_connection_repaired";
@@ -347,7 +383,7 @@ bundle agent guac_add_user_to_connection(username, conname, type, params)
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_web_server)::
+    (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
       "$(username) has been given READ access to $(conname) connection"
         ifvarclass => "guac_connection.add_user_to_connection_repaired";
