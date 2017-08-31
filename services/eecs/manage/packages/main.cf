@@ -100,6 +100,9 @@ bundle agent manage_custom_packages
     skype::
       "install skype" usebundle => install_skype;
 
+    java_bluej_ide::
+      "install Java BlueJ IDE from Duke University for Coursera Java Course" usebundle => install_java_bluej_ide;
+
     pyrosetta::
       "install python pyrosetta" usebundle => install_pyrosetta;
 

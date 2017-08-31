@@ -90,7 +90,7 @@
 	},
 	"user_configuration": [ "roose", ],
 	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", "fbreader", ],
-	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", ],
+	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", "java_bluej_ide", ],
      	"security": [ "linux_show_player", ],
     },
    "jb_223_3432_lt2": {

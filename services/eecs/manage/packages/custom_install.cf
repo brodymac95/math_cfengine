@@ -232,6 +232,80 @@ bundle agent install_etc_offline_editor
 
 #############################################
 
+bundle agent install_java_bluej_ide
+# @decription: manual installer for the coursera Java Progamming, Duke University BlueJ Development Environment
+# NOTE: Appears to be for debian systems only
+{
+  vars:
+      "download_weblink"  string => "http://www.bluej.org/download/files/BlueJ-linux-315-duke.deb";
+      "deb_package" string => "BlueJ-linux-315-duke.deb";
+
+      "install_dir" string => "/root/";
+
+      # debian_7::
+      # "install_dir" string => "/usr/local/lib/python3.2/dist-packages/",
+      #   policy => "overridable";
+      # debian_8::
+      # "install_dir" string => "/usr/local/lib/python3.4/dist-packages/",
+      #   policy => "overridable";
+
+      "exec_file" string => "/usr/bin/bluej";
+
+    debian::
+      "dependent_packages"  slist => { "default-jre", "default-jdk", "xdg-utils", },
+        comment => "BlueJ IDE requires the Java runtime and dev-kit suites, and xdg-utils";
+
+      "install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
+
+  classes:
+      "deb_package_exists"
+        expression => fileexists("$(install_dir)$(deb_package)");
+
+      "exec_exists"
+        expression => fileexists("$(exec_file)");
+
+
+  commands:
+    debian.!deb_package_exists::
+      "/usr/bin/wget -q --timeout=10 -O $(deb_package) $(download_weblink)" 
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "downloaded_file"),
+        comment => "download the .deb package file";
+
+    debian.deb_package_exists.!exec_exists::
+      "$(install_command) $(deb_package)"
+        contain => in_dir_shell("$(install_dir)"),
+        classes => results("bundle", "deb_install"),
+        comment => "install software from local .deb package";
+
+  methods:
+    debian.install_software::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+    (inform_mode|verbose_mode).(!debian)::
+      "$(this.bundle): ERROR: cannot install $(deb_package) on this OS platform. Must be Debian";
+
+    (DEBUG|DEBUG_custom_install)::
+      "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_custom_install).dependent_package_install_kept::
+      "$(dependent_package) has been installed";
+
+    (DEBUG|DEBUG_custom_install).deb_package_exists::
+      ".deb installer file downloaded";
+
+    (DEBUG|DEBUG_custom_install)deb_install_repaired::
+      "BlueJ Development Environment_installed";
+      
+    (DEBUG|DEBUG_custom_install).exec_exists::
+      "BlueJ Development Environment has already been installed";
+}
+
+#############################################
+
 bundle agent install_python_graphics
 # @decription: manual installer for graphics.py
 {
