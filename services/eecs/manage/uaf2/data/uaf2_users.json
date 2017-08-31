@@ -4,8 +4,9 @@
 	"cs211b": "live"
 	"cs211d": "live"
 	"cs211n": "live"
-	"cs300d": "reset"
-	"cs300n": "reset"
+	"cs300d": "live"
+	"cs300n": "live"
 	"cs411": "live"
+	"cs697b": "reset"
     },
 }
