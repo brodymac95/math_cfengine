@@ -6,8 +6,8 @@
 INSERT INTO guacamole_connection (connection_name, protocol, max_connections, max_connections_per_user)
 VALUES ('{{{vars.guac_create_connection.conname}}}',
         '{{{vars.guac_create_connection.protocol}}}', -- must be ssh or rdp
-        '{{{vars.guac_database_vars.max_connections}}}',
-        '{{{vars.guac_database_vars.max_connections_per_user}}}'
+        '{{{vars.guac_database_vars.max_connections_per_connection}}}',
+        '{{{vars.guac_database_vars.max_connections_per_user_per_connection}}}'
        );
 {{/classes.parent_group_not_defined}}
 
@@ -17,8 +17,8 @@ INSERT INTO guacamole_connection (connection_name, protocol, parent_id, max_conn
 VALUES ('{{{vars.guac_create_connection.conname}}}',
         '{{{vars.guac_create_connection.protocol}}}', -- must be ssh or rdp
         '{{{vars.guac_create_connection.mysql_parent_id_result}}}', -- id gained from mysql query on parent_group
-        '{{{vars.guac_database_vars.max_connections}}}',
-        '{{{vars.guac_database_vars.max_connections_per_user}}}'
+        '{{{vars.guac_database_vars.max_connections_per_connection}}}',
+        '{{{vars.guac_database_vars.max_connections_per_user_per_connection}}}'
        );
 {{/classes.parent_group_defined}}
 

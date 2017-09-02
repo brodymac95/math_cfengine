@@ -6,8 +6,8 @@
 INSERT INTO guacamole_connection_group (connection_group_name, type, max_connections, max_connections_per_user, enable_session_affinity)
 VALUES ('{{{vars.guac_create_connection_group.groupname}}}',
         '{{{vars.guac_create_connection_group.type}}}', -- must be ORGANIZATIONAL or BALANCING
-        '{{{vars.guac_database_vars.max_connections}}}',
-        '{{{vars.guac_database_vars.max_connections_per_user}}}',
+        '{{{vars.guac_database_vars.max_connections_per_group}}}',
+        '{{{vars.guac_database_vars.max_connections_per_user_per_group}}}',
         '{{{vars.guac_create_connection_group.enable_session_affinity}}}' -- must be TRUE or FALSE
        );
 -- END GLOBAL PARAMETERS
@@ -19,8 +19,8 @@ INSERT INTO guacamole_connection_group (connection_group_name, type, parent_id, 
 VALUES ('{{{vars.guac_create_connection_group.groupname}}}',
         '{{{vars.guac_create_connection_group.type}}}', -- must be ORGANIZATIONAL or BALANCING
         '{{{vars.guac_create_connection_group.mysql_parent_id_result}}}', -- id gained from mysql query on parent_group
-	'{{{vars.guac_database_vars.max_connections}}}',
-        '{{{vars.guac_database_vars.max_connections_per_user}}}',
+	'{{{vars.guac_database_vars.max_connections_per_group}}}',
+        '{{{vars.guac_database_vars.max_connections_per_user_per_group}}}',
         '{{{vars.guac_create_connection_group.enable_session_affinity}}}' -- must be TRUE or FALSE
        );
 -- END GLOBAL PARAMETERS

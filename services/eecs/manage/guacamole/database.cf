@@ -31,38 +31,48 @@ bundle agent guac_database
 # NOTE: uses the CFE service state on/off for enabling configuration!!
 {
 
-  vars:      
-      "apache_exec" string => "/usr/sbin/apache2";
+  vars:
 
       ## TESTING VARS ONLY
+      "apache_exec" string => "/usr/sbin/apache2";
       # "username" string => "guacadmin";
       "username" string => "d693f574";
-      "group_name" string => "testsubgroup";
-      "connection_name" string => "sshtestsub1";
-      "host_ip" string => "10.10.10.10";
-      "protocol" string => "ssh";
-      # "parent_group" string => "";
-      "parent_group" string => "testgroup2";
-      "params" string => "guac_database_vars";
 
+      ## GLOBAL PARAMETERS
+      "params" string => "guac_database_vars";
+      "wget_cmd" string => "/usr/bin/wget -q --timeout=10";
+      
       ## OPENSTACK METADATA
       "openstack_metadata_link" string => "http://169.254.169.254/openstack/latest/meta_data.json";
       "openstack_metadata_cache" string => "meta_data.json";
       "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
 
+    metadata_cache_exists::
       "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
-        comment => "pull in external json file from OpenStack Nova API",
-        ifvarclass => "metadata_cache_exists";
+        comment => "pull in external json file from OpenStack Nova API";
 
       "json_str_openstack_metadata" string => format("%S", "openstack_metadata");
-      
+
       "cluster_host_data"
         data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
         comment => "create data subset of cluster host ip addresses from openstack metadata";
 
-      # "cleaned_cluster_host_ips" string => regex_replace( "$(cluster_host_data)", "[\"", "", "T" );
-      "cluster_host_ips" slist => splitstring( "$(cleaned_cluster_host_ips)", ",", "1000" );
-      
+      "clean_cluster_string" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
+      "cluster_ip_list" slist => splitstring( "$(clean_cluster_string)", "\", \"", "1000" ),
+        comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
+                    since this parameter is defined as a 'comma_limited_list in openstack heat templates.
+                    Need to clean it by removing start chars and end chars, then split ips into a list"; 
+
+      # "canonified_cluster_ip_list" slist => canonify( "$(cluster_ip_list)" );
+     
+    any::
+      ## CONNECTION GROUP DATA
+      "ssh_group_name" string => "SSH_IDE";
+      "rdp_group_name" string => "RDP_IDE";
+
+      # "rdp_connection_name" string => "rdp";
+      # "parent_group" string => "";
+
   classes:      
       
       # DEFINE SERVER STATES
@@ -76,30 +86,51 @@ bundle agent guac_database
       "metadata_cache_exists"
       	expression => fileexists( "$(openstack_cache_dir)$(openstack_metadata_cache)" );
 
+      "have_cluster_ip_list"
+      	expression => isvariable( "cluster_ip_list" );
+
   files:
       "$(openstack_cache_dir)/."
         create => "true";
       
   commands:
     openstack_cache_exists::
-      "/usr/bin/wget -q --timeout=10 -O $(openstack_metadata_cache) $(openstack_metadata_link)" 
+      "$(wget_cmd)"
+        args => "-O $(openstack_metadata_cache) $(openstack_metadata_link)",
         contain => in_dir_shell("$(openstack_cache_dir)"),
         classes => results("bundle", "copy metadata"),
         comment => "download metadata file from openstack nova api link";
 
-
   methods:
-      # "create a test connection group"
-      # 	usebundle => guac_create_connection_group( $(group_name), "ORGANIZATIONAL", $(parent_group), "FALSE", $(params) ),
-      #   classes => if_ok("connection_group_created");
-      
-      # "create a test connection"
-      # 	usebundle => guac_create_connection( $(connection_name), $(host_ip), $(protocol), $(parent_group), $(params) ),
-      #   classes => if_ok("connection_created");
+      "create required variables"
+        usebundle => guac_database_vars;
 
-      # "add user to test connection"
-      # 	usebundle => guac_add_user_to_connection( $(username),$(connection_name), $(params) ),
-      #   classes => if_ok("add_user_to_connection");
+    have_cluster_ip_list::
+      "create an SSH load-balanced root connection group with session affinity=true"
+      	usebundle => guac_create_connection_group( "$(ssh_group_name)", "BALANCING", "", "TRUE", "$(params)" ),
+        classes => if_ok("ssh_group_created");
+
+      "create an RDP load-balanced root connection group with session affinity=true"
+      	usebundle => guac_create_connection_group( "$(rdp_group_name)", "BALANCING", "", "TRUE", "$(params)" ),
+        classes => if_ok("rdp_group_created");
+      
+    ssh_group_created::
+      "create SSH connections to hosts within SSH load-balanced group"
+      	usebundle => guac_create_connection( canonify( "$(ssh_group_name)_$(cluster_ip_list)" ), "$(cluster_ip_list)",
+					     "ssh", "$(ssh_group_name)", "$(params)" );
+
+      "add user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "$(username)", "$(ssh_group_name)", "group", "$(params)" ),
+        classes => if_ok("add_user_to_ssh_group");
+
+    rdp_group_created::
+      "create RDP connections to hosts within RDP load-balanced group"
+      	usebundle => guac_create_connection( canonify( "$(rdp_group_name)_$(cluster_ip_list)" ), "$(cluster_ip_list)",
+					     "rdp", "$(rdp_group_name)", "$(params)" );
+
+      "add user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "$(username)", "$(rdp_group_name)", "group", "$(params)" ),
+        classes => if_ok("add_user_to_rdp_group");
 
 
   reports:
@@ -109,7 +140,9 @@ bundle agent guac_database
     (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
 
-      "cluster host ips found in openstack metadata: $(cluster_host_ips)";
+      # "initial openstack metadata: $(cluster_host_data)";
+      # "cleaned string from openstack metadata: $(clean_cluster_string)";
+      "cluster host ips found in openstack metadata: $(cluster_ip_list)";
 
       # "web server (apache2) is not installed on this host"
       #   ifvarclass => "!apache_exists";
@@ -129,11 +162,11 @@ bundle agent guac_database_vars
 {
   vars:
     ## FILE PARAMETERS
-      "create_connection_group_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection_group.sql";
+      "create_connection_group_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection_group";
       "create_connection_group_template" string => "$(this.promise_dirname)/data/create_connection_group.sql.mustache";
-      "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection.sql";
+      "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection";
       "create_connection_template" string => "$(this.promise_dirname)/data/create_connection.sql.mustache";
-      "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection.sql";
+      "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection";
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
       
     ## GLOBAL PARAMETERS FOR DATABASE
@@ -145,10 +178,16 @@ bundle agent guac_database_vars
       "password" string => "${GUAC_PASSWORD}",
         comment => "Parameter token: ${GUAC_PASSWORD} = password of the current Guacamole user";
 
-      "max_connections" string => "",
+      "max_connections_per_group" string => "128",
+        comment => "maximum number of concurrent connections to allow to this group at any one time regardless of user
+                    NULL will use the default value specified in guacamole.properties";
+      "max_connections_per_user_per_group" string => "16",
+        comment => "maximum number of concurrent connections to allow to this group at any one time from a single user
+                    NULL will use the default value specified in guacamole.properties";
+      "max_connections_per_connection" string => "32",
         comment => "maximum number of concurrent connections to allow to this connection at any one time regardless of user
                     NULL will use the default value specified in guacamole.properties";
-      "max_connections_per_user" string => "",
+      "max_connections_per_user_per_connection" string => "4",
         comment => "maximum number of concurrent connections to allow to this connection at any one time from a single user
                     NULL will use the default value specified in guacamole.properties";
 
@@ -158,7 +197,7 @@ bundle agent guac_database_vars
     ## GLOBAL PARAMETERS SPECIFIC FOR SSH CONNECTIONS
       "ssh_port" string => "22",
         comment => "port the SSH server is listening on. If not specified, default of 22 will be used";
-      "ssh_color_scheme" string => "green-black",
+      "ssh_color_scheme" string => "white-black",
         comment => "color scheme to use for the terminal emulator used by SSH connections
                     options: black-white, gray-black, green-black, white-black";
       "ssh_font_name" string => "monospace",
@@ -209,7 +248,7 @@ bundle agent guac_database_vars
 
 ######################################################################
 
-bundle agent guac_create_connection_group(groupname, type, parent_group, session_afinity, params)
+bundle agent guac_create_connection_group(groupname, type, parent_group, enable_session_afinity, params)
 # @description: use a mustache template to add entries into required mySQL tables for a guacamole connection group "name" with "type" under a "parent group" (connection group name?), and whether "session_afinity" is required using a set of global parameters
 {
   vars:
@@ -220,7 +259,7 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, session
       "mysql_group_result" string => execresult("$(mysql_execute_cmd) $(mysql_group_query)","useshell");
 
     parent_group_defined::
-      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(parent_group)';\" ";
+      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_namtenant=$(keystone tenant-list | awk '/tenantName/ {print $2}')e = '$(parent_group)';\" ";
       "mysql_parent_id_result" string => execresult("$(mysql_execute_cmd) $(mysql_parent_query)","useshell");
 
   classes:
@@ -240,13 +279,13 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, session
 	expression => regcmp(".+","$(parent_group)"),
         comment => "check parent_group does contain one or more characters";
 
-      "parent_group_exists"
-	expression => regcmp(".+","$(mysql_parent_id_result)"),
-        comment => "check mysql query result contains a value";
+      # "parent_group_exists"
+      # 	expression => regcmp(".+","$(mysql_parent_id_result)"),
+      #   comment => "check mysql query result contains a value";
        
   files:
-    group_does_not_exist.(parent_group_exists|!parent_group_defined)::
-      "$($(params).create_connection_group_sql)"
+    group_does_not_exist::
+      "$($(params).create_connection_group_sql)_$(groupname).sql"
         create => "true",
         template_method => "mustache",
         edit_template => "$($(params).create_connection_group_template)",
@@ -257,7 +296,7 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, session
   commands:
     create_connection_group_sql_repaired|create_connection_group_sql_kept::
       "$(mysql_import_cmd)"
-        args => "$($(params).create_connection_group_sql)",
+        args => "$($(params).create_connection_group_sql)_$(groupname).sql",
         contain => in_shell,
       	classes => results("bundle", "create_connection_group"),
         comment => "add connection group $(groupname) into guacamole database";
@@ -271,11 +310,11 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, session
       "$(groupname) connection group created in $($(params).database)"
         ifvarclass => "create_connection_group_repaired";
 
-      "WARNING: Not adding group. $(groupname) connection group exists in database: $(const.n) $(mysql_group_result)"
+      "WARNING: Not adding group. $(groupname) connection group exists in database with connection_group_id: $(mysql_group_result)"
         ifvarclass => "!group_does_not_exist";
 
-      "WARNING: Not adding group. $(groupname) requires parent group $(parent_group) but parent does not exist"
-        ifvarclass => "parent_group_defined.!parent_group_exists";
+      # "WARNING: Not adding group. $(groupname) requires parent group $(parent_group) but parent does not exist"
+      #   ifvarclass => "parent_group_defined.!parent_group_exists";
 
       "$(groupname) connection group exists in database: $(const.n) $(mysql_group_result)"
         ifvarclass => "group_exists";
@@ -313,13 +352,13 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
 	expression => regcmp(".+","$(parent_group)"),
         comment => "check parent_group does contain one or more characters";
 
-      "parent_group_exists"
-	expression => regcmp(".+","$(mysql_parent_id_result)"),
-        comment => "check mysql query result contains a value";
+      # "parent_group_exists"
+      # 	expression => regcmp(".+","$(mysql_parent_id_result)"),
+      #   comment => "check mysql query result contains a value";
       
   files:
-    connection_does_not_exist.(parent_group_exists|!parent_group_defined)::
-      "$($(params).create_connection_sql)"
+    connection_does_not_exist::
+      "$($(params).create_connection_sql)_$(conname).sql"
         create => "true",
         template_method => "mustache",
         edit_template => "$($(params).create_connection_template)",
@@ -329,7 +368,7 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
   commands:
     create_connection_sql_repaired|create_connection_sql_kept::
       "$(mysql_import_cmd)"
-        args => "$($(params).create_connection_sql)",
+        args => "$($(params).create_connection_sql)_$(conname).sql",
         contain => in_shell,
       	classes => results("bundle", "create_connection"),
         comment => "add connection $(conname) into guacamole database";
@@ -343,11 +382,11 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
       "$(conname) connection created in $($(params).database)"
         ifvarclass => "create_connection_repaired";
       
-      "WARNING: Not adding connection. $(conname) connection exists in database: $(const.n) $(mysql_con_result)"
+      "WARNING: Not adding connection. $(conname) connection exists in database with connection_id: $(mysql_con_result)"
         ifvarclass => "!connection_does_not_exist";
 
-      "WARNING: Not adding connection. $(conname) requires parent group $(parent_group) but parent does not exist"
-        ifvarclass => "parent_group_defined.!parent_group_exists";
+      # "WARNING: Not adding connection. $(conname) requires parent group $(parent_group) but parent does not exist"
+      #   ifvarclass => "parent_group_defined.!parent_group_exists";
 }
 
 ######################################################################
@@ -364,7 +403,7 @@ bundle agent guac_add_user_to_connection(username, conname, type, params)
       "guac_group"  expression => strcmp("$(type)","group");
       
   files:
-      "$($(params).add_user_to_connection_sql)"
+      "$($(params).add_user_to_connection_sql)_$(conname)_$(username).sql"
         create => "true",
         template_method => "mustache",
         edit_template => "$($(params).add_user_to_connection_template)",
@@ -374,7 +413,7 @@ bundle agent guac_add_user_to_connection(username, conname, type, params)
   commands:
     add_user_to_connection_sql_repaired|add_user_to_connection_sql_kept::
       "$(mysql_import_cmd)"
-        args => "$($(params).add_user_to_connection_sql)",
+        args => "$($(params).add_user_to_connection_sql)_$(conname)_$(username).sql",
         contain => in_shell,
       	classes => results("bundle", "add_user_to_connection"),
         comment => "give user permission to access connection or group $(conname) into guacamole database";
