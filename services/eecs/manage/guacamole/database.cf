@@ -36,7 +36,8 @@ bundle agent guac_database
       ## TESTING VARS ONLY
       "apache_exec" string => "/usr/sbin/apache2";
       # "username" string => "guacadmin";
-      "username" string => "d693f574";
+      # "username" string => "d693f574";
+      "username" string => "bcroose";
 
       ## GLOBAL PARAMETERS
       "params" string => "guac_database_vars";
@@ -47,7 +48,7 @@ bundle agent guac_database
       "openstack_metadata_cache" string => "meta_data.json";
       "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
 
-    metadata_cache_exists::
+    metadata_cache_exists.(copy_metadata_repaired|copy_metadata_kept)::
       "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
         comment => "pull in external json file from OpenStack Nova API";
 
@@ -57,13 +58,12 @@ bundle agent guac_database
         data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
         comment => "create data subset of cluster host ip addresses from openstack metadata";
 
-      "clean_cluster_string" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
-      "cluster_ip_list" slist => splitstring( "$(clean_cluster_string)", "\", \"", "1000" ),
+      "clean_cluster_string1" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
+      "clean_cluster_string2" string => regex_replace( "$(clean_cluster_string1)", "\"\", ", "", "" );
+      "cluster_ip_list" slist => splitstring( "$(clean_cluster_string2)", "\", \"", "1000" ),
         comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
-                    since this parameter is defined as a 'comma_limited_list in openstack heat templates.
+                    since this parameter is defined as a comma_limited_list in openstack heat templates.
                     Need to clean it by removing start chars and end chars, then split ips into a list"; 
-
-      # "canonified_cluster_ip_list" slist => canonify( "$(cluster_ip_list)" );
      
     any::
       ## CONNECTION GROUP DATA
@@ -80,7 +80,7 @@ bundle agent guac_database
       # "on"  expression => strcmp("$(state)","on");
       # "off" expression => strcmp("$(state)","off");
 
-      "openstack_cache_exists"
+      "openstack_cache_dir_exists"
       	expression => fileexists( "$(openstack_cache_dir)/." );
 
       "metadata_cache_exists"
@@ -94,11 +94,11 @@ bundle agent guac_database
         create => "true";
       
   commands:
-    openstack_cache_exists::
+    openstack_cache_dir_exists::
       "$(wget_cmd)"
         args => "-O $(openstack_metadata_cache) $(openstack_metadata_link)",
         contain => in_dir_shell("$(openstack_cache_dir)"),
-        classes => results("bundle", "copy metadata"),
+        classes => results("bundle", "copy_metadata"),
         comment => "download metadata file from openstack nova api link";
 
   methods:
@@ -116,12 +116,19 @@ bundle agent guac_database
       
     ssh_group_created::
       "create SSH connections to hosts within SSH load-balanced group"
-      	usebundle => guac_create_connection( canonify( "$(ssh_group_name)_$(cluster_ip_list)" ), "$(cluster_ip_list)",
+      	usebundle => guac_create_connection( "$(ssh_group_name)_$(cluster_ip_list)", "$(cluster_ip_list)",
 					     "ssh", "$(ssh_group_name)", "$(params)" );
+      	# usebundle => guac_create_connection( canonify( "$(ssh_group_name)_$(cluster_ip_list)" ), "$(cluster_ip_list)",
+	# 				     "ssh", "$(ssh_group_name)", "$(params)" );
 
       "add user to SSH load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "$(username)", "$(ssh_group_name)", "group", "$(params)" ),
+      	usebundle => guac_add_user_to_connection( "$(ssh_group_name)", "$(username)", "group", "$(params)" ),
         classes => if_ok("add_user_to_ssh_group");
+
+      "add user to SSH load-balanced connections"
+	usebundle => guac_add_user_to_connection( "$(ssh_group_name)_$(cluster_ip_list)", "$(username)",
+						  "connection", "$(params)" ),
+       classes => if_ok("add_user_to_ssh_connection");
 
     rdp_group_created::
       "create RDP connections to hosts within RDP load-balanced group"
@@ -129,8 +136,13 @@ bundle agent guac_database
 					     "rdp", "$(rdp_group_name)", "$(params)" );
 
       "add user to RDP load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "$(username)", "$(rdp_group_name)", "group", "$(params)" ),
+      	usebundle => guac_add_user_to_connection( "$(rdp_group_name)", "$(username)", "group", "$(params)" ),
         classes => if_ok("add_user_to_rdp_group");
+
+      "add user to RDP load-balanced connections"
+	usebundle => guac_add_user_to_connection( canonify( "$(rdp_group_name)_$(cluster_ip_list)" ), "$(username)",
+						  "connection", "$(params)" ),
+       classes => if_ok("add_user_to_rdp_connection");
 
 
   reports:
@@ -141,7 +153,8 @@ bundle agent guac_database
       "=== $(this.bundle) ===";
 
       # "initial openstack metadata: $(cluster_host_data)";
-      # "cleaned string from openstack metadata: $(clean_cluster_string)";
+      # "cleaned string 1 from openstack metadata: $(clean_cluster_string1)";
+      # "cleaned string 2 from openstack metadata: $(clean_cluster_string2)";
       "cluster host ips found in openstack metadata: $(cluster_ip_list)";
 
       # "web server (apache2) is not installed on this host"
@@ -391,19 +404,22 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
 
 ######################################################################
 
-bundle agent guac_add_user_to_connection(username, conname, type, params)
+bundle agent guac_add_user_to_connection(conname, username, type, params)
 # @description: use a mustache template to add entries into required mySQL tables for giving a user permission to access a connection or connection group by defining type as 'connection' or 'group'
 {
   vars:
-      "mysql_cmd" string => "/usr/bin/mysql -u root ";
-      "mysql_import_cmd" string => "$(mysql_cmd) \"$($(params).database)\" < ";
+      "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
+      "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
+
+      # "mysql_con_query" string => " \"select * from guacamole_connection_permisson where connection_name = '$(conname)';\" ";
+      # "mysql_con_result" string => execresult("$(mysql_execute_cmd) $(mysql_con_query)","useshell");
 
   classes:
       "guac_connection"  expression => strcmp("$(type)","connection");
       "guac_group"  expression => strcmp("$(type)","group");
       
   files:
-      "$($(params).add_user_to_connection_sql)_$(conname)_$(username).sql"
+      "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql"
         create => "true",
         template_method => "mustache",
         edit_template => "$($(params).add_user_to_connection_template)",
@@ -413,7 +429,7 @@ bundle agent guac_add_user_to_connection(username, conname, type, params)
   commands:
     add_user_to_connection_sql_repaired|add_user_to_connection_sql_kept::
       "$(mysql_import_cmd)"
-        args => "$($(params).add_user_to_connection_sql)_$(conname)_$(username).sql",
+        args => "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql",
         contain => in_shell,
       	classes => results("bundle", "add_user_to_connection"),
         comment => "give user permission to access connection or group $(conname) into guacamole database";
