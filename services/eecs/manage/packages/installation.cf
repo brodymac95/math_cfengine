@@ -202,10 +202,15 @@ bundle agent unattended_upgrades_config
   files:
     debian|ubuntu::
       "$(enable_unattended_file)"
-      create => "true",
-      perms => mog("644","root","root"),
-      edit_line => append_if_no_line("$(added_lines)"),
-      comment => "creates config file for enabling the unattended-upgrades package. Can also be enabled manually by running on system: # dpkg-reconfigure unattended-upgrades";
+	create => "true",
+	perms => mog("644","root","root"),
+	edit_line => append_if_no_line("$(added_lines)"),
+        edit_defaults => std_defs,
+	comment => "creates config file for enabling the unattended-upgrades package. Can also be enabled manually by running on system: # dpkg-reconfigure unattended-upgrades";
+
+      "$(enable_unattended_file).cf-before-edit"
+        delete => tidy,
+	comment => "remove the old cfe backup file which is causing apt-get to fail!";
 
   reports:
     (inform_mode|verbose_mode)::
