@@ -16,16 +16,18 @@ bundle agent config_login_banner
   vars:
       "template_file" string => "$(this.promise_dirname)/motd_template.txt";
       "motd_file"     string => "/etc/motd";
-      "support"       string => "EECS: Ben Roose (ben.roose@wichita.edu)";
 
-    os_tenant::
-      "type" string => "OpenStack Tenant";
-    os_node::
-      "type" string => "OpenStack Node";
-    server::
-      "type" string => "Server";
-    workstation::
-      "type" string => "Workstation";
+    ## NOTE: support var has been moved to global bundle in clasification/main.cf
+
+    ## REMOVE ONCE FULLY CHANGED TO ROLE
+    # os_tenant::
+    #   "type" string => "OpenStack Tenant";
+    # os_node::
+    #   "type" string => "OpenStack Node";
+    # server::
+    #   "type" string => "Server";
+    # workstation::
+    #   "type" string => "Workstation";
 
   files:
     "$(motd_file)"

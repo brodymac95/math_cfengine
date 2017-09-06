@@ -29,6 +29,9 @@ bundle common cron_scheduler
 # @description: use cfengine as an alternative scheduler to cron by setting global classes based on time
 {
   vars:
+      "15m_after_system_creation" string => eval( "$(global.system_creation_time) + (15 * 60)", "math", "infix" ),
+      comment => "add 15 minutes in seconds to the unix epoch time set when host system was first created";
+      
       
   classes:
       # TIME PERIODS (medical abbreviations used)
@@ -37,35 +40,42 @@ bundle common cron_scheduler
       "Q6H_NIGHT_ONLY" or => { "Hr00", "Hr06", };
       "Q15M" or => { "Min00_05", "Min15_20", "Min30_35", "Min45_50", };
 
-      # UPTIME PERIODS
-      "UP_LESS_1HR" expression => eval("60 > $(sys.uptime)", "class", "infix");
-      "UP_LESS_1DY" expression => eval("1440 > $(sys.uptime)", "class", "infix");
-      "UP_LESS_1WK" expression => eval("10080 > $(sys.uptime)", "class", "infix");
+      # UPTIME PERIODS (defined in minutes)
+      # "UP_LESS_1HR" expression => eval( "$(sys.uptime) < 60", "class", "infix" );
+      # "UP_LESS_1DY" expression => eval( "$(sys.uptime) < 1440", "class", "infix" );
+      # "UP_LESS_1WK" expression => eval( "$(sys.uptime) < 10080", "class", "infix" );
       
       
       # DEFINE JOBS
-      "install_software" or => { "UP_LESS_1HR", },
-      comment => "install/update software within the first hour since system last boot";
-
       "install_software" and => { "Q6H", "Min00_05", "loadavg_low", },
       comment => "install/update software at start of every 6 hours only if system load is low";
-
-      "reboot_allowed" expression => "Hr02",
-      comment => "allow for system auto reboot at 2am only";
 
       "run_uaf2_client" and => { "Q15M", "uaf2_client", "loadavg_low", },
       comment => "run Tom's uaf2_client to update users every 15 minutes only if installed and system load is low";
 
       "run_uaf2_client" and => { "UP_LESS_1HR", },
       comment => "run Tom's uaf2_client to update users within first hour since system last boot";
-      
-      
+
+      "reboot_allowed" expression => "Hr02",
+      comment => "allow for system auto reboot at 2am only";
+
+      "reboot_15m_after_host_creation" expression => eval( "$(sys.systime) == $(15m_after_system_creation)", "class", "infix" ),
+      comment => "enable a full system reboot at 15 mins after system creation, defined in unix epoch time
+                  NOTE: this class must be activated in manage/main.cf for a specific machine type";
+
+      "install_software" expression => eval( "$(sys.systime) < $(15m_after_system_creation)", "class", "infix" ),
+      comment => "install/update software within the first 15 mins after system creation, defined in unix epoch time";
+
+      # "install_software" or => { "UP_LESS_1HR", },
+      # comment => "install/update software within the first hour since system last boot";
+
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
+      "epoch time for 15min: $(15m_epoch_time)";
 }
 
 ######################################################################

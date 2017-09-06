@@ -129,11 +129,15 @@ bundle agent manage_os_tenant_cluster
       "turn on xrdp remote access" usebundle => xrdp("on");
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
-    uaf2_client.run_uaf2_client::
-      "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
+    reboot_15m_after_host_creation::
+      "DANGEROUS: auto reboot host 15mins + 1min delay into lifecycle to ensure all services are fully operational"
+	usebundle => reboot ("1", "CFEngine: scheduled maintenance reboot at lifecycle start");
+      
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
+    uaf2_client.run_uaf2_client::
+      "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 
     testing::
       # insert bundles here for testing hosts only

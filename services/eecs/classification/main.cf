@@ -18,6 +18,7 @@ bundle common classification_main_file_control
     "bundles"
       slist =>
       {
+	"global",
 	"classify_host",
 	"classify_subnet_location",
       };
@@ -26,4 +27,23 @@ bundle common classification_main_file_control
 body file control
 {
       inputs => { @(classification_main_file_control.inputs) };
+}
+
+bundle common global
+{
+  vars:
+      "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
+
+      "system_creation_time" string => filestat( "/", "ctime" ),
+        comment => "defining the unix epoch time of when the root directory '/' was created
+                    to assume a baseline for host system creation time";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      # "system created at unix epoch time: $(system_creation_time)";
 }

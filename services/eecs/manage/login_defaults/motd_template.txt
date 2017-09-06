@@ -2,7 +2,7 @@ This system may be accessed by authorized users at WSU only.
 Use of this system implies acceptance of authorized use policies.
 Misuse may be subject to prosecution or disciplinary measures.
 
-$(config_login_banner.type) Host: $(sys.fqhost) ($(sys.ipv4))
+$(classify_host.host_role) host: $(sys.fqhost) ($(sys.ipv4))
 This system is managed by CFEngine v$(sys.cf_version)
-Support for $(config_login_banner.support)
+Support for $(global.eecs_support)
 
