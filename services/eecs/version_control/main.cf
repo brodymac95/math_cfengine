@@ -5,29 +5,33 @@
 #
 ###############################################################################
 
-
-
-# PROTIP: Use body file control to help make modular policy.
-# "There can be only one" body common control per policy entry (promises.cf,update.cf)
-
-# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf" };
-#}
+######################################################################
+# Public entry point: vcs_update bundle
+######################################################################
 
 bundle agent vcs_update
 # @description: periodically pulls newest version of policy files from github user benroose
 {
-
   vars:
+    policyhub_prod::
+      "branch" string => "production";
+
+    policyhub_dev::
+      "branch" string => "master";
+
+    policyhub_min::
       "branch" string => "minimal";
       
   commands:
     policy_server::
       "/usr/bin/git"
       args => "pull --ff-only origin $(branch)",
-      contain => masterfiles_contain;
+      contain => masterfiles_contain,
+      comment => "pull specified branch from github";
+
+  reports:
+      (inform_mode|verbose_mode)::
+            "$(this.bundle): Activated";      
 }
 
 body contain masterfiles_contain

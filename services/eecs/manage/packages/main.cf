@@ -1,70 +1,133 @@
-##############################################################################
+###############################################################################
 #
-#   manage/packages/main.cf - EECS packages management
+#   manage/packages/main.cf - EECS management of packages promises
 #   Maintained: Ben Roose, ver 0.2
 #
 ###############################################################################
 
+bundle common packages_main_file_control
+{
+  vars:
+    # "input[ad]" string => "$(this.promise_dirname)/ad.cf";
+    "input[custom_install]" string => "$(this.promise_dirname)/custom_install.cf";
+    "input[standard_install]" string => "$(this.promise_dirname)/installation.cf";
+      #"input[matlab]" string => "$(this.promise_dirname)/matlab.cf"; ERRORS OUT!
 
+      "inputs"
+        slist => getvalues(input);
+}
 
-# PROTIP: Use body file control to help make modular policy.
-# "There can be only one" body common control per policy entry (promises.cf,update.cf)
-
-# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf" };
-#}
+body file control
+{
+      inputs => { @(packages_main_file_control.inputs) };
+}
 
 bundle agent manage_packages
-# @description: package management for hosts classified by: any (all hosts), workstation only packages, server only packages
-# NOTE: This is an initial version to get up and running. must build this into a nicer interface bundle set!!
+# @description: package management entry point
 {
 
   vars:
 
-    ## Packages required
-    debian|ubuntu::
-      "policy[openssh-client]" string => "present";
-      "policy[emacs]" string => "present";
-      "policy[screen]" string => "present";
-      "policy[build-essential]" string => "present";
+  methods:
+      "manage standard repository packages" usebundle => manage_repository_packages;
 
-    workstation.(debian|ubuntu)::
+      # "package_upgrade" usebundle => manage_upgrades;
 
-    server.(debian|ubuntu)::
-      "policy[openssh-server]" string => "present";
+    # install_custom_packages::
+    #   "manage custom installer packages only if custom packages are specified in host_data.json file"
+    # 	usebundle => manage_custom_packages;
+}
 
-    ## Packages denied (NEED TO FIX!)
-    #debian|ubuntu::  
+###################################
 
-    workstation.(debian|ubuntu)::
-      #"policy[openssh-server]" string => "absent";
+bundle agent manage_custom_packages
+# @description: custom scripting for packages required by users but not in standard repositories
+{
+  vars:
 
-    server.(debian|ubuntu)::
+      "texworks_dictionary_source" string => "/usr/share/hunspell";
+      "texworks_dictionary_target" string => "/usr/share/myspell/dicts";
 
-    any::	
-      #"architectures" slist => { "x86_64" };
-      "allpkgs"       slist => getindices("policy");
+  classes:      
 
+    "autostart_scmmanager"
+	expression => "scmmanager",
+        scope => "namespace",
+        comment => "create global class for autostart if scmmannager is listed in custom_installs";
+      
   packages:
-      "$(allpkgs)"
-        policy => "$(policy[$(allpkgs)])",
-        package_module => apt_get,
-        version => "latest";
-        #architecture => @(architectures);
+    pip_gensim::
+      "gensim" package_method => pip(""), package_policy => "add",
+      comment => "install the gensim package using python pip (used by Sara Bahrami)";
+
+    pip_theano::
+      "theano" package_method => pip(""), package_policy => "add",
+      comment => "install the theano package using python pip (used by Dr. Kaushik Sinha)";
+
+    pip_pattern::
+      "pattern" package_method => pip(""), package_policy => "add",
+      comment => "install the pattern package using python pip (used by Dr. Kaushik Sinha)";
+
+    pip_orange::
+      "orange" package_method => pip(""), package_policy => "add",
+      comment => "install the orange package using python pip (used by Dr. Kaushik Sinha)";
+
+  files:
+    texworks_dictionaries::
+      "$(texworks_dictionary_target)"
+      move_obstructions => "true",
+      link_from => linkchildren( "$(texworks_dictionary_source)" ),
+      comment => "create symbolic links for all libreoffice dictionaries in texworks dictionary directory";
 
   methods:
 
-    #SETTING HOST MANUALLY FOR MATLAB INSTALL (need to build host classification bundles to make this more generic)
-    "jb_256_3432_res1"::
-      "install_matlab" usebundle => install_matlab;   
-  
+    # ad_authentication::
+    #   "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
+      
+    ldap_removal::
+      "remove old ldap config files and packages" usebundle => remove_ldap;
+
+    linux_show_player::
+      "install linux-show-player" usebundle => install_linux_show_player;
+
+    etc_offline_editor::
+      "install etc offline editor script" usebundle => install_etc_offline_editor;
+      
+    skype::
+      "install skype" usebundle => install_skype;
+
+    java_bluej_ide::
+      "install Java BlueJ IDE from Duke University for Coursera Java Course" usebundle => install_java_bluej_ide;
+
+    pyrosetta::
+      "install python pyrosetta" usebundle => install_pyrosetta;
+
+    python_graphics_lib::
+      "install python graphics library (for Keenan Jackson)" usebundle => install_python_graphics;
+
+    cuda_by_example::
+      "install cuda_by_example code and nvidia cuda toolkit" usebundle => install_cuda_by_example;
+
+    deep_learning|deep_learning_gpu::
+      "install all packages for deep learning (used by Dr Sinha)" usebundle => install_deep_learning_packages,
+      inherit => "true";
+
+      
+#   matlab_research|matlab_classroom::
+#      "install matlab software" usebundle => install_matlab,
+#      inherit => "true",
+#      comment => "run the set of custom bundles for installing the commercial matlab software. Must specify whether to use the research or classroom license";
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_manage_packages)::
+      "=== $(this.bundle) ===";
+      "Custom packages to be installed: $(classify_host.custom_packages)";
+
+    (DEBUG|DEBUG_manage_packages).test_package::
+      "test_package is listed in host_data.json file for this host and a test_package class has been created";      
 }
 
-###################################
+######################################################################

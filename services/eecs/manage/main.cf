@@ -13,12 +13,7 @@ bundle common manage_main_file_control
     "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
     "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
     "input[packages]" string => "$(this.promise_dirname)/packages/main.cf";
-    "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
-     
-    #enable_manage_emacs_config::
-      #"input[emacs_config]" string => "$(this.promise_dirname)/emacs_config/main.cf";
-      #"input[emacs_config_settings]" string => "$(this.promise_dirname)/emacs_config/settings.cf";
-      #"input[report_pl]" string => "$(this.promise_dirname)/cf_report/main.cf";
+    # "input[matlab]" string => "$(this.promise_dirname)/packages/matlab.cf";
       
     #enable_manage_sysctl::
       #"input[sysctl]" string => "$(this.promise_dirname)/sysctl/main.cf";
@@ -45,9 +40,4 @@ bundle agent manage_main
 
     server::
       "configure_sshd" usebundle => sshd_config;
-
-
-    #nickanderson_thinkpad_w520::
-    #  "emacs"
-    #  usebundle => emacs_config("nickanderson_emacs_config_settings");
 }

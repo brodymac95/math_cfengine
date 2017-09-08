@@ -16,7 +16,7 @@
 #}
 
 ######################################################################
-# Public entry point: sshd_config
+# Public entry point: config_sshd AND ensure_ssh_authorized_keys(user)
 ######################################################################
 
 # NOTES for future development of configuration:
@@ -27,18 +27,48 @@
 # file. This improves resilience, and tries to avoid deploying a potentially
 # broken config.bundle agent configfiles
 
-bundle agent sshd_config
+bundle common ssh_settings
+{
+  vars:
+            
+      "authorized_keys_dist"
+        string => "/srv/cfengine/configs/ssh_authorized_keys/",
+        comment => "server location where agents look for each user ssh authorized_keys file.";
+      "authorized_keys_cache"
+        string => "$(sys.workdir)/state/ssh_key_cache/",
+        comment => "local directory where agents cache the user ssh authorized_keys file
+        (for offline enforcement).";
+
+}
+
+########################################################
+
+bundle agent config_sshd
 {
   vars:  
       # Files to edit
       "files[sshd]"   string => "/etc/ssh/sshd_config";
 
-      # SSHD configuration to set
+      # SSHD configuration options to set
       "sshd[Port]"                                    string => "22";
+      "sshd[Protocol]"                                string => "2";
+
       "sshd[X11Forwarding]"                           string => "yes";
+      "sshd[AllowAgentForwarding]"                    string => "yes";
+      "sshd[RSAAuthentication]"                       string => "yes";
+      "sshd[PubkeyAuthentication]"                    string => "yes";
+      
       "sshd[UseDNS]"                                  string => "no";
       "sshd[PermitRootLogin]"                         string => "no";
+      "sshd[PermitEmptyPasswords]"                    string => "no";
 
+    !infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes";      
+
+    # allow SSH password authentication to be turned off for infrastructure servers and nodes if wanted in future
+    infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes";      
+      
   methods:
       "sshd"    usebundle => edit_sshd;
 
@@ -50,26 +80,114 @@ bundle agent sshd_config
       
 }
 
+########################################################
+
 bundle agent edit_sshd
 {
   files:
-      "$(sshd_config.files[sshd])"
+      "$(config_sshd.files[sshd])"
       handle => "edit_sshd",
-      comment => "Set desired sshd_config parameters",
-      edit_line => set_line_based("sshd_config.sshd", " ", "\s+", ".*", "\s*#\s*"),
+      comment => "Set desired sshd parameters",
+      edit_line => set_line_based("config_sshd.sshd", " ", "\s+", ".*", "\s*#\s*"),
       classes => results("bundle", "sshd");
-      
-  services:
-      "ssh"
-      service_policy => "start",
-      comment => "make sure ssh is always running";
 
-    sshd_repaired.!no_restarts::
-      "ssh"
-      service_policy => "reload",
-      handle => "sshd_restart",
-      comment => "Restart sshd if the configuration file was modified";
+  methods:
+    sshd_repaired.debian.!no_restarts::
+      "debian reload sshd service if config file modified" usebundle => standard_services("sshd", "reload"),
+      classes => results("bundle", "sshd_reload");
 
+    sshd_repaired.redhat.!no_restarts::
+      "redhat restart sshd service if config file modified" usebundle => standard_services("sshd", "restart"),
+      classes => results("bundle", "sshd_restart");
 
-      
+  reports:
+    (DEBUG|DEBUG_config_files).sshd_reload_repaired::
+      "sshd service reloaded after $(config_sshd.files[sshd]) file repaired";
+    (DEBUG|DEBUG_config_files).sshd_restart_repaired::
+      "sshd service restarted after $(config_sshd.files[sshd]) file repaired";
 }
+
+########################################################
+
+bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
+# @description: ensure user specific ssh authorized_keys files are deployed
+{
+  vars:
+      "user_ssh_dir" string => "$(user_home)/.ssh";
+      "user_auth_keys_file" string => "$(user_home)/.ssh/authorized_keys";
+
+      "auth_keys_dist" string => "$(ssh_settings.authorized_keys_dist)/$(user)/authorized_keys";
+      "auth_keys_cache" string => "$(ssh_settings.authorized_keys_cache)/$(user)_authorized_keys";
+      "auth_keys_cache_dir" string => "$(ssh_settings.authorized_keys_cache)";
+
+    redhat.!scientific::
+      "restorecon_cmd" string => "/usr/sbin/restorecon -R ",
+      comment => "-R = recursive";
+      
+  classes:
+      "user_home_exists"
+	expression => fileexists( "$(user_home)/." );
+
+      "have_cached_auth_keys"
+	expression => fileexists( "$(auth_keys_cache)" );
+      
+  files:
+      "$(auth_keys_cache_dir)/."
+    	create => "true",
+        comment => "ensure the cache directory exists";
+
+    policy_server::
+      "$(auth_keys_cache)"
+        perms => mo("600","root"),
+        copy_from => local_dcp( $(auth_keys_dist) ),
+        action => if_elapsed("60"),
+        comment => "if host is policy server then perform local copy of the authorized_keys file for local staging";
+
+    !policy_server::
+      "$(auth_keys_cache)"
+    	perms => mo("600","root"),
+    	copy_from => secure_cp( $(auth_keys_dist), $(sys.policy_hub) ),
+    	action => if_elapsed("60"),
+    	comment => "if host is another client then perform secure remote copy of the authorized_keys file for local staging";
+
+    user_home_exists::
+      "$(user_ssh_dir)/."
+    	create => "true",
+    	perms => mog( "700","$(user)","$(group)" ),
+    	comment => "ensure existence and correct permissions for user .ssh directory";
+
+    user_home_exists.have_cached_auth_keys:: 
+      "$(user_auth_keys_file)"
+    	copy_from => local_dcp( $(auth_keys_cache) ),
+    	perms => mog( "400","$(user)","$(group)" ),
+        classes => results("bundle", "auth_keys_file"),
+    	comment => "copy authorized_keys file from local staging cache and ensure correct permissions";
+
+  commands:
+    redhat.!scientific::
+      "$(restorecon_cmd) $(user_ssh_dir)"
+        classes => results("bundle", "restorecon"),
+        comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
+      	ifvarclass => "auth_keys_file_repaired";
+  
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sys_users)::
+      "=== $(this.bundle) ===";
+      "auth_keys_cache found at $(auth_keys_cache)"
+        ifvarclass => "have_cached_auth_keys";
+
+      "$(user_auth_keys_file) copied for $(user)"
+	ifvarclass => "auth_keys_file_repaired";
+
+      "$(user_auth_keys_file) exists for $(user)"
+	ifvarclass => "auth_keys_file_kept";
+
+      "SELinux restorecon ran on $(user_ssh_dir)"
+	ifvarclass => "restorecon_repaired";
+
+}
+
+########################################################
