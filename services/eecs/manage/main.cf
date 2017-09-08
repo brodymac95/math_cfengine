@@ -42,7 +42,7 @@ bundle agent manage_main
       "package_installation" usebundle => manage_packages;
 
     server::
-      "configure_sshd" usebundle => sshd_config;
+      "configure_sshd" usebundle => config_sshd;
 
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
