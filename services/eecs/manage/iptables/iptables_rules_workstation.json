@@ -17,7 +17,7 @@
         },
         "101":
         {
-	    "comment": "specific rule for opening SSH on eth1 for jb_257_3432_res1"
+	    "comment": "allow SSH on eth1 for jb_257_3432_res1"
 	    "chain": "INPUT",
 	    "interface": "eth1",
 	    "destination_port": "22",
@@ -26,13 +26,32 @@
 	},
 	"102":
 	{
-	    "comment": "specific rule for opening SDN controller on eth1 for jb_257_3432_res1"
+	    "comment": "allow SDN controller on eth1 for jb_257_3432_res1"
 	    "chain": "INPUT",
 	    "interface": "eth1",
 	    "destination_port": "8181",
 	    "target": "ACCEPT",
 	    "context": "jb_257_3432_res1"
 	},
+	"103":
+	{
+	    "comment": "allow OpenFlow controller for wumesh on eth1 for jb_257_3432_res1"
+	    "chain": "INPUT",
+	    "interface": "eth1",
+	    "destination_port": "6633",
+	    "target": "ACCEPT",
+	    "context": "jb_257_3432_res1"
+	},
+        "105":
+        {
+	    "comment": "allow incoming SSH from WSU wired public network for jb_257_3432_res1"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16",
+            "destination_port": "22",
+            "target": "ACCEPT",
+	    "context": "jb_257_3432_res1"
+        },
+
 	"1000":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"

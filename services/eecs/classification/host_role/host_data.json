@@ -23,4 +23,10 @@
         "role": "wirelesswst",
         "owner": "Prabhu Janakaraj",
     },
+    "jb_253_5261_nuc": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "capplab",
+        "owner": "Abu Asaduzzaman",
+    },
 }
