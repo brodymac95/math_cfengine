@@ -123,12 +123,12 @@ bundle agent guac_database
         usebundle => import_user_data( "$(params)" ),
         classes => if_ok("student_users_imported");
 
-    # student_users_imported::
+    student_users_imported::
       "create each student user from imported CSV data"
       	usebundle => guac_create_user(
-      			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-      			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.fullname_col)])",
-      			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.email_col)])",
+      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.mywsu_col)])",
+      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.fullname_col)])",
+      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.email_col)])",
       			"$($(params).student_user_organization)",
       			"$($(params).student_user_role)",
       			"$(params)");
@@ -194,6 +194,8 @@ bundle agent guac_database_vars
       "create_connection_group_template" string => "$(this.promise_dirname)/data/create_connection_group.sql.mustache";
       "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection";
       "create_connection_template" string => "$(this.promise_dirname)/data/create_connection.sql.mustache";
+      "create_user_sql" string => "$(sys.workdir)/state/mysql/guac_create_user";
+      "create_user_template" string => "$(this.promise_dirname)/data/create_user.sql.mustache";
       "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection";
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
       
@@ -452,26 +454,26 @@ bundle agent guac_create_user(username, full_name, email_address, organization, 
 	comment => "expand create_user_sql file using template from staging cache in this promise directory";
 
   commands:
-    create_user_sql_repaired|create_user_sql_kept::
-      "$(mysql_import_cmd)"
-        args => "$($(params).create_user_sql)_$(username).sql",
-        contain => in_shell,
-      	classes => results("bundle", "create_user"),
-        comment => "add user $(username) into guacamole database";
+  #   create_user_sql_repaired|create_user_sql_kept::
+  #     "$(mysql_import_cmd)"
+  #       args => "$($(params).create_user_sql)_$(username).sql",
+  #       contain => in_shell,
+  #     	classes => results("bundle", "create_user"),
+  #       comment => "add user $(username) into guacamole database";
 
-  methods:
-    user_does_not_exist::
-      "add user to SSH load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$(params).$(ssh_group_name)", "$(username)", "$(params)");
+  # methods:
+  #   user_does_not_exist::
+  #     "add user to SSH load-balanced connection group"
+  #     	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)", "$(username)", "$(params)");
 
-      "add user to RDP load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$(params).$(rdp_group_name)", "$(username)", "$(params)");
+  #     "add user to RDP load-balanced connection group"
+  #     	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)", "$(username)", "$(params)");
       
-      "add user to each SSH load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$(params).$(ssh_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
+  #     "add user to each SSH load-balanced connection"
+  #     	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
 
-      "add user to each RDP load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$(params).$(rdp_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
+  #     "add user to each RDP load-balanced connection"
+  #     	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
       
   reports:
     (inform_mode|verbose_mode)::
@@ -586,6 +588,17 @@ bundle agent import_user_data(params)
       	classes => results("bundle", "csv_fixed"),
         comment => "turn all \n in file to \r\n as required in CSV standard RFC 4180";
 
+  # methods:
+  #     "create each student user from imported CSV data"
+  #     	usebundle => guac_create_user(
+  #     			"$(student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
+  #     			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.fullname_col)])",
+  #     			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.email_col)])",
+  #     			"$($(params).student_user_organization)",
+  #     			"$($(params).student_user_role)",
+  #     			"$(params)");
+
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
