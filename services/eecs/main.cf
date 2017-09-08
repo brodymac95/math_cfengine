@@ -10,10 +10,12 @@ bundle common eecs_main_file_control
   vars:
       "inputs"
       slist => {
-	"$(this.promise_dirname)/version_control/main.cf",
-	"$(this.promise_dirname)/classification/main.cf",
-	"$(this.promise_dirname)/inventory/main.cf",
-	"$(this.promise_dirname)/manage/main.cf",
+		 "$(this.promise_dirname)/version_control/main.cf",
+		 "$(this.promise_dirname)/classification/main.cf",
+		 "$(this.promise_dirname)/inventory/main.cf",
+		 "$(this.promise_dirname)/manage/main.cf",
+		 "$(this.promise_dirname)/scheduler/main.cf",
+		 "$(this.promise_dirname)/server/main.cf",
       };
 }
 
@@ -24,13 +26,13 @@ body file control
 
 bundle agent eecs_main
 {
-
   methods:
-    "Update from github" usebundle => vcs_update;
-    "Inventory" usebundle => inventory_main;
-    "Manage" usebundle => manage_main;
-
+      "Update from github" usebundle => vcs_update;
+      "Inventory" usebundle => inventory_main;
+      "Manage" usebundle => manage_main;
+      "set schedule (cron)" usebundle => cron_scheduler;
+      
   reports:
-      (inform_mode|verbose_mode)::
-            "$(this.bundle): Activated";
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
