@@ -204,7 +204,6 @@ bundle agent testing_iptables_tidy(cdir)
       "$(this.bundle): Activated";
       
     (DEBUG|DEBUG_config_iptables)::
-      # "Contents of 'json_input' data container: '$(json_str)'";  
 }
 
 bundle edit_line iptables_remove_comments

@@ -5,14 +5,6 @@
 #
 ###############################################################################
 
-# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-body file control
-{
-      inputs => { "$(sys.libdir)/stdlib.cf",
-		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf",
-		  "$(sys.workdir)/inputs/services/eecs/lib/main.cf" };
-}
-
 ######################################################################
 # Public entry point: guacamole_server(on) OR guacamole_server(off)
 ######################################################################
@@ -59,7 +51,7 @@ bundle agent guacamole_server(state)
       	usebundle => standard_services( "guacd", "stop" ),
       	classes => if_ok("guacd_server_off");
 
-    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    ## ENSURE SERVICES AND DATABASE RUNNING AND CONFIGURED
     on.guacd_exists::
       "ensure guacd service is running if guacamole_server is on"
       	usebundle => standard_services( "guacd", "start" ),
@@ -76,6 +68,12 @@ bundle agent guacamole_server(state)
     	usebundle =>configure_guac_authentication("guacamole_vars.conf"),
         inherit=> "true",
         classes => results("bundle", "guac_authentication");
+
+    on.(guac_authentication_repaired|guac_authentication_kept)::
+      "configure guacamole database with connections and users (ensure guacamole.cf input file is loaded)"
+    	usebundle =>configure_guac_database,
+      	classes => if_ok("config_guac_db");
+
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
     on.(guac_configuration_repaired|guac_install_repaired).!NO_RESTARTS::
@@ -121,10 +119,12 @@ bundle agent guacamole_server(state)
         ifvarclass => "guacd_server_off";
       "guacamole server is turned on and running"
         ifvarclass => "guacd_server_on";
-      "tomcat8 server is turned on and running"
-        ifvarclass => "tomcat8_server_on";
       "guacamole server restarted due to configuration change"
         ifvarclass => "guacamole_server_restart";
+      "guacamole database fully configured"
+        ifvarclass => "config_guac_db";
+      "tomcat8 server is turned on and running"
+        ifvarclass => "tomcat8_server_on";
       "tomcat8 server restarted due to configuration change"
         ifvarclass => "tomcat8_server_restart";
 
@@ -208,7 +208,9 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guac_props_file]" string => "/etc/guacamole/guacamole.properties";
       "conf[guac_template_file]" string => "$(this.promise_dirname)/data/guacamole_properties.tpl.txt";
 
-      "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
+      "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/001-create-schema.sql";
+      # IF BELOW IS ENABLED, THEN THE DEFAULT guacadmin USER IS CREATED!
+      # "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
       
       "conf[guac_props][mysql-hostname]" string => "localhost";
       "conf[guac_props][mysql-port]" string => "3306";

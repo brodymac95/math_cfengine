@@ -75,7 +75,6 @@ bundle common cron_scheduler
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
-      "epoch time for 15min: $(15m_epoch_time)";
 }
 
 ######################################################################

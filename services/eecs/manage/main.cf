@@ -13,7 +13,8 @@ bundle common manage_main_file_control
 
       "input[active_directory_auth]" string => "$(this.promise_dirname)/ad_auth/main.cf";
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
-      "input[guacamole]" string => "$(this.promise_dirname)/guacamole/main.cf";
+      "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main.cf";
+      "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
@@ -130,7 +131,7 @@ bundle agent manage_os_tenant_cluster
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
     reboot_15m_after_host_creation::
-      "DANGEROUS: auto reboot host 15mins + 1min delay into lifecycle to ensure all services are fully operational"
+      "DANGEROUS: auto reboot 15mins + 1min delay into host lifecycle to ensure all services are fully operational"
 	usebundle => reboot ("1", "CFEngine: scheduled maintenance reboot at lifecycle start");
       
     reboot_allowed::

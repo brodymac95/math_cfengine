@@ -12,7 +12,6 @@
 body file control
 {
 	inputs => { "$(sys.libdir)/stdlib.cf",
-		    "database.cf",
 		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
 }
 
@@ -23,7 +22,7 @@ body file control
 # NOTES for future development of configuration:
 # 1. how to get feedback from database?
 
-bundle agent guac_database
+bundle agent configure_guac_database
 # bundle agent web_server(state)
 # @description: manipulates underlying mySQL database for Guacamole server
 # NOTE: uses the CFE service state on/off for enabling configuration!!
@@ -32,10 +31,7 @@ bundle agent guac_database
   vars:
 
       ## TESTING VARS ONLY
-      "apache_exec" string => "/usr/sbin/apache2";
       # "username" string => "guacadmin";
-      # "username" string => "d693f574";
-      "username" string => "bcroose";
 
       ## GLOBAL PARAMETERS
       "params" string => "guac_database_vars";
@@ -61,15 +57,9 @@ bundle agent guac_database
       "cluster_ip_list" slist => splitstring( "$(clean_cluster_string2)", "\", \"", "1000" ),
         comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
                     since this parameter is defined as a comma_limited_list in openstack heat templates.
-                    Need to clean it by removing start chars and end chars, then split ips into a list"; 
+                    Need to clean it by removing start/end chars, null entries, then split ips into a list"; 
      
   classes:      
-      
-      # DEFINE SERVER STATES
-      # "on"  expression => "any";
-      # "on"  expression => strcmp("$(state)","on");
-      # "off" expression => strcmp("$(state)","off");
-
       "openstack_cache_dir_exists"
       	expression => fileexists( "$(openstack_cache_dir)/." );
 
@@ -97,62 +87,65 @@ bundle agent guac_database
 
     ## BUILD CONNECTIONS INTO CLUSTER
     have_cluster_ip_list::
-      "create an SSH load-balanced root connection group with session affinity=true"
-      	usebundle => guac_create_connection_group( "$($(params).ssh_group_name)", "BALANCING", "", "TRUE", "$(params)" ),
+      "create an SSH load-balanced root connection group with session affinity=true(1)"
+      	usebundle => guac_create_connection_group( "$($(params).ssh_group_name)", "BALANCING", "", "1", "$(params)" ),
         classes => if_ok("ssh_group_created");
 
-      "create an RDP load-balanced root connection group with session affinity=true"
-      	usebundle => guac_create_connection_group( "$($(params).rdp_group_name)", "BALANCING", "", "TRUE", "$(params)" ),
+      "create an RDP load-balanced root connection group with session affinity=true(1)"
+      	usebundle => guac_create_connection_group( "$($(params).rdp_group_name)", "BALANCING", "", "1", "$(params)" ),
         classes => if_ok("rdp_group_created");
       
     ssh_group_created.have_cluster_ip_list::
       "create SSH connections to hosts within SSH load-balanced group"
       	usebundle => guac_create_connection( "$($(params).ssh_group_name)_$(cluster_ip_list)", "$(cluster_ip_list)",
-					     "ssh", "$(ssh_group_name)", "$(params)" );
-      	# usebundle => guac_create_connection( canonify( "$(ssh_group_name)_$(cluster_ip_list)" ), "$(cluster_ip_list)",
-	# 				     "ssh", "$(ssh_group_name)", "$(params)" );
+					     "ssh", "$($(params).ssh_group_name)", "$(params)" );
 
     rdp_group_created.have_cluster_ip_list::
       "create RDP connections to hosts within RDP load-balanced group"
       	usebundle => guac_create_connection( "$($(params).rdp_group_name)_$(cluster_ip_list)", "$(cluster_ip_list)",
-					     "rdp", "$(rdp_group_name)", "$(params)" );
-
-    ## CREATE USERS IN DATABASE
+					     "rdp", "$($(params).rdp_group_name)", "$(params)" );
+      
+    ## CREATE USERS IN DATABASE AND ADD CONNECTION PERMISSIONS TO EACH USER
     any::
       "import CSV data for all students enrolled in EECS classes from ITS source file"
         usebundle => import_user_data( "$(params)" ),
         classes => if_ok("student_users_imported");
 
-    student_users_imported::
-      "create each student user from imported CSV data"
+    have_cluster_ip_list.student_users_imported::
+      "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
       	usebundle => guac_create_user(
-      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.mywsu_col)])",
-      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.fullname_col)])",
-      			"$(import_user_data.student_user_data[$(import_user_data.student_user_row_index)][$(import_user_data.email_col)])",
-      			"$($(params).student_user_organization)",
-      			"$($(params).student_user_role)",
-      			"$(params)");
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.fullname_col)])",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
+    	  "$($(params).student_user_organization)",
+      	  "$($(params).student_user_role)",
+          "$(params)"),
+        classes => results("bundle", "student_user");
 
-      
-      # "add each student user to SSH load-balanced connection group"
-      # 	usebundle => guac_add_user_to_connection( "group", "$(ssh_group_name)",
-      # 			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-      # 		        "$(params)");
+      "if user is created, add each student user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
 
-      # "add each student user to RDP load-balanced connection group"
-      # 	usebundle => guac_add_user_to_connection( "group", "$(rdp_group_name)",
-      # 			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-      # 		        "$(params)");
-      
-      # "add each student user to each SSH load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$(ssh_group_name)_$(cluster_ip_list)",
-      # 			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-      # 		        "$(params)");
+      "if user is created, add each student user to each SSH load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ip_list)",
+	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
 
-      # "add each student user to each RDP load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$(rdp_group_name)_$(cluster_ip_list)",
-      # 			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-      # 		        "$(params)");
+      "if user is created, add each student user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");      
+
+      "if user is created, add each student user to each RDP load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ip_list)",
+	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
+
+    any::
+      "delete temporary sql query and insert files from cache directory after file is older than 1 day"
+        usebundle => guac_tidy ("$($(params).sql_cache_dir)", "1" );
+
 
   reports:
     (inform_mode|verbose_mode)::
@@ -164,21 +157,10 @@ bundle agent guac_database
       # "initial openstack metadata: $(cluster_host_data)";
       # "cleaned string 1 from openstack metadata: $(clean_cluster_string1)";
       # "cleaned string 2 from openstack metadata: $(clean_cluster_string2)";
-      "cluster host ips found in openstack metadata: $(cluster_ip_list)";
+      "cluster host ips found in openstack metadata: $(cluster_ip_list)"
+      ifvarclass => "have_cluster_ip_list";
 
-      ## FIX HERE::
-      "mywsu_ids: $(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])";
-
-      # "web server (apache2) is not installed on this host"
-      #   ifvarclass => "!apache_exists";
-      # "web server (apache2) is turned off"
-      #   ifvarclass => "web_server_off";
-      # "web server (apache2) is turned on and running"
-      #   ifvarclass => "web_server_on";
-      # "web server (apache2) restarted due to configuration change"
-      #   ifvarclass => "web_server_restart";
-      # "web server (apache2) reloaded due to configuration change"
-      #   ifvarclass => "web_server_reload";
+      # "mywsu_ids: $(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])";
 }
 
 ######################################################################
@@ -190,6 +172,7 @@ bundle agent guac_database_vars
       "database" string => "guacamole_db";
 
     ## FILE PARAMETERS
+      "sql_cache_dir" string => "$(sys.workdir)/state/mysql/";
       "create_connection_group_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection_group";
       "create_connection_group_template" string => "$(this.promise_dirname)/data/create_connection_group.sql.mustache";
       "create_connection_sql" string => "$(sys.workdir)/state/mysql/guac_create_connection";
@@ -199,7 +182,7 @@ bundle agent guac_database_vars
       "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection";
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
       
-      "its_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall.csv";
+      "its_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
       "user_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
       "user_cache_dir" string => "$(sys.workdir)/state/user_lists/";
 
@@ -286,18 +269,18 @@ bundle agent guac_database_vars
 
 ######################################################################
 
-bundle agent guac_create_connection_group(groupname, type, parent_group, enable_session_afinity, params)
+bundle agent guac_create_connection_group(groupname, type, parent_group, enable_session_affinity, params)
 # @description: use a mustache template to add entries into required mySQL tables for a guacamole connection group "name" with "type" under a "parent group" (connection group name?), and whether "session_afinity" is required using a set of global parameters
 {
   vars:
       "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
       "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
 
-      "mysql_group_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(groupname)';\" ";
+      "mysql_group_query" string => " \"SELECT connection_group_id FROM guacamole_connection_group WHERE connection_group_name = '$(groupname)';\" ";
       "mysql_group_result" string => execresult("$(mysql_execute_cmd) $(mysql_group_query)","useshell");
 
     parent_group_defined::
-      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_namtenant=$(keystone tenant-list | awk '/tenantName/ {print $2}')e = '$(parent_group)';\" ";
+      "mysql_parent_query" string => " \"SELECT connection_group_id FROM guacamole_connection_group WHERE connection_group_name='$(parent_group)';\" ";
       "mysql_parent_id_result" string => execresult("$(mysql_execute_cmd) $(mysql_parent_query)","useshell");
 
   classes:
@@ -367,19 +350,25 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
       "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
       "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
 
-      "mysql_con_query" string => " \"select connection_id from guacamole_connection where connection_name = '$(conname)';\" ";
+      "mysql_con_query" string => " \"SELECT connection_id FROM guacamole_connection WHERE connection_name='$(conname)';\" ";
       "mysql_con_result" string => execresult("$(mysql_execute_cmd) $(mysql_con_query)","useshell");
 
     parent_group_defined::
-      "mysql_parent_query" string => " \"select connection_group_id from guacamole_connection_group where connection_group_name = '$(parent_group)';\" ";
+      "mysql_parent_query" string => " \"SELECT connection_group_id FROM guacamole_connection_group WHERE connection_group_name='$(parent_group)';\" ";
       "mysql_parent_id_result" string => execresult("$(mysql_execute_cmd) $(mysql_parent_query)","useshell");
 
   classes:      
       "ssh_connection"  expression => strcmp("$(protocol)","ssh");
       "rdp_connection"  expression => strcmp("$(protocol)","rdp");
 
+      # "mysql_query_complete"
+      #   expression => isvariable( "mysql_con_result" );
+      
+      # "connection_exists"
+      #   expression => eval( "$(mysql_con_result) > 0", "class", "infix" ),
+      #   comment => "check mysql query result does not contain one or more characters";
       "connection_does_not_exist"
-	not => regcmp(".+","$(mysql_con_result)"),
+      	not => regcmp(".+","$(mysql_con_result)"),
         comment => "check mysql query result does not contain one or more characters";
 
       "parent_group_not_defined"
@@ -401,10 +390,10 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
         template_method => "mustache",
         edit_template => "$($(params).create_connection_template)",
         classes => results("bundle", "create_connection_sql"),
-	comment => "expand create_connection_sql file using template from staging cache in this promise directory";
+      	comment => "expand create_connection_sql file using template from staging cache in this promise directory";
 
   commands:
-    create_connection_sql_repaired|create_connection_sql_kept::
+    (create_connection_sql_repaired|create_connection_sql_kept)::
       "$(mysql_import_cmd)"
         args => "$($(params).create_connection_sql)_$(conname).sql",
         contain => in_shell,
@@ -436,9 +425,9 @@ bundle agent guac_create_user(username, full_name, email_address, organization, 
       "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
       "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
 
-      "mysql_user_query" string => " \"select user_id from guacamole_user where username = '$(username)';\" ";
+      "mysql_user_query" string => " \"SELECT user_id FROM guacamole_user WHERE username = '$(username)';\" ";
       "mysql_user_result" string => execresult("$(mysql_execute_cmd) $(mysql_user_query)","useshell");
-
+      
   classes:      
       "user_does_not_exist"
 	not => regcmp(".+","$(mysql_user_result)"),
@@ -451,29 +440,15 @@ bundle agent guac_create_user(username, full_name, email_address, organization, 
         template_method => "mustache",
         edit_template => "$($(params).create_user_template)",
         classes => results("bundle", "create_user_sql"),
-	comment => "expand create_user_sql file using template from staging cache in this promise directory";
+  	comment => "expand create_user_sql file using template from staging cache in this promise directory";
 
   commands:
-  #   create_user_sql_repaired|create_user_sql_kept::
-  #     "$(mysql_import_cmd)"
-  #       args => "$($(params).create_user_sql)_$(username).sql",
-  #       contain => in_shell,
-  #     	classes => results("bundle", "create_user"),
-  #       comment => "add user $(username) into guacamole database";
-
-  # methods:
-  #   user_does_not_exist::
-  #     "add user to SSH load-balanced connection group"
-  #     	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)", "$(username)", "$(params)");
-
-  #     "add user to RDP load-balanced connection group"
-  #     	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)", "$(username)", "$(params)");
-      
-  #     "add user to each SSH load-balanced connection"
-  #     	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
-
-  #     "add user to each RDP load-balanced connection"
-  #     	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(guac_database.cluster_ip_list)", "$(username)", "$(params)");
+    create_user_sql_repaired|create_user_sql_kept::
+      "$(mysql_import_cmd)"
+        args => "$($(params).create_user_sql)_$(username).sql",
+        contain => in_shell,
+      	classes => results("bundle", "create_user"),
+        comment => "add user $(username) into guacamole database";
       
   reports:
     (inform_mode|verbose_mode)::
@@ -497,14 +472,24 @@ bundle agent guac_add_user_to_connection(type, conname, username, params)
       "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
       "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
 
-      # "mysql_con_query" string => " \"select * from guacamole_connection_permisson where connection_name='$(conname)';\" ";
-      # "mysql_con_result" string => execresult("$(mysql_execute_cmd) $(mysql_con_query)","useshell");
+    guac_connection::
+      "mysql_con_query" string => " \"SELECT guacamole_connection_permission.* FROM guacamole_connection_permission JOIN guacamole_user ON (guacamole_user.user_id = guacamole_connection_permission.user_id) JOIN guacamole_connection ON (guacamole_connection.connection_id=guacamole_connection_permission.connection_id) WHERE username='$(username)' AND connection_name='$(conname)';\" ";
+    guac_group::
+      "mysql_perm_query" string => " \"SELECT guacamole_connection_group_permission.* FROM guacamole_connection_group_permission JOIN guacamole_user ON (guacamole_user.user_id = guacamole_connection_group_permission.user_id) JOIN guacamole_connection_group ON (guacamole_connection_group.connection_group_id=guacamole_connection_group_permission.connection_group_id) WHERE username='$(username)' AND connection_group_name='$(conname)';\" ";
+
+    guac_connection|guac_group::
+      "mysql_perm_result" string => execresult("$(mysql_execute_cmd) $(mysql_perm_query)","useshell");
 
   classes:
       "guac_connection"  expression => strcmp("$(type)","connection");
       "guac_group"  expression => strcmp("$(type)","group");
+
+      "permission_does_not_exist"
+	not => regcmp(".+","$(mysql_perm_result)"),
+        comment => "check mysql query result does not contain one or more characters";
       
   files:
+    permission_does_not_exist::
       "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql"
         create => "true",
         template_method => "mustache",
@@ -533,6 +518,8 @@ bundle agent guac_add_user_to_connection(type, conname, username, params)
       
       "ERROR: type of '$(type)' found. Type must be defined as 'connection' or 'group'"
         ifvarclass => "!guac_connection.!guac_group";      
+      "WARNING: Not adding connection permission. $(username) and $(conname) permission exists in database: $(mysql_perm_result)"
+        ifvarclass => "!permission_does_not_exist";
 }
 
 ######################################################################
@@ -543,22 +530,25 @@ bundle agent import_user_data(params)
 # This bundle uses a perl command to convert the ITS source file from /n to /r/n at end of lines 
 {
   vars:
-    ## FILES
-      "csv_fix_cmd" string => "perl -pe 's|\n|\r\n|' ";
-      "user_csv_source_cache" string => lastnode( "$($(params).its_user_source_path)", "/" );
-      "user_csv_fixed_file" string => "$($(params).user_csv_fixed_file)";
-      
     ## CSV DEFINED COLUMNS
       "mywsu_col" string => "0";
       "fullname_col" string => "3";
       "email_col" string => "5";
 
+    ## COMMANDS
+      "perl_lc_mywsu_cmd" string =>"perl -F, -lane '$F[$(mywsu_col)]=~s/(\w+)/lc($1)/ge; print join(\",\",@F);' ";
+      "perl_crlf_fix_cmd" string => "perl -pe 's|\n|\r\n|;' ";
+
+    ## FILES
+      "user_csv_source_cache" string => lastnode( "$($(params).its_user_source_path)", "/" );
+      "user_csv_fixed_file" string => "$($(params).user_csv_fixed_file)";
+
     ## CSV DATA MANIPULATION
     csv_fixed_file_exists::
-      "student_user_data" data => readcsv( "$($(params).user_cache_dir)/$(user_csv_fixed_file)" );
-        # "csv_str" string => format("%S", csv_data);
+      "student_data" data => readcsv( "$($(params).user_cache_dir)/$(user_csv_fixed_file)" );
+      # "csv_str" string => format("%S", "student_data");
 
-      "student_user_row_index" slist => getindices( "student_user_data" );
+      "row_index" slist => getindices( "student_data" );
         # action => if_elapsed("60");
 
   classes:
@@ -582,22 +572,11 @@ bundle agent import_user_data(params)
 
   commands:
     !csv_fixed_file_exists|user_csv_cache_repaired::
-      "$(csv_fix_cmd)"
-        args => "$(user_csv_source_cache) > $(user_csv_fixed_file)",
+      "$(perl_lc_mywsu_cmd) $(user_csv_source_cache)"
+        args => "| $(perl_crlf_fix_cmd) > $(user_csv_fixed_file)",
         contain => in_dir_shell( "$($(params).user_cache_dir)" ),
       	classes => results("bundle", "csv_fixed"),
-        comment => "turn all \n in file to \r\n as required in CSV standard RFC 4180";
-
-  # methods:
-  #     "create each student user from imported CSV data"
-  #     	usebundle => guac_create_user(
-  #     			"$(student_user_data[$(student_user_row_index)][$(import_user_data.mywsu_col)])",
-  #     			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.fullname_col)])",
-  #     			"$(import_user_data.student_user_data[$(student_user_row_index)][$(import_user_data.email_col)])",
-  #     			"$($(params).student_user_organization)",
-  #     			"$($(params).student_user_role)",
-  #     			"$(params)");
-
+        comment => "ensure myWSU_IDs are lowercase and turn all \n in file to \r\n as required in CSV standard RFC 4180";
       
   reports:
     (inform_mode|verbose_mode)::
@@ -610,7 +589,25 @@ bundle agent import_user_data(params)
 	ifvarclass => "csv_fixed_file_exists";
       
       # "csv_str: $(csv_str)";
-      # "csv_data = all rows/all cols: $(student_user_data[$(student_user_row_index)])";
+      # "csv_data = all rows/all cols: $(student_data[$(student_row_index)])";
+}
+
+######################################################################
+
+bundle agent guac_tidy(cdir, day)
+{
+# @description: delete all guac sql query files after specified days
+  files:
+      "$(cdir)/*guac*"
+	pathtype => "regex",
+        file_select => days_old( "$(day)" ),
+	delete => tidy;
+
+  reports:
+   (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_guacamole)::
 }
 
 ######################################################################
