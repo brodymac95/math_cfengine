@@ -85,67 +85,18 @@ bundle agent configure_guac_database
       "create required variables"
         usebundle => guac_database_vars;
 
-    ## BUILD CONNECTIONS INTO CLUSTER
     have_cluster_ip_list::
-      "create an SSH load-balanced root connection group with session affinity=true(1)"
-      	usebundle => guac_create_connection_group( "$($(params).ssh_group_name)", "BALANCING", "", "1", "$(params)" ),
-        classes => if_ok("ssh_group_created");
+      "add all groups and connections into guacamole database"
+        usebundle => guac_add_all_connections( "@(cluster_ip_list)", "$(params)" ),
+        classes => if_ok("connections_added");
 
-      "create an RDP load-balanced root connection group with session affinity=true(1)"
-      	usebundle => guac_create_connection_group( "$($(params).rdp_group_name)", "BALANCING", "", "1", "$(params)" ),
-        classes => if_ok("rdp_group_created");
-      
-    ssh_group_created.have_cluster_ip_list::
-      "create SSH connections to hosts within SSH load-balanced group"
-      	usebundle => guac_create_connection( "$($(params).ssh_group_name)_$(cluster_ip_list)", "$(cluster_ip_list)",
-					     "ssh", "$($(params).ssh_group_name)", "$(params)" );
-
-    rdp_group_created.have_cluster_ip_list::
-      "create RDP connections to hosts within RDP load-balanced group"
-      	usebundle => guac_create_connection( "$($(params).rdp_group_name)_$(cluster_ip_list)", "$(cluster_ip_list)",
-					     "rdp", "$($(params).rdp_group_name)", "$(params)" );
-      
-    ## CREATE USERS IN DATABASE AND ADD CONNECTION PERMISSIONS TO EACH USER
-    any::
-      "import CSV data for all students enrolled in EECS classes from ITS source file"
-        usebundle => import_user_data( "$(params)" ),
-        classes => if_ok("student_users_imported");
-
-    have_cluster_ip_list.student_users_imported::
-      "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
-      	usebundle => guac_create_user(
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.fullname_col)])",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
-    	  "$($(params).student_user_organization)",
-      	  "$($(params).student_user_role)",
-          "$(params)"),
-        classes => results("bundle", "student_user");
-
-      "if user is created, add each student user to SSH load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
-      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
-
-      "if user is created, add each student user to each SSH load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ip_list)",
-	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
-
-      "if user is created, add each student user to RDP load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
-      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");      
-
-      "if user is created, add each student user to each RDP load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ip_list)",
-	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
+    connections_added::
+      "import and add all users into guacamole database"
+        usebundle => guac_add_all_users( "@(cluster_ip_list)", "$(params)" );
 
     any::
       "delete temporary sql query and insert files from cache directory after file is older than 1 day"
         usebundle => guac_tidy ("$($(params).sql_cache_dir)", "1" );
-
 
   reports:
     (inform_mode|verbose_mode)::
@@ -158,9 +109,7 @@ bundle agent configure_guac_database
       # "cleaned string 1 from openstack metadata: $(clean_cluster_string1)";
       # "cleaned string 2 from openstack metadata: $(clean_cluster_string2)";
       "cluster host ips found in openstack metadata: $(cluster_ip_list)"
-      ifvarclass => "have_cluster_ip_list";
-
-      # "mywsu_ids: $(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])";
+	ifvarclass => "have_cluster_ip_list";
 }
 
 ######################################################################
@@ -181,13 +130,15 @@ bundle agent guac_database_vars
       "create_user_template" string => "$(this.promise_dirname)/data/create_user.sql.mustache";
       "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection";
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
-      
-      "its_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
-      "user_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
+     
       "user_cache_dir" string => "$(sys.workdir)/state/user_lists/";
+      "persistent_user_source_path" string => "/srv/cfengine/configs/user_lists/persistent_gateway_users.json";
+      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
+      "student_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
 
     ## USER PARAMETERS
-      "student_user_organization" string => "EECS";
+      "eecs_user_organization" string => "EECS";
+      "faculty_user_role" string => "Faculty";
       "student_user_role" string => "Student";
       "username" string => "${GUAC_USERNAME}",
         comment => "Parameter token: ${GUAC_USERNAME} = username of the current Guacamole user";
@@ -260,11 +211,120 @@ bundle agent guac_database_vars
 
       "rdp_enable_printing" string => "true",
         comment => "when true, RDP users can print to a virtual printer that sends a PDF containing the document printed to the Guacamole client";
-
       
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent guac_add_all_connections(cluster_ips, params)
+# @description: create all connection groups and coonections
+{
+  vars:
+      
+  methods:
+      
+      "create an SSH load-balanced root connection group with session affinity=true(1)"
+      	usebundle => guac_create_connection_group( "$($(params).ssh_group_name)", "BALANCING", "", "1", "$(params)" ),
+        classes => if_ok("ssh_group_created");
+
+      "create an RDP load-balanced root connection group with session affinity=true(1)"
+      	usebundle => guac_create_connection_group( "$($(params).rdp_group_name)", "BALANCING", "", "1", "$(params)" ),
+        classes => if_ok("rdp_group_created");
+      
+    ssh_group_created::
+      "create SSH connections to hosts within SSH load-balanced group"
+      	usebundle => guac_create_connection( "$($(params).ssh_group_name)_$(cluster_ips)", "$(cluster_ips)",
+					     "ssh", "$($(params).ssh_group_name)", "$(params)" );
+
+    rdp_group_created::
+      "create RDP connections to hosts within RDP load-balanced group"
+      	usebundle => guac_create_connection( "$($(params).rdp_group_name)_$(cluster_ips)", "$(cluster_ips)",
+					     "rdp", "$($(params).rdp_group_name)", "$(params)" );
+      
+}
+
+######################################################################
+
+bundle agent guac_add_all_users(cluster_ips, params)
+# @description create users in database and add connection permissions to each user
+{
+  vars:
+
+  methods:
+      "import CSV data for all persistent users and students enrolled in EECS classes"
+        usebundle => import_user_data( "$(params)" ),
+        classes => if_ok("users_imported");
+
+    users_imported::
+    ## FACULTY USERS
+      "create each faculty user from persistent user json file"
+      	usebundle => guac_create_user(
+    	  "$(import_user_data.faculty_users)",
+    	  "$(import_user_data.faculty_data[$(import_user_data.faculty_users)][fullname])",
+    	  "$(import_user_data.faculty_data[$(import_user_data.faculty_users)][email])",
+    	  "$($(params).eecs_user_organization)",
+      	  "$($(params).faculty_user_role)",
+          "$(params)" );
+        # classes => results("bundle", "faculty_user");
+
+      "add each faculty user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+          "$(import_user_data.faculty_users)", "$(params)" );
+
+      "add each faculty user to each SSH load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+          "$(import_user_data.faculty_users)", "$(params)" );
+
+      "add each faculty user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      "$(import_user_data.faculty_users)", "$(params)" );
+
+      "add each faculty user to each RDP load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+          "$(import_user_data.faculty_users)", "$(params)" );
+
+    ## STUDENT USERS
+      "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
+      	usebundle => guac_create_user(
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.fullname_col)])",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
+    	  "$($(params).eecs_user_organization)",
+      	  "$($(params).student_user_role)",
+          "$(params)");
+        # classes => results("bundle", "student_user");
+
+      "add each student user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
+
+      "add each student user to each SSH load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
+
+      "add each student user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");      
+
+      "add each student user to each RDP load-balanced connection"
+      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+          "$(params)");
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_guacamole)::
+      "=== $(this.bundle) ===";
+
+      # "mywsu_ids: $(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])";
 }
 
 ######################################################################
@@ -530,7 +590,7 @@ bundle agent import_user_data(params)
 # This bundle uses a perl command to convert the ITS source file from /n to /r/n at end of lines 
 {
   vars:
-    ## CSV DEFINED COLUMNS
+    ## CSV DEFINED COLUMNS FOR ITS STUDENT USER FILE
       "mywsu_col" string => "0";
       "fullname_col" string => "3";
       "email_col" string => "5";
@@ -540,42 +600,71 @@ bundle agent import_user_data(params)
       "perl_crlf_fix_cmd" string => "perl -pe 's|\n|\r\n|;' ";
 
     ## FILES
-      "user_csv_source_cache" string => lastnode( "$($(params).its_user_source_path)", "/" );
-      "user_csv_fixed_file" string => "$($(params).user_csv_fixed_file)";
+      "persistent_user_cache" string => lastnode( "$($(params).persistent_user_source_path)", "/" );
+      "student_csv_source_cache" string => lastnode( "$($(params).its_student_user_source_path)", "/" );
+      "student_csv_fixed_file" string => "$($(params).student_csv_fixed_file)";
 
-    ## CSV DATA MANIPULATION
-    csv_fixed_file_exists::
-      "student_data" data => readcsv( "$($(params).user_cache_dir)/$(user_csv_fixed_file)" );
-      # "csv_str" string => format("%S", "student_data");
+    ## GENERATE USER DATA STRUCTURES
+    persistent_user_cache_exists::
+      "persistent_user_data" data => readjson( "$($(params).user_cache_dir)/$(persistent_user_cache)", 1M),
+        comment => "pull in data from cached persistent user json file";
+      "json_str_persistent_user_data" string => format("%S", "persistent_user_data");
 
-      "row_index" slist => getindices( "student_data" );
+      "faculty_data" data => mergedata( "persistent_user_data[faculty]" ),
+        comment => "create data subset of faculty users from all persistent user data";
+      "faculty_users" slist => getindices( "faculty_data" ),
+        comment => "create a list of all faculty user myWSU_IDs from faculty_data subset";
+
+      # "grader_data" data => mergedata( "persistent_user_data[graders]" ),
+      #   comment => "UNUSED FOR NOW: create data subset of grader users from all persistent user data";
+      # "grader_user" slist => getindices( "grader_data" ),
+      #   comment => "create a list of all grader user myWSU_IDs from grader_data subset";
+
+    student_fixed_file_exists::
+      "student_data" data => readcsv( "$($(params).user_cache_dir)/$(student_csv_fixed_file)" ),
+        comment => "pull in data from cached student user csv file after fixes performed";
+      # "csv_str_student_data" string => format("%S", "student_data");
+      "row_index" slist => getindices( "student_data" ),
+        comment => "create a numerical index of all rows found in student_data from underlying CSV file";
+
         # action => if_elapsed("60");
 
   classes:
-      "user_csv_source_cache_exists"
-	expression => fileexists( "$($(params).user_cache_dir)/$(user_csv_source_cache)" );
+      "persistent_user_cache_exists"
+	expression => fileexists( "$($(params).user_cache_dir)/$(persistent_user_cache)" );
 
-      "csv_fixed_file_exists"
-      	expression => fileexists( "$($(params).user_cache_dir)/$(user_csv_fixed_file)" );
+      "student_csv_source_cache_exists"
+	expression => fileexists( "$($(params).user_cache_dir)/$(student_csv_source_cache)" );
+
+      "student_fixed_file_exists"
+      	expression => fileexists( "$($(params).user_cache_dir)/$(student_csv_fixed_file)" );
       
   files:
       "$($(params).user_cache_dir)/."
 	create => "true",
         comment => "ensure the user_cache directory exists";
       
-      "$($(params).user_cache_dir)/$(user_csv_source_cache)"
+      "$($(params).user_cache_dir)/$(persistent_user_cache)"
 	perms => mo("400","root"),
-	copy_from => secure_cp( "$($(params).its_user_source_path)", $(sys.policy_hub) ),
-      	classes => results("bundle", "user_csv_cache"),
+	copy_from => secure_cp( "$($(params).persistent_user_source_path)", $(sys.policy_hub) ),
+      	classes => results("bundle", "persistent_user_cache"),
 	# action => if_elapsed("60"),
-	comment => "perform a secure remote copy of the ITS user_list csv file";
+	comment => "perform a secure remote copy of the persistent gateway users json file";
+
+      "$($(params).user_cache_dir)/$(student_csv_source_cache)"
+	perms => mo("400","root"),
+	copy_from => secure_cp( "$($(params).its_student_user_source_path)", $(sys.policy_hub) ),
+      	classes => results("bundle", "student_csv_cache"),
+	# action => if_elapsed("60"),
+	comment => "perform a secure remote copy of the ITS student user list csv file";
 
   commands:
-    !csv_fixed_file_exists|user_csv_cache_repaired::
-      "$(perl_lc_mywsu_cmd) $(user_csv_source_cache)"
-        args => "| $(perl_crlf_fix_cmd) > $(user_csv_fixed_file)",
+      ## CSV DATA MANIPULATION AND REPAIRS
+    !student_fixed_file_exists|student_csv_cache_repaired::
+      "$(perl_lc_mywsu_cmd) $(student_csv_source_cache)"
+        args => "| $(perl_crlf_fix_cmd) > $(student_csv_fixed_file)",
         contain => in_dir_shell( "$($(params).user_cache_dir)" ),
-      	classes => results("bundle", "csv_fixed"),
+      	classes => results("bundle", "student_csv_fixed"),
         comment => "ensure myWSU_IDs are lowercase and turn all \n in file to \r\n as required in CSV standard RFC 4180";
       
   reports:
@@ -586,10 +675,11 @@ bundle agent import_user_data(params)
       "=== $(this.bundle) ===";
 
       "student user list csv file exists in cache"
-	ifvarclass => "csv_fixed_file_exists";
+	ifvarclass => "student_fixed_file_exists";
       
-      # "csv_str: $(csv_str)";
-      # "csv_data = all rows/all cols: $(student_data[$(student_row_index)])";
+      # "csv_str_student_data: $(csv_str_student_data)";
+      # "student_data = all rows/all cols: $(student_data[$(row_index)])";
+      "Faculty myWSU_id = $(faculty_users)";
 }
 
 ######################################################################
