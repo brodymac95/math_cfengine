@@ -118,11 +118,11 @@ bundle agent manage_os_tenant_cluster
       "turn on guacamole service"  usebundle => guacamole_server("on");
       "turn on apache web service" usebundle => web_server("on");
 
-    dev_cluster.!uaf2_client::
+    cluster_node.!uaf2_client::
       "admin user management"      usebundle => manage_sys_users;
       "standard user management"   usebundle => manage_users;
 
-    dev_cluster.uaf2_client::
+    cluster_node.uaf2_client::
       "uaf2 user management"       usebundle => install_uaf2_client,
       	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
       "join host to ad domain"     usebundle => join_host_to_ad;
