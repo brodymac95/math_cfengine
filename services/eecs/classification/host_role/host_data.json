@@ -16,23 +16,36 @@
     "TESTING": {},
     "policyhub_dev": {
 	"machine": "server",
-	"purpose": "testing",
+	"purpose": "cfe-dev",
         "role": "policysrv",
-        "owner": "roose",
+        "owner": "development",
 	"authentication": "local_users_shared_group",
 	"users": {
             "roose": "Ben Roose",
 	   },
     },
-    "csdev_web_gateway": {
+    "devcluster_web_gw": {
 	"machine": "os_tenant_cluster",
-	"purpose": "testing",
+	"purpose": "testing-gateway",
+        "role": "guac_gateway",
+        "owner": "development",
+    },
+    "devcluster_node": {
+	"machine": "os_tenant_cluster",
+	"purpose": "testing-node",
+        "role": "dev_cluster",
+        "owner": "development",
+	"authentication": "uaf2_client",
+    },
+    "csprg_cluster_web_gw": {
+	"machine": "os_tenant_cluster",
+	"purpose": "csprg-gateway",
         "role": "guac_gateway",
         "owner": "eecs",
     },
-    "csdev_cluster": {
+    "csprg_cluster_node": {
 	"machine": "os_tenant_cluster",
-	"purpose": "testing",
+	"purpose": "csprg-node",
         "role": "dev_cluster",
         "owner": "eecs",
 	"authentication": "uaf2_client",

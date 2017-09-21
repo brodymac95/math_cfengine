@@ -132,10 +132,15 @@ bundle agent guac_database_vars
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
      
       "user_cache_dir" string => "$(sys.workdir)/state/user_lists/";
-      "persistent_user_source_path" string => "/srv/cfengine/configs/user_lists/persistent_gateway_users.json";
-      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
       "student_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
+      "persistent_user_source_path" string => "/srv/cfengine/configs/user_lists/persistent_gateway_users.json";
 
+    development::
+      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
+    !development::
+      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall.csv";
+
+    any::
     ## USER PARAMETERS
       "eecs_user_organization" string => "EECS";
       "faculty_user_role" string => "Faculty";
