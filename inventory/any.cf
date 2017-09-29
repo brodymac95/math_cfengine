@@ -74,8 +74,12 @@ bundle agent cfe_autorun_inventory_listening_ports
 # default, as it runs instantly and has no side effects.
 {
   vars:
-      "ports" slist => sort( "mon.listening_ports", "int"),
-      meta => { "inventory", "attribute_name=Ports listening" };
+      "ports" -> { "ENT-150" }
+        slist => sort( "mon.listening_ports", "int"),
+        meta => { "inventory", "attribute_name=Ports listening" },
+        ifvarclass => some("[0-9]+", "mon.listening_ports"),
+        comment => "We only want to inventory the listening ports if we have
+                    values that make sense.";
 }
 
 bundle agent cfe_autorun_inventory_ipv4_addresses
@@ -437,6 +441,7 @@ bundle agent cfe_autorun_inventory_dmidecode
   "system-serial-number": "System serial number",
   "system-manufacturer": "System manufacturer",
   "system-version": "System version",
+  "system-product-name": "System product name",
 }');
 
       # other dmidecode variables you may want:
@@ -454,7 +459,6 @@ bundle agent cfe_autorun_inventory_dmidecode
       # processor-family
       # processor-frequency
       # processor-manufacturer
-      # system-product-name
       # system-uuid
       #"processor-version": "CPU model" <- Collected by default, but not by iterating over the list
 
@@ -492,7 +496,7 @@ bundle agent cfe_autorun_inventory_dmidecode
       meta => { "inventory", "attribute_name=System version" };
 
       "dmi[processor-version]" string => $(processor_array[1]);
- 
+
       "split_pscomputername"
         slist => string_split($(system_array[1]), "PSComputerName\s.*", 2),
         comment => "Work around weird appearance of PSComputerName into System manufacturer";
@@ -529,13 +533,11 @@ bundle agent cfe_autorun_inventory_LLDP
 # testing, and your Friendly Network Admin may be of help too.
 {
   classes:
-      "disable_inventory_LLDP" not => fileexists($(inventory_control.lldpctl_exec));
+      "lldpctl_exec_exists" expression => fileexists($(inventory_control.lldpctl_exec));
 
-  commands:
-    !disable_inventory_LLDP::
-      "$(inventory_control.lldpctl_exec) | perl -n -e 'my ($k, $v) = m/([^=]+)=(.*)/; $k =~ s/\W/_/g; print \"=$k=$v\";"
-      classes => kept_successful_command,
-      module => "true";
+  vars:
+    !disable_inventory_LLDP.lldpctl_exec_exists::
+      "info" data => parsejson(execresult($(inventory_control.lldpctl_json), "noshell"));
 }
 
 bundle agent cfe_autorun_inventory_packages
@@ -560,8 +562,7 @@ bundle agent cfe_autorun_inventory_packages
   packages:
     # From 3.7 onwards there is a new package promise implementation using package
     # modules, in which case installing non_existing_package is not needed any more.
-    #(cfengine_3_5|cfengine_3_6).debian::
-    debian::
+    (cfengine_3_5|cfengine_3_6).debian::
       "cfe_internal_non_existing_package"
       package_policy => "add",
       package_method => inventory_apt_get($(refresh)),
@@ -569,8 +570,7 @@ bundle agent cfe_autorun_inventory_packages
 
     # From 3.7 onwards there is a new package promise implementation using package
     # modules, in which case installing non_existing_package is not needed any more.
-    #(cfengine_3_5|cfengine_3_6).redhat::
-    redhat::
+    (cfengine_3_5|cfengine_3_6).redhat::
       "cfe_internal_non_existing_package"
       package_policy => "add",
       package_method => inventory_yum_rpm($(refresh)),
@@ -787,8 +787,13 @@ bundle agent inventory_cmdb_load(file)
       "$(ckeys)" expression => "any", scope => "namespace";
 
   vars:
-      "cmdb" data => readjson($(file), "999999");
-      "cmdb_string" string => format("%S", cmdb);
+      "cmdb"
+        data => readjson($(file), "999999"),
+        ifvarclass => fileexists( $(file) );
+
+      "cmdb_string"
+      string => format("%S", cmdb),
+        ifvarclass => isvariable( cmdb );
 
       "bkeys" slist => getindices("cmdb[vars]");
       "vkeys_$(bkeys)" slist => getindices("cmdb[vars][$(bkeys)]");

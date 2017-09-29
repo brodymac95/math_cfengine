@@ -1,5 +1,6 @@
 # eecs_cfengine
 EECS CFEngine policyhub repo
+Forked from https://github.com/cfengine/masterfiles
 
 ## MASTER BRANCH - CFENGINE POLICY DEVELOPMENT ENVIRONMENT
 ## PRODUCTION BRANCH - CFENGINE POLICY PRODUCTION ENVIRONMENT

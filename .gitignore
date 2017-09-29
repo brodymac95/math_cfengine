@@ -1,4 +1,39 @@
+<<<<<<< HEAD
 cf_promises_release_id
 cf_promises_validated
 */cfengine_run.log
 */*~
+=======
+# autotools stuff
+Makefile
+Makefile.in
+stamp-h1
+/aclocal.m4
+/autom4te.cache
+/compile
+/config.guess
+/config.log
+/config.status
+/config.sub
+/configure
+/controls/3.6/update_def.cf
+/controls/update_def.cf
+/depcomp
+/install-sh
+/libtool
+/ltmain.sh
+/m4/libtool.m4
+/m4/lt*.m4
+/missing
+/promises.cf
+/revision
+/ylwrap
+/test-driver
+CFVERSION
+
+# Misc.
+/cf_promises_*
+
+# vim
+.*.sw[po]
+>>>>>>> upstream/master

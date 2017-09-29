@@ -18,11 +18,36 @@ bundle common cfe_internal_hub_vars
 {
   vars:
 
-    linux::
+    policy_server::
 
       "docroot" string => "$(sys.workdir)/httpd/htdocs",
-      comment => "Root directory of Enterprise Web interface",
-      handle => "cfe_internal_hub_vars_docroot";
+        comment => "Root directory of Enterprise Web interface",
+        handle => "cfe_internal_hub_vars_docroot";
+
+
+      # TODO Consider tagging these files for file integrity monitoring.
+
+      "SSLCertificateFile"
+        string => "$(sys.workdir)/httpd/ssl/certs/$(sys.fqhost).cert";
+
+      "SSLCertificateKeyFile"
+        string => "$(sys.workdir)/httpd/ssl/private/$(sys.fqhost).key";
+
+      "SSLCertificatePasswdKeyFile"
+        string => "$(sys.workdir)/httpd/ssl/private/$(sys.fqhost).pass.key";
+
+      "SSLCertificateSigningRequest"
+        string => "$(sys.workdir)/httpd/ssl/private/$(sys.fqhost).csr";
+
+      "SSLCnf"
+        string => "$(sys.workdir)/ssl/openssl.cnf";
+
+      "access_log" string => "$(sys.workdir)/httpd/logs/access_log";
+      "error_log"  string => "$(sys.workdir)/httpd/logs/error_log";
+      "ssl_request_log" string => "$(sys.workdir)/httpd/logs/ssl_request_log";
+
+      "SSLCertificateKeySize" string => "4096";
+      "SSLCertificateDaysValid" string => "3650";
 
 }
 
@@ -54,10 +79,14 @@ bundle agent cfe_internal_update_folders
                         "ubuntu_13_x86_64",
                         "ubuntu_14_i686",
                         "ubuntu_14_x86_64",
+                        "ubuntu_16_i686",
+                        "ubuntu_16_x86_64",
                         "centos_5_i686",
                         "centos_5_x86_64",
                         "centos_6_i686",
                         "centos_6_x86_64",
+                        "centos_7_i686",
+                        "centos_7_x86_64",
                         "redhat_4_i686",
                         "redhat_4_x86_64",
                         "redhat_5_i686",
@@ -96,7 +125,7 @@ bundle agent cfe_internal_update_folders
 
   files:
 
-      "$(sys.workdir)/master_software_updates/$(dirs)/." -> { "goal_updated" }
+      "$(sys.workdir)/master_software_updates/$(dirs)/."
       comment => "Prepare binary upgrade folders for all distributions in our environment",
       handle => "cfe_internal_update_folders_files_create_dirs",
       create => "true";
@@ -148,163 +177,31 @@ bundle edit_line apache_sudoer
       "$(def.cf_apache_user) ALL=(ALL) NOPASSWD:$(sys.bindir)/cf-runagent *"
       comment => "Add Apache user to run passwordless sudo cf-runagent",
       handle => "apache_sudoer_insert_lines";
-
 }
 
-##################################################################
-#
-# cfe_internal_webserver(on/off)
-#  ***this is a new one***
-##################################################################
 
-bundle agent cfe_internal_webserver(state)
-{
-
-  classes:
-
-      "on"       expression => strcmp("$(state)","on"),
-      comment => "Check if a keyword \"on\" is inputs",
-      handle => "cfe_internal_webserver_classes_on";
-
-      "off"      expression => strcmp("$(state)","off"),
-      comment => "Check if a keyword \"off\" is inputs",
-      handle => "cfe_internal_webserver_classes_off";
-
-      #
-
-  processes:
-
-    am_policy_hub.on::
-
-      ".*$(sys.workdir)/httpd/bin/httpd.*"
-      restart_class => "start_cfe_httpd",
-      comment => "Check if CFE httpd process exists or not",
-      handle => "cfe_internal_webserver_processes_start_cfe_httpd";
-
-      #
-
-  commands:
-
-    start_cfe_httpd::
-
-      "LD_LIBRARY_PATH=$(sys.workdir)/lib:$LD_LIBRARY_PATH $(sys.workdir)/httpd/bin/apachectl start"
-      comment => "Start CFE httpd process if not exist",
-      classes => kept_successful_command,
-      handle => "cfe_internal_webserver_commands_start_cfe_httpd",
-      contain => in_shell;
-
-}
-
-##################################################################
-#
-# cfe_internal_httpd_related
-#  - to change default TCP (80) port of MP
-#
-##################################################################
-
-bundle agent cfe_internal_httpd_related
-{
-  vars:
-
-    am_policy_hub::
-
-      "tcp_port" string => "80",
-      comment => "TCP port that MP is using",
-      handle => "cfe_internal_httpd_related_vars_tcp_port";
-
-      #
-
-  files:
-
-    am_policy_hub::
-
-      "$(sys.workdir)/httpd/conf/httpd.conf"
-      comment => "Change TCP port on CFEngine httpd configuration",
-      handle => "cfe_internal_httpd_related_files_httpd_conf",
-      edit_line => change_port("$(tcp_port)"),
-      classes => if_repaired("restart_cfe_httpd");
-
-      "$(sys.workdir)/httpd/htdocs/application/config/appsettings.php"
-      comment => "Add TCP port to MP setting",
-      handle => "cfe_internal_httpd_related_files_appsettings_php",
-      edit_line => change_appsettings("$(tcp_port)");
-
-      #
-
-  commands:
-
-    restart_cfe_httpd::
-
-      "LD_LIBRARY_PATH=$(sys.workdir)/lib:$LD_LIBRARY_PATH $(sys.workdir)/httpd/bin/apachectl restart"
-      comment => "Restart CFEngine httpd if there is a change on configuration",
-      classes => kept_successful_command,
-      handle => "cfe_internal_httpd_related_commands_apachectl_restart",
-      contain => in_shell;
-
-}
-
-      #
-
-bundle edit_line change_port(p)
-{
-  replace_patterns:
-
-    any::
-
-      "^\s*Listen(\s+)(?!$(p)$).*$"
-      comment => "Match Listen line and replace",
-      handle => "cfe_internal_change_port_edit_line_listen_port",
-      replace_with => value("Listen $(p)");
-
-}
-
-      #
-
-bundle edit_line change_appsettings(p)
-{
-  classes:
-
-    any::
-
-      "original_config"
-      expression => strcmp("$(p)","80"),
-      comment => "If the port is 80 then create a class",
-      handle => "cfe_internal_change_appsettings_classes_port_80";
-
-      #
-
-  replace_patterns:
-
-    original_config::
-      "\s+\$config\['rest_server'\]\s+=\s+\$protocol\s+\.\s+'localhost'\s+\.\s+'(?!/api).*"
-      comment => "Match a line and replace",
-      handle => "cfe_internal_change_appsetting_replace_patterns_port_80",
-      replace_with => value("    $config['rest_server'] = $protocol . 'localhost' . '/api';");
-
-    !original_config::
-      "\s+\$config\['rest_server'\]\s+=\s+\$protocol\s+\.\s+'localhost'\s+\.\s+'(?!\:$(p)/api).*"
-      comment => "Match a line and replace",
-      handle => "cfe_internal_change_appsetting_replace_patterns_not_port_80",
-      replace_with => value("    $config['rest_server'] = $protocol . 'localhost' . ':$(p)/api';");
-
-}
 
 bundle agent cfe_internal_php_runalerts
-#@brief create and run PHP alerts
-#  - Bundle status need to be updated and displayed on MP. We do it
-# by running php binary with some parameters. cfe_internal_php_runalerts
-# is a bundle to create a shell script on the fly and keep running
-# the command by a specific interval (every 60s by default)
+# @brief Manage the runalerts service.
+#
+# - Bundle status need to be updated and displayed on MP. This bundle manages a
+#   small script which runs in a loop.
 {
   vars:
 
     any::
 
-      "runalerts_script" string => "$(sys.workdir)/bin/runalerts.sh",
+      "runalerts_types"
+        comment => "Runalerts is run for different types of alerts",
+        slist => { "sketch", "sql" };
+
+      "runalerts_script" string => "$(sys.bindir)/runalerts.php",
       comment => "location of php runalerts script",
       handle => "cfe_internal_php_runalerts_vars_runalerts_script";
 
-      "runalerts_stampfiles_dir" string => "$(sys.workdir)/httpd/php",
+      # TODO Move runalerts stamp files into $(sys.statedir)
+      "runalerts_stampfiles_dir"
+      string => "$(sys.workdir)/httpd/php/runalerts-stamp",
       comment => "location of runalerts stamp file directory",
       handle => "cfe_internal_php_runalerts_var_runalerts_stampfiles_dir";
 
@@ -318,10 +215,12 @@ bundle agent cfe_internal_php_runalerts
 
       "sql[name]"        string => "sql",
       comment => "name of query type - sql",
+
       handle => "cfe_internal_php_runalerts_vars_sql_name";
       "sql[limit]"       string => "300",
       comment => "query limit of sql",
       handle => "cfe_internal_php_runalerts_vars_sql_limit";
+
       "sql[running]"     string => "20",
       comment => "how many query at a time of sql",
       handle => "cfe_internal_php_runalerts_vars_sql_running";
@@ -329,69 +228,135 @@ bundle agent cfe_internal_php_runalerts
       "sketch[name]"     string => "sketch",
       comment => "name of query type - sketch",
       handle => "cfe_internal_php_runalerts_vars_sketch_name";
+
       "sketch[limit]"    string => "300",
       comment => "query limit of sketch",
       handle => "cfe_internal_php_runalerts_vars_sketch_limit";
+
       "sketch[running]"  string => "10",
       comment => "how many query at a time of sketch",
       handle => "cfe_internal_php_runalerts_vars_sketch_running";
 
-      #
+  classes:
+
+      "systemd_supervised"
+        scope => "bundle",
+        expression => "systemd.!(cfengine_3_6|cfengine_3_7|cfengine_3_8|cfengine_3_9)",
+        comment => "As of 3.10 the runalerts service is supervised by systemd
+                    when available. Prior to 3.10 the service is supervised
+                    directly by CFEngine policy.";
+
+      # NOTE The `hub_active` class is a hard class defined by the ha_plugin in
+      # the enterprise agent.
+      "active_hub"
+      comment => "The runalerts service should only run on policy servers that
+                  are active.",
+      scope => "bundle",
+      expression => "policy_server.(!enable_cfengine_enterprise_hub_ha|(enable_cfengine_enterprise_hub_ha.hub_active))";
+
+      # TODO Consider using `hub_passive` instead of `!hub_active`
+      "passive_ha_hub"
+      comment => "To avoid duplicate alerts the runalerts service should not run
+                  on standby hubs.",
+      scope => "bundle",
+      expression => "policy_server.(enable_cfengine_enterprise_hub_ha.!hub_active)";
 
   files:
 
     any::
 
       "$(runalerts_script)"
-      comment => "create php run alerts script",
-      handle => "cfe_internal_php_runalerts_files_create_php_runalerts_script",
+      comment => "The runalerts script is necessary for the proper functioning
+                  of the CFEngine Enterprise alerts.",
+      handle => "cfe_internal_php_runalerts_files_php_runalerts_script",
       create => "true",
       perms => mog("0755","root","root"),
-      edit_defaults => empty,
-      edit_line => my_php_runalerts_script("sql","sketch","$(runalerts_stampfiles_dir)","$(sleep_time)");
+      edit_template => "$(this.promise_dirname)/templates/runalerts.php.mustache",
+      template_method => "mustache";
+
+
+      "$(runalerts_stampfiles_dir)/."
+      create => "true",
+      comment => "We provide a single directory where the runalerts process
+                  should maintain its timestamp tracking.";
+
+      # This promise uses the side effect of cleaning up the timestamp files to
+      # realize when it's time to kill the runalerts script. However, in order
+      # to make sure that runalerts can write to the state files, we will also
+      # make sure they exist with specific perms. This extra churn is probably
+      # unnecessary.
 
       "$(runalerts_stampfiles_dir)/runalerts_.*"
-      comment => "sanity check for the run alerts script. if not, restart it.",
+      comment => "The runalerts process updates a timestamp for each type of
+                  alert each time alerts are checked. Here we check for the
+                  state files not being updated and kill off the runalerts
+                  process so that it can be refreshed. ",
       handle => "cfe_internal_php_runalerts_files_status_check",
       delete => tidy,
       file_select => mins_old("$(stale_time)"),
-      classes => if_repaired("kill_script");
+      classes => results("bundle", "stale_runalerts_timestamp");
 
-      #
+      "$(runalerts_stampfiles_dir)/runalerts_$(runalerts_types)"
+      create => "true",
+      handle => "cfe_internal_php_runalerts_state_file_perms",
+      comment => "The runalerts timestamp files need to be owned by the apache
+                    user or we won't be able to update the timestamps from the
+                    runalerts service which is expected to be running as
+                    $(def.cf_apache_user)",
+      perms => mog( "600", $(def.cf_apache_user), $(def.cf_apache_group) );
+
+
+      # Cleanup old runalerts script if it's still present
+      "$(sys.bindir)/runalerts.sh"
+        delete => tidy,
+        comment => "The runalerts loop was re-written in php to better work with
+                    systemd service Type=simple.";
 
   processes:
 
+      "$(sys.bindir)/runalerts.sh"
+        comment => "The old runalerts process should be killed if it's running
+                    and replaced with the php version of the loop.",
+        signals => { "kill" };
+
     # Make sure to kill script on non active hub(s).
-    kill_script||(enable_cfengine_enterprise_hub_ha.!hub_active)::
+    stale_runalerts_timestamp_repaired|passive_ha_hub::
 
       "$(runalerts_script)"
-      comment => "kill the php runalerts script because it is stale for some reason",
+      comment => "The runalerts process should be killed if it has failed to
+                  update the timestamp files in $(stale_time) minutes or if it
+                  is running on an standby HA hub.",
       handle => "cfe_internal_php_runalerts_process_kill_php_runalerts_script",
       signals => { "term" },
       classes => if_repaired("run_script");
 
-    # Run script only on active hub to not send duplicated alert emails.
-    !enable_cfengine_enterprise_hub_ha||(enable_cfengine_enterprise_hub_ha.hub_active)::
+
+    # We don't try to supervise the runalerts process on systemd hosts because
+    # there is a unit for that.
+    !systemd_supervised.active_hub::
 
       "$(runalerts_script)"
-      comment => "check if the php runalerts script is running or not",
+      comment => "When the runalerts service is not supervised by systemd we
+                  need to check to see if the service is running so that we can
+                  restart it when necessary.",
       handle => "cfe_internal_php_runalerts_process_check_php_runalerts_script",
-      restart_class => "run_script";
-
-      #
+      restart_class => "runalerts_process_not_running";
 
   commands:
 
-    # Run script only on active hub to not send duplicated alert emails.
-    (run_script.!enable_cfengine_enterprise_hub_ha)||(run_script.enable_cfengine_enterprise_hub_ha.hub_active)::
+    # Don't run the script on systemd hosts
+    !systemd_supervised.runalerts_process_not_running.active_hub::
 
       "$(runalerts_script) > /dev/null < /dev/null 2>&1 &"
-      comment => "to run php alerts script",
+      comment => "Runalerts is needed for proper functioning of Enterprise
+                  dashboard alerts. It should only be run on the active hub to
+                  avoid duplicate alerts. On systemd hosts the service is
+                  supervised by it's own unit and the CFEngine policy does not
+                  need to ensure it is running.",
       handle => "cfe_internal_php_runalerts_commands_run_php_runalerts_script",
       classes => kept_successful_command,
       contain => in_shell,
       action => cfe_internal_bg;
-
 }
 
       #
@@ -407,31 +372,6 @@ body file_select mins_old(mins)
 {
  mtime       => irange(0,ago(0,0,0,0,"$(mins)",0));
  file_result => "mtime";
-}
-
-      #
-
-bundle edit_line my_php_runalerts_script(v1,v2,sdir,stime)
-{
-  insert_lines:
-
-    any::
-
-      "#!/bin/bash
-
-while true; do
-  touch $(sdir)/runalerts_$(cfe_internal_php_runalerts.sql[name])
- if [ -f $(sys.workdir)/httpd/php/runalerts_$(cfe_internal_php_runalerts.sql[name]) ]; then
-  $(sys.workdir)/httpd/php/bin/php $(sys.workdir)/httpd/htdocs/index.php cli_tasks runalerts $(cfe_internal_php_runalerts.sql[limit]) $(cfe_internal_php_runalerts.sql[running]) $(cfe_internal_php_runalerts.sql[name]) >/dev/null 2>&1
- fi
-  touch $(sdir)/runalerts_$(cfe_internal_php_runalerts.sketch[name])
- if [ -f $(sys.workdir)/httpd/php/runalerts_$(cfe_internal_php_runalerts.sketch[name]) ]; then
-  $(sys.workdir)/httpd/php/bin/php $(sys.workdir)/httpd/htdocs/index.php cli_tasks runalerts $(cfe_internal_php_runalerts.sketch[limit]) $(cfe_internal_php_runalerts.sketch[running]) $(cfe_internal_php_runalerts.sketch[name]) >/dev/null 2>&1
- fi
- sleep $(stime)
-done"
-      comment => "contents inside php runalerts script",
-      handle => "my_php_runalerts_script_insert_lines_php_runalerts_script";
 }
 
 bundle agent cfe_internal_truncate_events
@@ -456,4 +396,58 @@ bundle agent cfe_internal_purge_scheduled_reports_older_than_days(days)
       file_select => filetype_older_than("plain", $(days) ),
       comment => "Mission Portals scheduled reports are written here. They need
                   to be purged after some time so that they do not fill the disk.";
+}
+
+bundle agent log_cfengine_enterprise_license_utilization
+# @brief Log the number of hosts seen within the last 24 hours and the number of
+# hosts reported to have the "cfengine" class. Note any hosts that has been
+# successfully collected from is expected to have the "cfengine" class. This
+# policy will not do anything unless the class
+# `enable_log_cfengine_enterprise_license_utilization` is defined.
+{
+  reports:
+
+    policy_server.enterprise_edition.(DEBUG|DEBUG_log_cfengine_enterprise_license_utilization|inform_mode)::
+
+      "Hosts reported: $(count_reporting)";
+
+  vars:
+
+      "log_frequency" int => "720";
+
+    policy_server.enterprise_edition.enable_log_cfengine_enterprise_license_utilization::
+
+      "log_dir" string => "$(sys.workdir)/log";
+
+      # Using address for reporting hosts because hostseen() will incur
+      # undesirable reverse dns lookups if name is used and we need to be able
+      # to find unique hosts from a combined list.
+
+      # The cfengine class is always reported, and a reliable way to find hosts
+      # that have reported.
+      "hosts_reporting" slist => hostswithclass("cfengine", "address");
+      "count_reporting" int => length(hosts_reporting);
+
+      # We are counting hosts seen within the last day.
+      "hosts_seen" slist => hostsseen("24", "lastseen", "address");
+      "count_seen" int => length(hosts_seen);
+
+  files:
+
+    policy_server.enterprise_edition.enable_log_cfengine_enterprise_license_utilization::
+      "$(log_dir)/."
+        create => "true",
+        comment => "The log dir must exist in order to write to a file.";
+
+  reports:
+
+    policy_server.enterprise_edition.enable_log_cfengine_enterprise_license_utilization::
+
+      "$(sys.date), hosts_reporting=$(count_reporting), hosts_seen=$(count_seen)"
+        report_to_file => "$(sys.workdir)/log/license_utilization.log",
+        action => if_elapsed( $(log_frequency) );
+
+    policy_server.enterprise_edition.!enable_log_cfengine_enterprise_license_utilization::
+
+      "WARNING $(this.bundle) is actuated but not enabled. enable_$(this.bundle) is not defined.";
 }

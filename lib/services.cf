@@ -1,5 +1,5 @@
 ############################################################################
-#  Copyright (C) CFEngine AS
+#  Copyright 2017 Northern.tech AS
 #
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License LGPL as published by the
@@ -91,6 +91,38 @@ body service_method force_deps
       service_type => "windows";
 }
 
+body service_method standard_services
+# @brief Default services_method for when you wan't to call it explicitly
+#
+# By default this service_method is *not* used. The call for standard_services
+# is within the core and not here. In case you use a promise like:
+#
+# ```cf3
+# services:
+#     "ssh"
+#       service_policy => "start";
+# ```
+#
+# Then this method is skipped and CFEngine calls standard_services bundle
+# directly. This is here as a helper in case you wan't to be explicit
+# with your service promise and point it to standard_services (for readability,
+# documentation, etc).
+#
+# Do note that any options defined in this method does not apply to service
+# promises without explicit template_method call for standard_services.
+#
+# **Example:**
+#
+# ```cf3
+# services:
+#     "ssh"
+#       service_policy => "start",
+#       service_method => standard_services;
+# ```
+{
+        service_bundle => standard_services( $(this.promiser), $(this.service_policy) );
+}
+
 ##
 
 bundle agent standard_services(service,state)
@@ -136,6 +168,7 @@ bundle agent standard_services(service,state)
 {
   vars:
       "call_systemctl" string => "$(paths.systemctl) --no-ask-password --global --system";
+      "systemd_properties" string => "-pLoadState,CanStop,UnitFileState,ActiveState,LoadState,CanStart,CanReload";
       "init" string => "/etc/init.d/$(service)";
       "c_service" string => canonify("$(service)");
 
@@ -148,8 +181,7 @@ bundle agent standard_services(service,state)
       "svcadm_mode" string => "disable";
 
     systemd::
-      # On my systems, I'm seeing 115 or so lines of output... giving some wiggle room
-      "systemd_service_info" slist => string_split(execresult("$(call_systemctl) show $(service)", "noshell"), "\n", "1500");
+      "systemd_service_info" slist => string_split(execresult("$(call_systemctl) $(systemd_properties) show $(service)", "noshell"), "\n", "10");
 
   classes:
       # define a class named after the desired state
@@ -166,9 +198,12 @@ bundle agent standard_services(service,state)
     chkconfig.have_init::
       "running" expression => returnszero("$(init) status > /dev/null", "useshell");
 
+    sysvservice.have_init::
+      "running" expression => returnszero("$(paths.service) $(service) status > /dev/null", "useshell");
+
     chkconfig.SuSE::
       "onboot"
-        expression => returnszero("$(paths.chkconfig) $(service) | $(paths.grep) 'on$' >/dev/null", "usehell"),
+        expression => returnszero("$(paths.chkconfig) $(service) | $(paths.grep) 'on$' >/dev/null", "useshell"),
         comment => "SuSE chkconfig outputs current state to stdout rather than as an exit code";
 
     chkconfig.!SuSE::
@@ -196,6 +231,7 @@ bundle agent standard_services(service,state)
       "service_enabled" expression => reglist(@(systemd_service_info), "UnitFileState=enabled");
       "service_active"  expression => reglist(@(systemd_service_info), "ActiveState=active");
       "service_loaded"  expression => reglist(@(systemd_service_info), "LoadState=loaded");
+      "service_notfound" expression => reglist(@(systemd_service_info), "LoadState=not-found");
 
       "can_stop_service"   expression => reglist(@(systemd_service_info), "CanStop=yes");
       "can_start_service"  expression => reglist(@(systemd_service_info), "CanStart=yes");
@@ -211,7 +247,7 @@ bundle agent standard_services(service,state)
       "action_stop"    expression => "request_stop.service_active.can_stop_service";
       "action_reload"  expression => "request_reload.service_active.can_reload_service";
       "action_restart"         or => {
-                                      "request_restart.service_active",
+                                      "request_restart",
 
                                       # Possibly undesirable... if a reload is
                                       # requested, and the service "can't" be
@@ -272,13 +308,42 @@ bundle agent standard_services(service,state)
       "$(init) $(state)"
       contain => silent;
 
-    sysvservice.non_disabling::
-      "$(paths.service) $(service) $(state)"
-      classes => kept_successful_command;
+    sysvservice.start.!running::
+      "$(paths.service) $(service) start"
+      handle => "standard_services_sysvservice_not_running_start",
+      classes => kept_successful_command,
+      comment => "If the service should be running and it is not
+                  currently running then we should issue the standard service
+                  command to start the service.";
 
-    sysvservice.disable::
+    sysvservice.restart::
+      "$(paths.service) $(service) restart"
+      handle => "standard_services_sysvservice_restart",
+      classes => kept_successful_command,
+      comment => "If the service should be restarted we issue the
+                  standard service command to restart or reload the service.
+                  There is no restriction based on the services current state as
+                  restart can start a service that was not already
+                  running.";
+
+    sysvservice.reload.running::
+      "$(paths.service) $(service) reload"
+      handle => "standard_services_sysvservice_reload",
+      classes => kept_successful_command,
+      comment => "If the service should be reloaded we issue the
+                  standard service command to reload the service.
+                  It is restricted to when the service is running as a reload
+                  should not start services that are not already running. This
+                  may not be triggered as service state parameters are limited
+                  and translated to the closest meaning.";
+
+    sysvservice.((stop|disable).running)::
       "$(paths.service) $(service) stop"
-      classes => kept_successful_command;
+      handle => "standard_services_sysvservice_stop",
+      classes => kept_successful_command,
+      comment => "If the service should be stopped or disabled and it is
+                  currently running then we should issue the standard service
+                  command to stop the service.";
 
     smf::
       "$(paths.svcadm) $(svcadm_mode) $(service)"
@@ -291,8 +356,6 @@ bundle agent standard_services(service,state)
   reports:
     verbose_mode.systemd::
       "$(this.bundle): using systemd layer to $(state) $(service)";
-    verbose_mode.systemd.!service_loaded::
-      "$(this.bundle): Service $(service) unit file is not loaded; doing nothing";
     verbose_mode.chkconfig::
       "$(this.bundle): using chkconfig layer to $(state) $(service) (chkconfig mode $(chkconfig_mode))"
         ifvarclass => "!chkconfig_$(c_service)_unregistered.((start.!onboot)|(stop.onboot))";
@@ -306,14 +369,10 @@ bundle agent standard_services(service,state)
     verbose_mode.fallback::
       "$(this.bundle): falling back to classic_services to $(state) $(service)";
 
-      #BEN ADDED FOR TESTING SYSTEMD ERROR
-    systemd::
-      "$(this.bundle): using systemd layer to $(state) $(service)";
-    systemd.!service_loaded::
+    systemd.!service_loaded.(inform_mode|verbose_mode)::
       "$(this.bundle): Service $(service) unit file is not loaded; doing nothing";
-      any::
-      "systemd_service_info found: $(systemd_service_info)";
-
+    systemd.service_notfound.(inform_mode|verbose_mode)::
+        "$(this.bundle): Could not find service: $(service)";
 }
 
 bundle agent classic_services(service,state)

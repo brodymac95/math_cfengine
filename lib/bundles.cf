@@ -1,5 +1,5 @@
 ############################################################################
-#  Copyright (C) CFEngine AS
+#  Copyright 2017 Northern.tech AS
 #
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License LGPL as published by the
@@ -93,9 +93,25 @@ bundle agent cronjob(commands,user,hours,mins)
     !(suse|redhat|fedora|freebsd)::
       "crontab" string => "/var/spool/cron/crontabs";
 
+    any::
+      # We escape the user supplied values so that we can search to see if the
+      # entry already exists with slightly different spacing.
+      "e_mins" string => escape("$(mins)");
+      "e_hours" string => escape("$(hours)");
+      "e_commands" string => escape("$(commands)");
+
+  classes:
+    !windows::
+
+      # We tolerate existing entries that differ only in whitespace and avoid
+      # entering duplicate entries.
+
+      "present_with_potentially_different_spacing"
+        expression => regline( "^$(e_mins)\s+$(e_hours)\s+\*\s+\*\s+\*\s+$(e_commands)", "$(crontab)/$(user)");
+
   files:
 
-    !windows::
+    !windows.!present_with_potentially_different_spacing::
       "$(crontab)/$(user)"
 
       comment => "A user's regular batch jobs are added to this file",
@@ -285,6 +301,39 @@ bundle agent prunedir(dir, max_days)
       depth_search  => recurse("1");
 }
 
+bundle agent prunetree(dir, depth, max_days)
+# @brief Delete files and directories inside "dir" up to "depth" older than "max_days".
+# @depends delete tidy
+# @depends depth_search recurse_with_base
+# @depends file_select days_old
+# @param dir directory to examine for files
+# @param depth How many levels to descend
+# @param max_days maximum number of days old a files mtime is allowed to before deletion
+#
+# **Example:**
+#
+# ```cf3
+# bundle agent example
+# {
+#   vars:
+#     "dirs" slist => { "/tmp/logs", "/tmp/logs2" };
+#
+#   methods:
+#     "prunetree" usebundle => prunetree( @(dirs), inf, "1" );
+# }
+# ```
+{
+  files:
+      "$(dir)"
+      comment => "Delete files and directories under $(dir) up to $(depth)
+                    depth older than $(max_days)",
+
+      delete        => tidy,
+      file_select   => days_old( $(max_days) ),
+      depth_search  => recurse_with_base( $(depth) );
+
+}
+
 bundle agent url_ping(host, method, port, uri)
 # @brief ping HOST:PORT/URI using METHOD
 # @param host the host name
@@ -380,6 +429,88 @@ bundle agent cmerge(name, varlist)
       "$(name)" data => parsejson('[]'),            policy => "free";
       "$(name)" data => mergedata($(name), $(varlist)), policy => "free"; # iterates!
       "$(name)_str" string => format("%S", $(name)),    policy => "free";
+}
+
+bundle agent collect_vars(name, tag, flatten)
+# @brief bundle to collect tagged variables into a data container
+# @param name the variable name to create inside `collect_vars`
+# @param tag the tag regex string to match e.g. "beta,gamma=.*"
+# @param flatten to flatten variable values, set to "any" or "true" or "1"
+#
+# The result will be a map in `collect.$(name)`. You can also use
+# `cmerge.$(name)_str` for a string version of the merged containers
+# (if it fits in a CFEngine string).
+#
+# The name is variable so you can call this bundle for more than one
+# collection.
+#
+# Every found variable will be a key in the map, unless you specify
+# `flatten`, in which case they'll be flattened into a top-level array
+# of data.
+#
+# The `flatten` parameter can be "any" or "true" or "1" to be true.
+#
+# **Example:**
+#
+# ```cf3
+# body common control
+# {
+#       inputs => { "$(sys.libdir)/stdlib.cf" };
+# }
+#
+# bundle agent main
+# {
+#   vars:
+#       # the "mymerge" tag is user-defined
+#       "a" data  => parsejson('{ "mark": "burgess" }'), meta => { "mymerge" };
+#       "b" data  => parsejson('{ "volker": "hilsheimer" }'), meta => { "mymerge" };
+#
+#   methods:
+#       # merge a, b into container collect_vars.all
+#       "go" usebundle => collect_vars("all", "mymerge", "");
+#       # flatten a, b into container collect_vars.flattened
+#       "go_flatten" usebundle => collect_vars("flattened", "mymerge", "true");
+#
+#   reports:
+#       # merged = {"default:main.a":{"mark":"burgess"},"default:main.b":{"volker":"hilsheimer"}}
+#       "merged = $(collect_vars.all_str)";
+#       # flattened = {"mark":"burgess","volker":"hilsheimer"}
+#       "flattened = $(collect_vars.flattened_str)";
+# }
+# ```
+{
+  classes:
+      "flatten" expression => strcmp($(flatten), "any");
+      "flatten" expression => strcmp($(flatten), "1");
+      "flatten" expression => strcmp($(flatten), "true");
+
+  vars:
+      "todo_$(name)"    slist => variablesmatching(".*", $(tag));
+
+    !flatten::
+      "$(name)"
+        data => parsejson('{}'),
+        policy => "free";
+
+      # this iterates!
+      "$(name)"
+        data => mergedata($(name), '{ "$(todo_$(name))": $(todo_$(name)) }'),
+        policy => "free";
+
+    flatten::
+      "$(name)"
+        data => parsejson('[]'),
+        policy => "free";
+
+      # this iterates!
+      "$(name)"
+        data => mergedata($(name), "$(todo_$(name))"),
+        policy => "free";
+
+    any::
+      "$(name)_str"
+        string => format("%S", $(name)),
+        policy => "free";
 }
 
 bundle agent run_ifdefined(namespace, mybundle)

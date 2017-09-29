@@ -15,8 +15,8 @@ body agent control
 
     any::
 
-      # This should normally be set to an interval like 1-5 mins
-      # We set it to one initially to avoid confusion.
+      # Minimum time (in minutes) which should have passed since the last time
+      # the promise was verified before it is checked again.
 
       ifelapsed => "1";
 
@@ -27,6 +27,21 @@ body agent control
 
       # explicitly not supported (but they should break long before)
       abortclasses => { "cfengine_3_3", "cfengine_3_4" };
+
+
+      # Maximum number of outgoing connections to a remote cf-serverd.
+      maxconnections => "$(def.control_agent_maxconnections)";
+
+    mpf_control_agent_default_repository::
+
+      # Location to backup files before they are edited by cfengine
+
+      default_repository => "$(def.control_agent_default_repository)";
+
+      # File patterns which allow a file to be copied over only a single time
+      # per agent run.
+
+      files_single_copy => { @(def.control_agent_files_single_copy) };
 
       # Environment variables based on Distro
 

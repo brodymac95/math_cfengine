@@ -88,20 +88,6 @@ bundle agent cfe_internal_update_policy
       "cfe_internal_trigger" expression => "local_files_ok",
       classes => u_if_else("files_ok", "files_ok");
 
-      #
-
-  commands:
-
-    am_policy_hub.update_report::
-
-      "$(sys.cf_promises) -r"
-         contain => u_in_shell_and_silent,
-         comment => "Generate config knowledge format after update",
-         classes => u_kept_successful_command,
-         handle => "cfe_internal_update_policy_commands_run_cf_promises_r";
-
-      #
-
   files:
 
     !am_policy_hub::  # policy hub should not alter inputs/ uneccessary
@@ -158,7 +144,15 @@ bundle agent cfe_internal_update_policy
       depth_search => u_recurse("inf"),
       file_select  => u_input_files,
       action => u_immediate,
-      classes => u_if_repaired("update_report");
+      classes => u_results("bundle", "update_inputs");
+
+    update_inputs_not_kept::
+
+      "$(inputs_dir)/cf_promises_validated" -> { "CFE-2587" }
+        delete => u_tidy,
+        comment => "If there is any problem copying to $(inputs_dir) then purge
+                    the cf_promises_validated file must be purged so that
+                    subsequent agent runs will perform a full scan.";
 
     !policy_server.enable_cfengine_enterprise_hub_ha::
       "$(sys.workdir)/policy_server.dat"
@@ -230,9 +224,12 @@ body copy_from u_rcp(from,server)
       compare     => "digest";
       trustkey    => "false";
 
-    !am_policy_hub::
 
+    !am_policy_hub::
       servers => { "$(server)" };
+
+    !am_policy_hub.sys_policy_hub_port_exists::
+      portnumber => "$(sys.policy_hub_port)";
 
     cfengine_internal_encrypt_transfers::
       encrypt => "true";
@@ -242,6 +239,9 @@ body copy_from u_rcp(from,server)
 
     cfengine_internal_preserve_permissions::
       preserve => "true";
+
+    cfengine_internal_verify_update_transfers::
+      verify      => "true";
 }
 
 #########################################################
@@ -348,6 +348,13 @@ body action u_ifwin_bg
 body service_method u_bootstart
 {
       service_autostart_policy => "boot_time";
+}
+
+#########################################################
+
+body contain u_in_dir(s)
+{
+      chdir => "$(s)";
 }
 
 #########################################################

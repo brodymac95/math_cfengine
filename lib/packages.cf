@@ -1,5 +1,5 @@
 ############################################################################
-#  Copyright (C) CFEngine AS
+#  Copyright 2017 Northern.tech AS
 #
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License LGPL as published by the
@@ -57,8 +57,17 @@ bundle common package_module_knowledge
     debian::
       "platform_default" string => "apt_get";
 
+    freebsd::
+      "platform_default" string => "pkg";
+
     redhat::
       "platform_default" string => "yum";
+
+    suse::
+      "platform_default" string => "zypper";
+
+    aix::
+      "platform_default" string => "nimclient";
 }
 
 body package_module apt_get
@@ -68,6 +77,57 @@ body package_module apt_get
     #default_options =>  {};
 }
 
+body package_module zypper
+{
+      query_installed_ifelapsed => "60";
+      query_updates_ifelapsed => "1440";
+      #default_options =>  {};
+}
+
+body package_module nimclient
+# @brief Define details used when interfacing with nimclient package
+# module
+#
+# **Example:**
+#
+# ```cf3
+# bundle agent example_nimclient
+# {
+#   packages:
+#       "expect.base"
+#         policy => "present",
+#         options => { "lpp_source=lppaix71034" },
+#         package_module => nimclient;
+# }
+# ```
+{
+    query_installed_ifelapsed => "60";
+    query_updates_ifelapsed => "14400";
+
+    # This would likey be customized based on your infrastructure specifics
+    # you may for example want to default the lpp_source based on something
+    # like `oslevel -s` output.
+    #default_options =>  {};
+}
+body package_module pkgsrc
+# @brief Define details used when interfacing with the pkgsrc package
+# module.
+#
+# **Example:**
+# ```cf3
+# bundle agent main
+# {
+#   packages:
+#       "vim"
+#         policy => "present",
+#         package_module => pkgsrc;
+# }
+# ```
+{
+    query_installed_ifelapsed => "60";
+    query_updates_ifelapsed => "14400";
+}
+
 body package_module yum
 {
     query_installed_ifelapsed => "60";
@@ -75,6 +135,37 @@ body package_module yum
     #default_options => {};
 }
 
+body package_module pkg
+{
+    query_installed_ifelapsed => "60";
+    query_updates_ifelapsed => "1440";
+    #default_options => {};
+}
+
+
+body package_module freebsd_ports
+# @brief Define details used when interfacing with the freebsd ports package
+# module.
+#
+# **Note:** Ports are expected to be setup prior to trying to use the packages
+# promise. You may need to ensure that `portsnap extract` has been run, e.g.
+# fileexists("/usr/ports/Mk/bsd.port.mk")
+#
+# **Example:**
+# ```cf3
+# bundle agent main
+# {
+#   packages:
+#     freebsd::
+#       "vim"
+#         policy => "present",
+#         package_module => freebsd_ports;
+# }
+# ```
+{
+    query_installed_ifelapsed => "60";
+    query_updates_ifelapsed => "1440";
+}
 
 bundle common packages_common
 # @ignore
@@ -307,8 +398,8 @@ body package_method pip(flags)
 #
 # @param flags The command line parameter passed to `pip`
 #
-# Note: "update" command preforms recursive upgrade (of dependencies) by
-# default. Set $flags to "--no-deps" to preform non-recursive upgrade.
+# Note: "update" command performs recursive upgrade (of dependencies) by
+# default. Set $flags to "--no-deps" to perform non-recursive upgrade.
 # http://www.pip-installer.org/en/latest/cookbook.html#non-recursive-upgrades
 #
 # **Example:**
@@ -320,7 +411,7 @@ body package_method pip(flags)
 #     "requests"            package_method => pip(""), package_policy => "verify";
 #
 # ```
-# 
+#
 # **Note:** "Django" with a capital 'D' in the example above.
 # Explicitly match the name of the package, capitalization does count!
 #
@@ -442,7 +533,7 @@ body package_method brew(user)
 #
 # Available commands : add, delete, (add)update (with package_version).
 #
-# @param user The user under which to run the commands 
+# @param user The user under which to run the commands
 #
 # Homebrew expects a regular (non-root) user to install packages.
 # https://github.com/mxcl/homebrew/wiki/FAQ#why-does-homebrew-say-sudo-is-bad
@@ -804,7 +895,7 @@ body package_method windows_feature
 body package_method msi_implicit(repo)
 # @brief Windows MSI method
 # @param repo The package file repository
-# 
+#
 # Uses the whole file name as promiser, e.g. "7-Zip-4.50-x86_64.msi".
 # The name, version and arch is then deduced from the promiser.
 #
@@ -832,7 +923,7 @@ body package_method msi_implicit(repo)
 body package_method msi_explicit(repo)
 # @brief Windows MSI method
 # @param repo The package file repository
-# 
+#
 # Uses software name as promiser, e.g. "7-Zip", and explicitly
 # specify any `package_version` and `package_arch`.
 #
@@ -1087,7 +1178,7 @@ body package_method yum_group
 # Groups must be specified by their groupids, available through `yum
 # grouplist -v` (between parentheses).  For example, below
 # `network-tools` is the groupid.
-# 
+#
 # ```console
 # $ yum grouplist -v|grep Networking|head -n 1
 #   Networking Tools (network-tools)
@@ -1413,7 +1504,7 @@ body package_method freebsd
       package_changes => "individual";
 
       # Could use rpm for this
-      package_list_command => "/usr/sbin/pkg_info";
+      package_list_command => "/usr/sbin/pkg info";
 
       # Remember to escape special characters like |
 
@@ -1427,8 +1518,8 @@ body package_method freebsd
 
       package_name_convention => "$(name)-$(version)";
 
-      package_add_command => "/usr/sbin/pkg_add -r";
-      package_delete_command => "/usr/sbin/pkg_delete";
+      package_add_command => "/usr/sbin/pkg install -y";
+      package_delete_command => "/usr/sbin/pkg delete -y";
 }
 
 body package_method freebsd_portmaster
@@ -1456,7 +1547,7 @@ body package_method freebsd_portmaster
 {
       package_changes => "individual";
 
-      package_list_command => "/usr/sbin/pkg_info";
+      package_list_command => "/usr/sbin/pkg info";
 
       package_list_name_regex    => "([^\s]+)-.*";
       package_list_version_regex => "[^\s]+-([^\s]+).*";
@@ -1690,7 +1781,7 @@ body package_method generic
       package_list_command => "$(rpm_knowledge.call_rpm) -qa --queryformat \"$(rpm_knowledge.rpm_output_format)\"";
       # set it to "0" to avoid caching of list during upgrade
       package_list_update_command => "$(suse_knowledge.call_zypper) list-updates";
-      package_list_update_ifelapsed => "0";
+      package_list_update_ifelapsed => "$(common_knowledge.list_update_ifelapsed)";
       package_patch_list_command => "$(suse_knowledge.call_zypper) patches";
       package_installed_regex => "i.*";
       package_list_name_regex    => "$(rpm_knowledge.rpm_name_regex)";
@@ -1779,15 +1870,15 @@ body package_method generic
 
     freebsd::
       package_changes => "individual";
-      package_list_command => "/usr/sbin/pkg_info";
+      package_list_command => "/usr/sbin/pkg info";
       package_list_name_regex    => "([^\s]+)-.*";
       package_list_version_regex => "[^\s]+-([^\s]+).*";
       package_name_regex    => "([^\s]+)-.*";
       package_version_regex => "[^\s]+-([^\s]+).*";
       package_installed_regex => ".*";
       package_name_convention => "$(name)-$(version)";
-      package_add_command => "/usr/sbin/pkg_add -r";
-      package_delete_command => "/usr/sbin/pkg_delete";
+      package_add_command => "/usr/sbin/pkg install -y";
+      package_delete_command => "/usr/sbin/pkg delete";
 
     alpinelinux::
       package_changes => "bulk";

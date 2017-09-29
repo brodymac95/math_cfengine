@@ -1,5 +1,5 @@
 ############################################################################
-#  Copyright (C) CFEngine AS
+#  Copyright 2017 Northern.tech AS
 #
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License LGPL as published by the
@@ -255,7 +255,7 @@ bundle agent cfe_internal_postgresql_vacuum
 #@brief Vacuum (with analyze) over cfdb database.
 {
   vars:
-      "vacuum_cfdb_cmd" 
+      "vacuum_cfdb_cmd"
       string => "$(sys.bindir)/vacuumdb --analyze --quiet --dbname=cfdb",
       comment => "Vacuum command with update statistics enabled";
 
