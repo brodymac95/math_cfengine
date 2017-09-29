@@ -33,6 +33,7 @@ bundle common global
 {
   vars:
       "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
+      "cs_domain" string => "cs.wichita.edu";
 
       "system_creation_time" string => filestat( "/", "ctime" ),
         comment => "defining the unix epoch time of when the root directory '/' was created

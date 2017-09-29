@@ -29,10 +29,12 @@ bundle common cron_scheduler
 # @description: use cfengine as an alternative scheduler to cron by setting global classes based on time
 {
   vars:
-      "15m_after_system_creation" string => eval( "$(global.system_creation_time) + (15 * 60)", "math", "infix" ),
-      comment => "add 15 minutes in seconds to the unix epoch time set when host system was first created";
+      "20m_after_system_creation" string => eval( "$(global.system_creation_time) + (20 * 60)", "math", "infix" ),
+      comment => "add 20 minutes in seconds to the unix epoch time set when host system was first created";
       
-      
+      # "3hr_after_system_creation" string => eval( "$(global.system_creation_time) + (180 * 60)", "math", "infix" ),
+      # comment => "add 3 hours in seconds to the unix epoch time set when host system was first created";
+
   classes:
       # TIME PERIODS (medical abbreviations used)
       "Q3H" or => { "Hr00", "Hr03", "Hr06", "Hr09", "Hr12", "Hr15", "Hr18", "Hr21", };
@@ -41,16 +43,16 @@ bundle common cron_scheduler
       "Q15M" or => { "Min00_05", "Min15_20", "Min30_35", "Min45_50", };
 
       # UPTIME PERIODS (defined in minutes)
-      # "UP_LESS_1HR" expression => eval( "$(sys.uptime) < 60", "class", "infix" );
+      "UP_LESS_1HR" expression => eval( "$(sys.uptime) < 60", "class", "infix" );
       # "UP_LESS_1DY" expression => eval( "$(sys.uptime) < 1440", "class", "infix" );
       # "UP_LESS_1WK" expression => eval( "$(sys.uptime) < 10080", "class", "infix" );
       
       
       # DEFINE JOBS
-      "install_software" and => { "Q6H", "Min00_05", "loadavg_low", },
-      comment => "install/update software at start of every 6 hours only if system load is low";
+      "install_software" and => { "Q6H", "Min00_05", },
+      comment => "install/update software at start of every 6 hours only if system load is low (removed)";
 
-      "run_uaf2_client" and => { "Q15M", "uaf2_client", "loadavg_low", },
+      "run_uaf2_client" and => { "Q15M", "uaf2_client", },
       comment => "run Tom's uaf2_client to update users every 15 minutes only if installed and system load is low";
 
       "run_uaf2_client" and => { "UP_LESS_1HR", },
@@ -59,12 +61,14 @@ bundle common cron_scheduler
       "reboot_allowed" expression => "Hr02",
       comment => "allow for system auto reboot at 2am only";
 
-      "reboot_15m_after_host_creation" expression => eval( "$(sys.systime) == $(15m_after_system_creation)", "class", "infix" ),
-      comment => "enable a full system reboot at 15 mins after system creation, defined in unix epoch time
-                  NOTE: this class must be activated in manage/main.cf for a specific machine type";
+      ## NOT WORKING - JUST KEEPS REBOOTING
+      # "reboot_20m_after_host_creation" expression => eval( "$(sys.systime) < $(20m_after_system_creation)","class", "infix" ),
+      # ifvarclass => "Q15M",
+      # comment => "enable a full system reboot within the timeframe of 10-25 mins after system creation
+      #             NOTE: this class must be activated in manage/main.cf for a specific machine type";
 
-      "install_software" expression => eval( "$(sys.systime) < $(15m_after_system_creation)", "class", "infix" ),
-      comment => "install/update software within the first 15 mins after system creation, defined in unix epoch time";
+      "install_software" expression => eval( "$(sys.systime) < $(20m_after_system_creation)", "class", "infix" ),
+      comment => "install/update software within the first 20 mins after system creation";
 
       # "install_software" or => { "UP_LESS_1HR", },
       # comment => "install/update software within the first hour since system last boot";

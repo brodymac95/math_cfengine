@@ -166,6 +166,12 @@ bundle agent configure_autofs(params)
 	perms => mog("755", "root", "root" ),
 	comment => "create mounting directories required by autofs map entries";
      
+  methods:
+    autofs_master_repaired.!NO_RESTARTS::
+      "restart autofs service if configuration changed"
+      	usebundle => standard_services( "autofs", "restart" ),
+      	classes => if_ok("autofs_restart");
+      
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";

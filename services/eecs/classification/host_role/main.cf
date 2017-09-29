@@ -112,11 +112,11 @@ bundle common classify_host
       
   classes:
     ## DEFINE CLUSTER CLASSES FOR INDIVIDUAL HOSTNAMES USING REGEX
-      "dev_cluster_node" expression => classmatch( "dev_cluster_node.*", hardclass ),
-        comment => "create generic cluster class on each dev_cluster_node host";
+      "dev_node" expression => classmatch( "dev_node.*", hardclass ),
+        comment => "create generic cluster class on each dev_node host";
 
-      "cslab_cluster_node" expression => classmatch( "cslab_cluster_node.*", hardclass ),
-        comment => "create generic cluster class on each cslab_cluster_node host";
+      "cslab_node" expression => classmatch( "cslab_node.*", hardclass ),
+        comment => "create generic cluster class on each cslab_node host";
 
       "cstest" expression => classmatch( "cstest.*", hardclass ),
         comment => "testing classmatch for cstesting host";

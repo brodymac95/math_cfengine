@@ -37,17 +37,17 @@
         "owner": "development",
 	"authentication": "uaf2_client",
     },
-    "cslab_cluster_guac_gw": {
+    "cslab_guac_gw": {
 	"machine": "os_tenant_cluster",
 	"purpose": "cslab-gateway",
         "role": "guac_gateway",
         "owner": "eecs",
     },
-    "cslab_cluster_node": {
+    "cslab_node": {
 	"machine": "os_tenant_cluster",
 	"purpose": "cslab-node",
         "role": "cluster_node",
-        "owner": "eecs",
+        "owner": "teaching",
 	"authentication": "uaf2_client",
     },
     "cstest": {

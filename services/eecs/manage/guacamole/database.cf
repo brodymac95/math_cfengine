@@ -151,8 +151,9 @@ bundle agent guac_database_vars
         comment => "Parameter token: ${GUAC_PASSWORD} = password of the current Guacamole user";
 
     ## CONNECTION GROUP PARAMETERS
-      "ssh_group_name" string => "SSH_IDE";
-      "rdp_group_name" string => "RDP_IDE";
+    cslab_gateway::
+      "ssh_group_name" string => "CSLAB_SSH";
+      "rdp_group_name" string => "CSLAB_RDP";
 
     ## GLOBAL PARAMETERS FOR ALL CONNECTIONS
       "max_connections_per_group" string => "128",
@@ -279,17 +280,18 @@ bundle agent guac_add_all_users(cluster_ips, params)
       	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
           "$(import_user_data.faculty_users)", "$(params)" );
 
-      "add each faculty user to each SSH load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
-          "$(import_user_data.faculty_users)", "$(params)" );
-
       "add each faculty user to RDP load-balanced connection group"
       	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
       "$(import_user_data.faculty_users)", "$(params)" );
 
-      "add each faculty user to each RDP load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
-          "$(import_user_data.faculty_users)", "$(params)" );
+      ## DOES NOT SEEM LIKE WE NEED TO ADD USERS TO INDIVIDUAL CONNECTIONS WITHIN A BALANCED GROUP!!
+      # "add each faculty user to each SSH load-balanced connection"
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+      #     "$(import_user_data.faculty_users)", "$(params)" );
+
+      # "add each faculty user to each RDP load-balanced connection"
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+      #     "$(import_user_data.faculty_users)", "$(params)" );
 
     ## STUDENT USERS
       "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
@@ -307,20 +309,21 @@ bundle agent guac_add_all_users(cluster_ips, params)
       	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
           "$(params)");
 
-      "add each student user to each SSH load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
-
       "add each student user to RDP load-balanced connection group"
       	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
       	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
           "$(params)");      
 
-      "add each student user to each RDP load-balanced connection"
-      	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
+      ## DOES NOT SEEM LIKE WE NEED TO ADD USERS TO INDIVIDUAL CONNECTIONS WITHIN A BALANCED GROUP!!
+      # "add each student user to each SSH load-balanced connection"
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+      #     "$(params)");
+
+      # "add each student user to each RDP load-balanced connection"
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+      #     "$(params)");
 
   reports:
     (inform_mode|verbose_mode)::
@@ -369,6 +372,9 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, enable_
       # 	expression => regcmp(".+","$(mysql_parent_id_result)"),
       #   comment => "check mysql query result contains a value";
        
+      "sql_insert_file_exists"
+	expression => fileexists( "$($(params).create_connection_group_sql)_$(groupname).sql" );
+
   files:
     group_does_not_exist::
       "$($(params).create_connection_group_sql)_$(groupname).sql"
@@ -376,11 +382,11 @@ bundle agent guac_create_connection_group(groupname, type, parent_group, enable_
         template_method => "mustache",
         edit_template => "$($(params).create_connection_group_template)",
         classes => results("bundle", "create_connection_group_sql"),
-	comment => "expand create_connection_group_sql file using template from staging cache in this promise directory
+	comment => "expand sql insert file using template from staging cache in this promise directory
                     only if group does not already exist, and its parent group exists or it does not require a parent group";
 
   commands:
-    create_connection_group_sql_repaired|create_connection_group_sql_kept::
+    sql_insert_file_exists.(create_connection_group_sql_repaired|create_connection_group_sql_kept)::
       "$(mysql_import_cmd)"
         args => "$($(params).create_connection_group_sql)_$(groupname).sql",
         contain => in_shell,
@@ -448,6 +454,9 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
       # 	expression => regcmp(".+","$(mysql_parent_id_result)"),
       #   comment => "check mysql query result contains a value";
       
+      "sql_insert_file_exists"
+	expression => fileexists( "$($(params).create_connection_sql)_$(conname).sql" );
+
   files:
     connection_does_not_exist::
       "$($(params).create_connection_sql)_$(conname).sql"
@@ -455,10 +464,10 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
         template_method => "mustache",
         edit_template => "$($(params).create_connection_template)",
         classes => results("bundle", "create_connection_sql"),
-      	comment => "expand create_connection_sql file using template from staging cache in this promise directory";
+      	comment => "expand sql insert file using template from staging cache in this promise directory";
 
   commands:
-    (create_connection_sql_repaired|create_connection_sql_kept)::
+    sql_insert_file_exists.(create_connection_sql_repaired|create_connection_sql_kept)::
       "$(mysql_import_cmd)"
         args => "$($(params).create_connection_sql)_$(conname).sql",
         contain => in_shell,
@@ -498,6 +507,9 @@ bundle agent guac_create_user(username, full_name, email_address, organization, 
 	not => regcmp(".+","$(mysql_user_result)"),
         comment => "check mysql query result does not contain one or more characters";
       
+      "sql_insert_file_exists"
+	expression => fileexists( "$($(params).create_user_sql)_$(username).sql" );
+
   files:
     user_does_not_exist::
       "$($(params).create_user_sql)_$(username).sql"
@@ -505,10 +517,10 @@ bundle agent guac_create_user(username, full_name, email_address, organization, 
         template_method => "mustache",
         edit_template => "$($(params).create_user_template)",
         classes => results("bundle", "create_user_sql"),
-  	comment => "expand create_user_sql file using template from staging cache in this promise directory";
+  	comment => "expand sql insert file using template from staging cache in this promise directory";
 
   commands:
-    create_user_sql_repaired|create_user_sql_kept::
+    sql_insert_file_exists.(create_user_sql_repaired|create_user_sql_kept)::
       "$(mysql_import_cmd)"
         args => "$($(params).create_user_sql)_$(username).sql",
         contain => in_shell,
@@ -553,6 +565,9 @@ bundle agent guac_add_user_to_connection(type, conname, username, params)
 	not => regcmp(".+","$(mysql_perm_result)"),
         comment => "check mysql query result does not contain one or more characters";
       
+      "sql_insert_file_exists"
+	expression => fileexists( "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql" );
+
   files:
     permission_does_not_exist::
       "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql"
@@ -560,10 +575,10 @@ bundle agent guac_add_user_to_connection(type, conname, username, params)
         template_method => "mustache",
         edit_template => "$($(params).add_user_to_connection_template)",
         classes => results("bundle", "add_user_to_connection_sql"),
-	comment => "expand add_user_to_connection_sql file using template from staging cache in this promise directory";
+	comment => "expand sql insert file using template from staging cache in this promise directory";
 
   commands:
-    add_user_to_connection_sql_repaired|add_user_to_connection_sql_kept::
+    sql_insert_file_exists.(add_user_to_connection_sql_repaired|add_user_to_connection_sql_kept)::
       "$(mysql_import_cmd)"
         args => "$($(params).add_user_to_connection_sql)_$(username)_$(conname).sql",
         contain => in_shell,
@@ -693,7 +708,7 @@ bundle agent guac_tidy(cdir, day)
 {
 # @description: delete all guac sql query files after specified days
   files:
-      "$(cdir)/*guac*"
+      "$(cdir)/guac.*"
 	pathtype => "regex",
         file_select => days_old( "$(day)" ),
 	delete => tidy;

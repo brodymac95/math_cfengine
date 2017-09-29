@@ -218,8 +218,8 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guac_props][mysql-username]" string => "guacamole_user";
 
       "conf[guac_props][cas-authorization-endpoint]" string => " https://cas-test.wichita.edu/cas";
-      "conf[guac_props][cas-redirect-uri]" string => "$(classify_host.host_purpose).$(sys.domain)",
-        comment => "domain hostname defined using the host purpose field plus sys.domain";
+      "conf[guac_props][cas-redirect-uri]" string => "$(classify_host.host_purpose).$(global.cs_domain)",
+        comment => "domain hostname defined using the host purpose field plus global bundle cs_domain";
 
       "conf[guac_props][ldap-hostname]" string => "ad.wichita.edu";
       # "conf[guac_props][ldap-port]" string => "389"; # Standard LDAP port is 389, but 636 is used by WSU for AD

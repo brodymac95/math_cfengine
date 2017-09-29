@@ -28,6 +28,7 @@ bundle agent manage_repositories
 # @description: takes in repository info from external json file and adds or removes repository within /etc/apt/sources
 {
   vars:
+      "apt_update_cmd" string => "/usr/bin/apt-get update";
       "default_sources_file" string => "/etc/apt/sources.list";
       
       "options" string => "";
@@ -48,9 +49,17 @@ bundle agent manage_repositories
       
   methods:
     debian::
-        "ensure all required repos are inserted into sources.list as specified in repos.json"
-        	usebundle => ensure_repos( $(default_sources_file), @(repos_ensure), $(options) ),
-          inherit => "true";
+      "ensure all required repos are inserted into sources.list as specified in repos.json"
+        usebundle => ensure_repos( $(default_sources_file), @(repos_ensure), $(options) ),
+      	classes => results("bundle", "ensure_repos"),
+        inherit => "true";
+      
+
+  commands:
+    ensure_repos_repaired::
+      "$(apt_update_cmd)"
+      	classes => if_ok("apt_update"),
+        comment => "if apt repo sources.list are modifed, then run apt-get update";
 
   reports:
    (inform_mode|verbose_mode)::
@@ -58,6 +67,8 @@ bundle agent manage_repositories
       
     (DEBUG|DEBUG_manage_repositories)::
       "=== $(this.bundle) ===";
+      "apt-get update run to ensure new repos are cached"
+        ifvarclass => "apt_update";
 
     (DEBUG|DEBUG_manage_repositories).!debian::
       "Cannot set up repository sources on this operating system. Only have code for debian/ubuntu OS";

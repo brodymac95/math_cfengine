@@ -130,9 +130,9 @@ bundle agent manage_os_tenant_cluster
       "turn on xrdp remote access" usebundle => xrdp("on");
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
-    reboot_15m_after_host_creation::
-      "DANGEROUS: auto reboot 15mins + 1min delay into host lifecycle to ensure all services are fully operational"
-	usebundle => reboot ("1", "CFEngine: scheduled maintenance reboot at lifecycle start");
+    # reboot_20m_after_host_creation::
+    #   "DANGEROUS: auto reboot within first 25mins using 10m delay into host lifecycle to ensure all services are fully operational"
+    # 	usebundle => reboot ("10", "CFEngine: scheduled maintenance reboot at lifecycle start");
       
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
@@ -282,7 +282,7 @@ bundle agent manage_workstation_host
          
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
-	usebundle => reboot_required;
+    	usebundle => reboot_required;
 
     testing::
       # insert bundles here for testing hosts only

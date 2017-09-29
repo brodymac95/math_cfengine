@@ -73,10 +73,11 @@ bundle agent manage_repository_packages
 				 "tmux",
                                 };
 
-    dev_cluster.(debian)::
+    cslab_node.(debian)::
       "server_installs" slist => {
 				   "openssh-server",
 				   "build-essential",
+				   "ddd",
 				   "tree",
 				   "terminator",
 				   "default-jre",
@@ -85,6 +86,8 @@ bundle agent manage_repository_packages
 				   "eclipse-cdt",
 				   "geany",
 				   "geany-plugins",
+				   "texlive",
+				   "texmaker",
 				   "subversion",
 				   "git",
 				   "git-el",

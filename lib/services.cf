@@ -149,7 +149,7 @@ bundle agent standard_services(service,state)
 
     systemd::
       # On my systems, I'm seeing 115 or so lines of output... giving some wiggle room
-      "systemd_service_info" slist => string_split(execresult("$(call_systemctl) show $(service)", "noshell"), "\n", "150");
+      "systemd_service_info" slist => string_split(execresult("$(call_systemctl) show $(service)", "noshell"), "\n", "1500");
 
   classes:
       # define a class named after the desired state
@@ -305,6 +305,15 @@ bundle agent standard_services(service,state)
       "$(this.bundle): using Solaris SMF to $(state) $(service) (svcadm mode $(svcadm_mode))";
     verbose_mode.fallback::
       "$(this.bundle): falling back to classic_services to $(state) $(service)";
+
+      #BEN ADDED FOR TESTING SYSTEMD ERROR
+    systemd::
+      "$(this.bundle): using systemd layer to $(state) $(service)";
+    systemd.!service_loaded::
+      "$(this.bundle): Service $(service) unit file is not loaded; doing nothing";
+      any::
+      "systemd_service_info found: $(systemd_service_info)";
+
 }
 
 bundle agent classic_services(service,state)

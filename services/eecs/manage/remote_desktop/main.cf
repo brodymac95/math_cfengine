@@ -117,8 +117,8 @@ bundle agent xrdp_vars(params)
       "dependent_packages" slist => { "xrdp", "lxde", },
         comment => "install xrdp service and lxde desktop environment";
 
-      "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", },
-        comment => "remove all desktop/GUI-based network, screenlock, screensaver packages from server";
+      "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
+        comment => "remove all desktop/GUI-based network, screenlock, screensaver, torrent, web-browser packages from server";
 
     ## XWRAPPER CONFIGURATION
       "xwrapper_config_file" string => "/etc/X11/Xwrapper.config";
