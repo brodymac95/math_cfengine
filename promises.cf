@@ -324,18 +324,15 @@ bundle common services_autorun
 
   reports:
     DEBUG|DEBUG_services_autorun::
+      "DEBUG $(this.bundle): Services Autorun Disabled"
+        ifvarclass => "!services_autorun";
+
+      "DEBUG $(this.bundle): Services Autorun Enabled"
+	ifvarclass => "services_autorun";
+
       "DEBUG $(this.bundle): adding input='$(inputs)'"
         ifvarclass => isvariable("inputs");
 
       "DEBUG $(this.bundle): adding input='$(found_inputs)'"
         ifvarclass => isvariable("found_inputs");
-}
-
-
-
-# special body for update/*.cf compatibility
-body classes u_kept_successful_command
-# @brief Set command to "kept" instead of "repaired" if it returns 0
-{
-      kept_returncodes => { "0" };
 }
