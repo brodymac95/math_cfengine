@@ -41,4 +41,16 @@
         "role": "robotics",
         "owner": "Hongsheng He",
     },
+    "wh_330_3053_r03": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "robotics",
+        "owner": "Hongsheng He",
+    },
+    "wh_330_3054_r04": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "robotics",
+        "owner": "Hongsheng He",
+    },
 }
