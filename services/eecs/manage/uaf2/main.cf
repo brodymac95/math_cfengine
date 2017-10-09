@@ -72,7 +72,12 @@ bundle agent install_uaf2_client
       "install_dir" string => "/root/";
 
       "server_public_keys" string => "wsu-eecs-server-public-keys-1.0-20_all.deb";
-      "dependent_packages" slist => { "perl", "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", };
+
+      "uaf2_dependent_packages" slist => { "perl", "wsu-whereami-eecs", "vtw10-globals", "vtw10-base", },
+        comment => "uaf2 depends on perl and Tom's packages";
+      "handin_dependent_packages" slist => { "perl", "libc6:i386", "libstdc++6:i386", },
+        comment => "grader handin depends on the 32-bit libc6 libraries";
+      
       "uaf2_client_package" string => "vtw10-uaf2-client";
 
       "dpkg_install_command" string => "/usr/bin/dpkg --install --force-confold --force-confdef ";
@@ -89,6 +94,10 @@ bundle agent install_uaf2_client
       "client_dbpass" string => readfile($(passwd_cache), 4096),
       	comment => "database password to define in uaf2_dbpass_client.conf file (downloaded from host_by_key directory)";
 
+    debian::
+      "add_arch_i386" string => "dpkg --add-architecture i386 && apt-get update",
+        comment => "handin is part of uaf2 grader users, but is an old 32-bit app so needs i386 architecture added to host";
+ 
   classes:
       
     "server_public_keys_package_exists" 
@@ -99,11 +108,19 @@ bundle agent install_uaf2_client
 
       "uaf2_client_installed"
         expression => fileexists( $(executable_file) );
+
+  commands:
+    debian.install_software::
+    # debian.!uaf2_client_installed::
+      "$(add_arch_i386)" 
+        contain => in_dir_shell("/root"),
+        classes => results("bundle", "add_arch"),
+        comment => "update dpkg with i386 architecture for handin to work";
       
   methods:
-    # install_software.wsu_local_repo::
-    #   "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
-    #     classes => results("bundle", "dependent_packages_installed");
+    install_software::
+      "install dependent packages" usebundle => package_latest("$(handin_dependent_packages)"),
+        classes => results("bundle", "handin_dependent_packages_installed");
 
     # # install_software.(server_public_keys_repaired|uaf2_client_installed)::
     # #   "install uaf2_client_package after server public keys are installed or run an update if already installed"
@@ -111,12 +128,12 @@ bundle agent install_uaf2_client
 
   packages:
     install_software.wsu_local_repo::
-      "$(dependent_packages)"
+      "$(uaf2_dependent_packages)"
         policy => "present",
         package_module => apt_get,
         options => { " --allow-unauthenticated " },
         classes => results("bundle", "dependent_packages_installed"),
-        comment => "install dependent packages from wsu_local_repo
+        comment => "install dependent packages from standard repo and wsu_local_repo
                     need to allow unauthenticated repos in Debian 9";
 
     install_software.(server_public_keys_repaired|uaf2_client_installed)::
