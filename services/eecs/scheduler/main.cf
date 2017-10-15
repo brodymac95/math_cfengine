@@ -57,9 +57,12 @@ bundle common cron_scheduler
 
       "run_uaf2_client" and => { "UP_LESS_1HR", },
       comment => "run Tom's uaf2_client to update users within first hour since system last boot";
-
+      
       "reboot_allowed" expression => "Hr02",
       comment => "allow for system auto reboot at 2am only";
+
+      "reboot_node_now" and => { "Hr04", splayclass("$(sys.host)$(sys.ipv4)","hourly"), },
+      comment => "allow for node auto reboot every night sometime between 2am and 3am";
 
       ## NOT WORKING - JUST KEEPS REBOOTING
       # "reboot_20m_after_host_creation" expression => eval( "$(sys.systime) < $(20m_after_system_creation)","class", "infix" ),

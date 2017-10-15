@@ -105,7 +105,7 @@ bundle agent manage_os_tenant_cluster
 
       # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts! 
       "manage root password"     usebundle => manage_root_passwd,
-        comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
+        comment => "add root password hash for new hosts by manually running the cf-pwhash.sh script";
       
     install_software.!NO_INSTALLS::
       "repository management"      usebundle => manage_repositories;
@@ -130,13 +130,15 @@ bundle agent manage_os_tenant_cluster
       "turn on xrdp remote access" usebundle => xrdp("on");
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
-    # reboot_20m_after_host_creation::
-    #   "DANGEROUS: auto reboot within first 25mins using 10m delay into host lifecycle to ensure all services are fully operational"
-    # 	usebundle => reboot ("10", "CFEngine: scheduled maintenance reboot at lifecycle start");
+
+     cluster_node.reboot_node_now.!no_restarts::
+      "DANGEROUS: auto reboot/reset cluster nodes each night in splayed time as defined in the scheduler"
+ 	usebundle => reboot_with_warning("10", "CFEngine: nightly reboot of this node will occur shortly! Save your work and reconnect after reboot.");
       
     reboot_allowed::
       "check if a reboot is required after upgrades only if rebooting is allowed via cron_scheduler"
 	usebundle => reboot_required;
+
     uaf2_client.run_uaf2_client::
       "when called by cron_scheduler, run uaf2 client" usebundle => run_uaf2_client;
 

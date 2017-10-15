@@ -236,7 +236,6 @@ bundle agent install_guacctl(params)
         contain => in_dir_shell("$(exec_dir)"),
         classes => results("bundle", "downloaded_file"),
         comment => "download the script file";
-
       
   reports:
     (inform_mode|verbose_mode)::

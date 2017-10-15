@@ -46,11 +46,77 @@ bundle agent reboot_required
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
       
-    (DEBUG|DEBUG_manage_packages)::
+    (DEBUG|DEBUG_reboot)::
       "=== $(this.bundle): ===";
 
-    (DEBUG|DEBUG_manage_packages).reboot_required::
+    (DEBUG|DEBUG_reboot).reboot_required::
       "Reboot is required";   
+}
+
+######################################################################
+
+bundle agent reboot_with_warning(reboot_delay_time, reboot_message)
+# @description: uses zenity to warn all RDP and SSH users, then reboots system at a defined time
+# BE CAREFUL TO USE THIS BUNDLE SPARINGLY!!
+{
+
+  vars:
+      # "reboot_message" string => "CFEngine: testing reboot_with_warning bundle";      
+      # "reboot_delay_time" string => "10";
+      
+      "xrdp_user_query_cmd" string => "/bin/ps h -f -p `pgrep -f xorg` | /usr/bin/awk '{ print $1 $10 }'";
+      "zenity_cmd" string => "/usr/bin/zenity --warning --text '$(reboot_message)'";
+      "zenity_exec" string => "/usr/bin/zenity";
+
+      "dependent_packages" slist => { "zenity", },
+        comment => "install awk and zenity for sending warning to graphical desktop users";
+
+      "xrdp_users_string" string => execresult( "$(xrdp_user_query_cmd)", "useshell" );
+      "dim" int => parsestringarrayidx( "xrdp_users_data", "$(xrdp_users_string)", "", ":", 100, 400 );
+      "xrdp_users" slist => getindices( "xrdp_users_data" );
+      
+  classes:
+      "zenity_exists"
+      	expression => fileexists( "$(zenity_exec)" );
+
+  methods:
+    install_software::
+      "ensure dependent packages are installed"
+    	usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+
+    !no_restarts::
+      "call for a reboot of host!"
+        usebundle => reboot( $(reboot_delay_time), $(reboot_message) );
+
+  commands:
+    zenity_exists::
+      "$(zenity_cmd)"
+        args => "--display :$(xrdp_users_data[$(xrdp_users)][1])",
+      	contain => runasuser("$(xrdp_users_data[$(xrdp_users)][0])"),
+      	classes => results("bundle", "warning_message"),
+        comment => "display a warning dialog message on desktop for all users connected to host",
+        ifvarclass => isvariable( "xrdp_users" );
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+      
+    (DEBUG|DEBUG_reboot)::
+      "=== $(this.bundle): ===";
+      "desktop_users to send warning: $(xrdp_users_data[$(xrdp_users)][0]) with display = $(xrdp_users_data[$(xrdp_users)][1])";
+
+      "$(dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+body contain runasuser(user)
+{
+        useshell => "noshell";
+	exec_timeout => "20";
+        exec_owner => "$(user)";
 }
 
 ######################################################################

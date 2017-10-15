@@ -35,8 +35,8 @@ bundle common global
       "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
       "cs_domain" string => "cs.wichita.edu";
 
-      "system_creation_time" string => filestat( "/", "ctime" ),
-        comment => "defining the unix epoch time of when the root directory '/' was created
+      "system_creation_time" string => filestat( "/usr", "ctime" ),
+        comment => "defining the unix epoch time of when the directory '/usr' was created
                     to assume a baseline for host system creation time";
       
   reports:
