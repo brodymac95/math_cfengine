@@ -27,6 +27,7 @@ bundle common manage_main_file_control
       "input[ssh]" string => "$(this.promise_dirname)/ssh/main.cf";
       "input[system_users]" string => "$(this.promise_dirname)/system_users/main.cf";
       "input[tftp]" string => "$(this.promise_dirname)/tftp/main.cf";
+      "input[time]" string => "$(this.promise_dirname)/time/main.cf";
       "input[uaf2]" string => "$(this.promise_dirname)/uaf2/main.cf";
       "input[uaf2_users]" string => "$(this.promise_dirname)/uaf2/user_management.cf";
       "input[users]" string => "$(this.promise_dirname)/users/main.cf";
@@ -102,13 +103,14 @@ bundle agent manage_os_tenant_cluster
       "configure login motd"     usebundle => config_login_banner;
       "configure sshd"           usebundle => config_sshd;
       "configure login defaults" usebundle => config_login_defs;
+      "configure timezone"       usebundle => config_timezone;
 
-      # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts! 
+      # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts? 
       "manage root password"     usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by manually running the cf-pwhash.sh script";
       
     install_software.!NO_INSTALLS::
-      "repository management"      usebundle => manage_repositories;
+      "repository management"    usebundle => manage_repositories;
       "package management"       usebundle => manage_packages;
 
       

@@ -61,7 +61,7 @@ bundle common cron_scheduler
       "reboot_allowed" expression => "Hr02",
       comment => "allow for system auto reboot at 2am only";
 
-      "reboot_node_now" and => { "Hr04", splayclass("$(sys.host)$(sys.ipv4)","hourly"), },
+      "reboot_node_now" and => { "Hr02", splayclass("$(sys.host)$(sys.ipv4)","hourly"), },
       comment => "allow for node auto reboot every night sometime between 2am and 3am";
 
       ## NOT WORKING - JUST KEEPS REBOOTING
