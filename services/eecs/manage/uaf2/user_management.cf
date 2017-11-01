@@ -61,6 +61,15 @@ bundle agent uaf2_user_management
       "ensure ssh authorized keys are copied into grader account (use bundle in manage/ssh/main.cf)"
 	usebundle => ensure_user_ssh_authorized_keys( "$(grader_users)", "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
 	classes => results("bundle", "$(grader_users)_ssh_auth_keys");
+
+      "ensure all uaf2 grader user accounts as defined in the json grader list have correct permissions"
+	usebundle => ensure_grader_perms( "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
+	classes => results("bundle", "$(grader_users)_grader_perms");
+        # ifvarclass => strcmp( "$(grader_user_data[$(grader_users)])", "reset" );
+
+      "ensure all uaf2 student user accounts have correct permissions"
+	usebundle => ensure_student_perms,
+	classes => results("bundle", "student_perms");
   
   reports:
     (inform_mode|verbose_mode)::
@@ -72,9 +81,88 @@ bundle agent uaf2_user_management
       "$(grader_users) account reset"
         ifvarclass => "$(grader_users)_grader_reset_repaired";
 
+      "$(grader_users) account permissions are correct"
+        ifvarclass => "$(grader_users)_grader_perms_repaired";
+
+      "student account permissions are correct"
+        ifvarclass => "student_perms_repaired";
+
       # "json data found for grader_users: $(json_str_grader_user_data)";
 }
 
+######################################################################
+
+bundle agent ensure_student_perms
+# @description: ensure correct permissions on student user home directories
+{
+  vars:
+      "student_homes" string => "/opt/homes/stu";
+      "exclude_file" string => "aquota.user";
+      "mode" string => "0700",
+        comment => "restrict mode to only allow owner/user access into home directory";
+
+  files:
+      "$(student_homes).*"
+	perms => m( "$(mode)" ),
+	file_select => exclude( "$(exclude_file)" ),
+        depth_search => recurse( "1" ),
+      # action => warn_only,
+	comment => "ensure owner only permissions on all student home directories";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+}
+
+
+######################################################################
+
+bundle agent ensure_grader_perms(user, grader_home)
+# @description: ensure correct permissions on grader account and handin files
+{
+  vars:
+      "handin_exec" string => "bin/handin";
+      "handin_dir" string => "handin";
+      "assign_dir" string => "handin/assign";
+
+  classes:
+      "handin_exec_exists"
+	expression =>  fileexists( "$(grader_home)/$(handin_exec)" );
+
+      "handin_dir_exists"
+	expression =>  fileexists( "$(grader_home)/$(handin_dir)/." );
+
+  files:
+      "$(grader_home)/."
+	perms => mog("755","$(user)","$(user)"),
+	comment => "set global read permissions for grader home directory";
+
+    handin_exec_exists::
+      "$(grader_home)/bin/."
+	perms => mog("755","$(user)","$(user)"),
+	comment => "set global read permissions for grader bin directory";
+
+      "$(grader_home)/$(handin_exec)"
+	perms => mog("4755","$(user)","$(user)"),
+	comment => "set setuid permissions for handin executable";
+
+    handin_dir_exists::
+      "$(grader_home)/$(handin_dir)/."
+	perms => mog("700","$(user)","$(user)"),
+	comment => "set user only access permissions for handin directory";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+      # "assign directory exists. Assuming data needs to be tarballed before removal"
+      #   ifvarclass => "assign_dir_exists";
+}
 ######################################################################
 
 bundle agent reset_grader(user, grader_home)
@@ -95,9 +183,6 @@ bundle agent reset_grader(user, grader_home)
   classes:
       "assign_dir_exists"
 	expression =>  fileexists( "$(grader_home)/$(assign_dir)/." );
-
-      "handin_exec_exists"
-	expression =>  fileexists( "$(grader_home)/$(handin_exec)" );
       
   commands:
     assign_dir_exists::
@@ -112,11 +197,6 @@ bundle agent reset_grader(user, grader_home)
         perms => mog( "$(default_mode)","$(user)", "$(user)" ),
         # action => if_elapsed("60"),
         comment => "ensure correct perms on old assign tarball";
-
-    handin_exec_exists::
-      "$(grader_home)/$(handin_exec)"
-	perms => mog("4755","$(user)","$(user)"),
-	comment => "set setuid permissions for handin executable";
          
   methods:
     tar_create_repaired|tar_create_kept::
