@@ -11,12 +11,12 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-body file control
-{
-	inputs => { "$(sys.libdir)/stdlib.cf",
-		    "$(sys.workdir)/inputs/services/eecs/manage/ssh/main.cf",
-		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-}
+# body file control
+# {
+# 	inputs => { "$(sys.libdir)/stdlib.cf",
+# 		    "$(sys.workdir)/inputs/services/eecs/manage/ssh/main.cf",
+# 		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+# }
 
 ######################################################################
 # Public entry point: uaf2_user_management
@@ -104,7 +104,7 @@ bundle agent ensure_student_perms
       "$(student_homes).*"
 	perms => m( "$(mode)" ),
         depth_search => recurse("1"),
-        action => warn_only,
+        # action => warn_only,
 	comment => "ensure owner only permissions on all student home directories";
 
   reports:
