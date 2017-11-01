@@ -28,7 +28,6 @@ body file control
 bundle agent config_<service>
 # @description: 
 {
-
   vars:
 
   methods:
@@ -39,6 +38,87 @@ bundle agent config_<service>
 
     (DEBUG|DEBUG_config)::
       "=== $(this.bundle) ===";
+}
+
+######################################################################
+
+# bundle agent template_server
+bundle agent template_server(state)
+# @description:
+{
+  vars:      
+      "template_exec" string => "/usr/sbin/template";
+
+  classes:
+      # DEFINE SERVER STATES
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "template_exists"
+	expression => fileexists( "$(template_exec)" );
+
+  methods:
+
+    off.template_exists::
+      "ensure service is stopped if template_server is off"
+      	usebundle => standard_services( "template", "stop" ),
+      	classes => if_ok("template_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.template_exists::
+      "ensure service is running if template_server is on"
+      	usebundle => standard_services( "template", "start" ),
+      	classes => if_ok("template_server_on");
+
+      "generate all template server variables"  usebundle => template_server_vars;
+      
+    on.template_repaired::
+      "restart template service after configuration"
+      	usebundle => standard_services( "template", "restart" ),
+      	classes => if_ok("template_server_restart");
+
+    ## INSTALL ALL SOFTWARE FOR TEMPLATE SERVER
+    on.install_software::
+      "generate all template server variables"  usebundle => template_server_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest("$(template_server_vars.dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_template_server)::
+      "=== $(this.bundle) ===";
+
+      "template server is not installed on this host"
+        ifvarclass => "!template_exists";
+      "template server is turned off"
+        ifvarclass => "template_server_off";
+      "template server is turned on and running"
+        ifvarclass => "template_server_on";
+      "template server restarted due to configuration change"
+        ifvarclass => "template_server_restart";
+      "$(template_server_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+bundle agent template_server_vars
+{
+  vars:
+
+    ## INSTALL PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "dependent_packages" slist => { "", },
+        comment => "set of packages required for server";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
 
 ######################################################################

@@ -17,6 +17,7 @@ bundle common manage_main_file_control
       "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
+      "input[mail_server]" string => "$(this.promise_dirname)/mail_server/main.cf";
       "input[network]" string => "$(this.promise_dirname)/network/main.cf";
       "input[network file system]" string => "$(this.promise_dirname)/nfs/main.cf";
       "input[printers]" string => "$(this.promise_dirname)/printers/main.cf";
@@ -104,8 +105,9 @@ bundle agent manage_os_tenant_cluster
       "configure sshd"           usebundle => config_sshd;
       "configure login defaults" usebundle => config_login_defs;
       "configure timezone"       usebundle => config_timezone;
+      "turn on mail send-only"   usebundle => mail_server("on");
 
-      # not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts? 
+      # future: not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts? 
       "manage root password"     usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by manually running the cf-pwhash.sh script";
       

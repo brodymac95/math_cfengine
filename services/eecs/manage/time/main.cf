@@ -66,20 +66,21 @@ bundle agent config_timezone
     timezone_exists.linux::
       "$(localtime_file)"
         handle            => "tzconfig_files_etc_localtime",
-        copy_from         => local_dcp( "$(timezone_file)" ),
+        copy_from         => local_cp( "$(timezone_file)" ),
         perms             => mog("644", "root", "root"),
         classes           => results("bundle", "localtime_file"),
-        move_obstructions => "true",
+        # move_obstructions => "true",
         comment           => "Copy the proper timezone file in place. We dont use a symlink because that might cause problems across different filesystems, it has been a bug in the past.";
 
   commands:
-    timezone_file_repaired|localtime_file_repaired::
+    debian.(timezone_file_repaired)::
       "/usr/sbin/dpkg-reconfigure -f noninteractive tzdata"
-        comment => "reconfigure timezone data after updating files",
-        ifvarclass => "debian|gentoo";
+        action => if_elapsed("60"),
+        comment => "reconfigure timezone data after updating files";
       
       "/usr/sbin/ntpdate -u $(ntp_server)"
-      comment => "reset time using ntp after timezone update";
+       action => if_elapsed("60"),
+       comment => "reset time using ntp after timezone update";
 
   reports:
     (inform_mode|verbose_mode)::

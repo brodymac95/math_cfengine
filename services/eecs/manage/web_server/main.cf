@@ -23,7 +23,7 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1.
+# 1. For ensuring secure websites, check out: https://www.ssllabs.com 
 
 # bundle agent web_server
 bundle agent web_server(state)

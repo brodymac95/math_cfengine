@@ -152,6 +152,15 @@
             "target": "ACCEPT",
 	    "context": "tftp_rslab_internal",
         },
+        "1302":
+        {
+	    "comment": "allow incoming ssh connections from rslab (ee-328D) internal subnet only"
+            "chain": "INPUT"
+            "source_ip": "192.168.77.0/24",
+            "destination_port": "22",
+            "target": "ACCEPT",
+	    "context": "tftp_rslab_internal",
+        },
         "1801":
         {
 	    "comment": "allow incoming CFEngine connections from WSU wired subnet for policy_server only"

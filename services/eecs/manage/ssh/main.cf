@@ -27,6 +27,134 @@
 # file. This improves resilience, and tries to avoid deploying a potentially
 # broken config.bundle agent configfiles
 
+bundle agent sshd_server
+# bundle agent sshd_server(state)
+# @description:
+{
+  vars:      
+      "sshd_exec" string => "/usr/sbin/sshd";
+
+  classes:
+      # DEFINE SERVER STATES
+      "on"  expression => "any";
+      # "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "sshd_exists"
+	expression => fileexists( "$(sshd_exec)" );
+
+  methods:
+
+    off.sshd_exists::
+      "ensure service is stopped if sshd_server is off"
+      	usebundle => standard_services( "sshd", "stop" ),
+      	classes => if_ok("sshd_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.sshd_exists::
+      "ensure service is running if sshd_server is on"
+      	usebundle => standard_services( "sshd", "start" ),
+      	classes => if_ok("sshd_server_on");
+
+      "generate all sshd server variables"  usebundle => sshd_server_vars;
+      
+    on.sshd_repaired::
+      "restart sshd service after configuration"
+      	usebundle => standard_services( "sshd", "restart" ),
+      	classes => if_ok("sshd_server_restart");
+
+    ## INSTALL ALL SOFTWARE FOR SSHD SERVER
+    on.install_software::
+      "generate all sshd server variables"  usebundle => sshd_server_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest("$(sshd_server_vars.dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sshd_server)::
+      "=== $(this.bundle) ===";
+
+      "sshd server is not installed on this host"
+        ifvarclass => "!sshd_exists";
+      "sshd server is turned off"
+        ifvarclass => "sshd_server_off";
+      "sshd server is turned on and running"
+        ifvarclass => "sshd_server_on";
+      "sshd server restarted due to configuration change"
+        ifvarclass => "sshd_server_restart";
+      "$(sshd_server_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+bundle agent sshd_server_vars
+{
+  vars:
+
+    ## INSTALL PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "dependent_packages" slist => { "openssh-server", "openssh-client", },
+        comment => "set of packages required for server";
+
+    ## FILE PARAMETERS
+    any::
+      "sshd_config_file" string => "/etc/ssh/sshd_config";
+      "sshd_config_template" string => "$(this.promise_dirname)/data/sshd_config.mustache";      
+      "sshd_config_cache" string => "$(sys.workdir)/state/security/sshd_config",
+
+      "authorized_keys_dist" string => "/srv/cfengine/configs/ssh_authorized_keys/",
+        comment => "server location where agents look for each user ssh authorized_keys file.";
+      "authorized_keys_cache" string => "$(sys.workdir)/state/security/ssh_key_cache/",
+        comment => "local directory where agents cache the user ssh authorized_keys file
+        (for offline enforcement).";
+
+     ## SSHD_CONFIG: NETWORKING
+      "sshd[Port]"                                    string => "22";
+      "sshd[Protocol]"                                string => "2";
+      "sshd[ClientAliveInterval]"                     string => "120";
+      "sshd[TCPKeepAlive]"                            string => "yes";
+      "sshd[UseDNS]"                                  string => "no";
+
+    ## SSHD_CONFIG: AUTHENTICATION
+      "sshd[RSAAuthentication]"                       string => "yes";
+      "sshd[PubkeyAuthentication]"                    string => "yes";
+      "sshd[ChallengeResponseAuthentication]"         string => "no";
+      "sshd[HostbasedAuthentication]"                 string => "no";
+
+    !infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes";
+      
+    infrastructure::
+      "sshd[PasswordAuthentication]"                    string => "yes",
+      comment => "allow no password auth for infrastructure servers/nodes in future";
+
+    ## SSHD_CONFIG: SECURITY
+      "sshd[UsePAM]"                                  string => "yes";
+      "sshd[StrictModes]"                             string => "yes";
+      "sshd[PermitRootLogin]"                         string => "no";
+      "sshd[PermitEmptyPasswords]"                    string => "no";
+      "sshd[UsePrivilegeSeparation]"                  string => "sandbox";
+      "sshd[ChrootDirectory]"                         string => "none";
+      
+    ## SSHD_CONFIG: MISC OPTIONS
+      "sshd[AllowTcpForwarding]"                      string => "yes";
+      "sshd[AllowAgentForwarding]"                    string => "yes";
+      "sshd[X11Forwarding]"                           string => "yes"; 
+      "sshd[X11DisplayOffset]"                        string => "10";
+     
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+
 bundle common ssh_settings
 {
   vars:
