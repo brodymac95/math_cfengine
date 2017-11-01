@@ -11,12 +11,12 @@
 # "There can be only one" body common control per policy entry (promises.cf,update.cf)
 
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
-# body file control
-# {
-# 	inputs => { "$(sys.libdir)/stdlib.cf",
-# 		    "$(sys.workdir)/inputs/services/eecs/manage/ssh/main.cf",
-# 		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
-# }
+body file control
+{
+	inputs => { "$(sys.libdir)/stdlib.cf",
+		    "$(sys.workdir)/inputs/services/eecs/manage/ssh/main.cf",
+		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
 
 ######################################################################
 # Public entry point: uaf2_user_management
@@ -66,6 +66,10 @@ bundle agent uaf2_user_management
 	usebundle => ensure_grader_perms( "$(grader_users)", "$(grader_home_dir)/$(grader_users)" ),
 	classes => results("bundle", "$(grader_users)_grader_perms");
         # ifvarclass => strcmp( "$(grader_user_data[$(grader_users)])", "reset" );
+
+      "ensure all uaf2 student user accounts have correct permissions"
+	usebundle => ensure_student_perms,
+	classes => results("bundle", "student_perms");
   
   reports:
     (inform_mode|verbose_mode)::
@@ -80,8 +84,37 @@ bundle agent uaf2_user_management
       "$(grader_users) account permissions are correct"
         ifvarclass => "$(grader_users)_grader_perms_repaired";
 
+      "student account permissions are correct"
+        ifvarclass => "student_perms_repaired";
+
       # "json data found for grader_users: $(json_str_grader_user_data)";
 }
+
+######################################################################
+
+bundle agent ensure_student_perms
+# @description: ensure correct permissions on student user home directories
+{
+  vars:
+      "student_homes" string => "/opt/homes/stu";
+      "mode" string => "0700",
+        comment => "restrict mode to only allow owner/user access into home directory";
+
+  files:
+      "$(student_homes).*"
+	perms => m( "$(mode)" ),
+        depth_search => recurse("1"),
+        action => warn_only,
+	comment => "ensure owner only permissions on all student home directories";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+}
+
 
 ######################################################################
 
