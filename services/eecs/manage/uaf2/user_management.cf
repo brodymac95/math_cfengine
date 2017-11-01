@@ -97,14 +97,16 @@ bundle agent ensure_student_perms
 {
   vars:
       "student_homes" string => "/opt/homes/stu";
+      "exclude_file" string => "aquota.user";
       "mode" string => "0700",
         comment => "restrict mode to only allow owner/user access into home directory";
 
   files:
       "$(student_homes).*"
 	perms => m( "$(mode)" ),
-        depth_search => recurse("1"),
-        # action => warn_only,
+	file_select => exclude( "$(exclude_file)" ),
+        depth_search => recurse( "1" ),
+      # action => warn_only,
 	comment => "ensure owner only permissions on all student home directories";
 
   reports:
