@@ -1,0 +1,179 @@
+##############################################################################
+#
+#   manage/<service>/main.cf - EECS <service> configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/main.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: mail_server(on) OR mail_server(off)
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+######################################################################
+
+# bundle agent mail_server
+bundle agent mail_server(state)
+# @description: install and configure postfix service for host to send mail to root@cs.wichita.edu only!
+{
+  vars:
+      "postfix_exec" string => "/usr/sbin/postfix";
+
+  classes:
+      # DEFINE SERVER STATES
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "postfix_exists"
+	expression => fileexists( "$(postfix_exec)" );
+
+  methods:
+
+    off.postfix_exists::
+      "ensure service is stopped if mail_server is off"
+      	usebundle => standard_services( "postfix", "stop" ),
+      	classes => if_ok("mail_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.postfix_exists::
+      "ensure service is running if mail_server is on"
+      	usebundle => standard_services( "postfix", "start" ),
+      	classes => if_ok("mail_server_on");
+
+      "generate all mail server variables"  usebundle => mail_server_vars;
+      
+      "configure postfix and aliases files"
+    	usebundle => config_mail_server( "mail_server_vars" ),
+        classes => results("bundle", "mail_server_config");
+
+    on.mail_server_config_repaired::
+      "restart mail service after configuration changes"
+      	usebundle => standard_services( "postfix", "restart" ),
+      	classes => if_ok("mail_server_restart");
+
+    ## INSTALL ALL SOFTWARE FOR MAIL SERVER
+    on.install_software::
+      "generate all mail server variables"  usebundle => mail_server_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest( "$(mail_server_vars.dependent_packages)" ),
+        classes => results("bundle", "dependent_packages_install");
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_mail_server)::
+      "=== $(this.bundle) ===";
+
+      "mail server is not installed on this host"
+        ifvarclass => "!postfix_exists";
+      "mail server is turned off"
+        ifvarclass => "mail_server_off";
+      "mail server is turned on and running"
+        ifvarclass => "mail_server_on";
+      "mail server restarted due to configuration change"
+        ifvarclass => "mail_server_restart";
+      "$(mail_server_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+bundle agent mail_server_vars
+{
+  vars:
+
+    ## INSTALL PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "dependent_packages" slist => { "postfix", },
+        comment => "set of packages required for server";
+
+    ## FILE PARAMETERS
+      "postfix_config_file" string => "/etc/postfix/main.cf";
+      "postfix_config_template" string => "$(this.promise_dirname)/data/postfix_main.cf.mustache";
+      "aliases_file" string => "/etc/aliases";
+      "aliases_template" string => "$(this.promise_dirname)/data/aliases.mustache";
+      
+      
+    ## POSTFIX PARAMETERS
+      # "smtpserver" string => "localhost";
+      "mailrelay"  string => "pobox.$(global.cs_domain)";
+      
+      "pf[mydomain]"                   string => "$(global.cs_domain)";
+      
+      "pf[myhostname]"                 string => "$(sys.uqhost).$(global.cs_domain)";
+      "pf[myorigin]"                 string => "$(sys.uqhost).$(global.cs_domain)";
+      "pf[relayhost]"                  string => "pobox.$(global.cs_domain)";
+      "pf[relay_domains]"              string => "$(global.cs_domain)";
+      # "pf[relayhost]"                  string => "[$(mailrelay)]:587";
+      "pf[mailbox_size_limit]"         string => "0";
+      "pf[recipent_delimiter]"         string => "+";
+      "pf[inet_interfaces]"            string => "loopback-only";
+      "pf[inet_protocols]"             string => "ipv4";
+
+      "parameter_name" slist => getindices("pf");
+
+    ## ALIASES PARAMETERS
+      "root_email" string => "root@$(global.cs_domain)";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent config_mail_server(params)
+{
+  vars:
+
+  files:
+      "$($(params).postfix_config_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).postfix_config_template)",
+        classes => results("bundle", "postfix_config"),
+        comment => "expand postfix config file using template from staging cache in this promise directory";
+
+      "$($(params).aliases_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).aliases_template)",
+        classes => results("bundle", "aliases"),
+        comment => "expand aliases file using template from staging cache in this promise directory";
+
+  commands:
+    aliases_repaired::
+      "/usr/bin/newaliases"
+        comment => "run newaliases if /etc/aliases file is update";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_mail_server)::
+      "=== $(this.bundle) ===";
+
+      
+}
+
+######################################################################
