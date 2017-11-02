@@ -1,7 +1,7 @@
 ## {{{vars.sshd_server_vars.sshd_config_file}}} is managed by CFEngine v{{{vars.sys.cf_version}}} at {{{vars.sys.policy_hub}}}
 ## Support for {{{vars.global.eecs_support}}}
 
-#	$OpenBSD: sshd_config,v 1.100 2016/08/15 12:32:04 naddy Exp $
+# $ OpenBSD: sshd_config,v 1.100 2016/08/15 12:32:04 naddy Exp $
 
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
@@ -103,7 +103,7 @@ AllowTcpForwarding {{{vars.sshd_server_vars.sshd[AllowTcpForwarding]}}}
 #GatewayPorts no
 
 X11Forwarding {{{vars.sshd_server_vars.sshd[X11Forwarding]}}}
-X11DisplayOffset UseDNS {{{vars.sshd_server_vars.sshd[X11DisplayOffset]}}}
+X11DisplayOffset {{{vars.sshd_server_vars.sshd[X11DisplayOffset]}}}
 #X11UseLocalhost yes
 #PermitTTY yes
 
@@ -132,8 +132,6 @@ ChrootDirectory {{{vars.sshd_server_vars.sshd[ChrootDirectory]}}}
 # no default banner path
 #Banner none
 #Banner /etc/issue.net
-
-#MaxStartups 10:30:60
 
 # Allow client to pass locale environment variables
 AcceptEnv LANG LC_*

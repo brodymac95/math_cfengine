@@ -10,34 +10,33 @@
 # obtain. Because when reading the policy to restart it can be nice to
 # know why your restarting, instead of restarting because someone said restart.
 
-#body file control
-#{
-#      inputs => { "$(sys.libdir)/stdlib.cf" };
-#}
+body file control
+{
+	inputs => { "$(sys.libdir)/stdlib.cf",
+		    "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
 
 ######################################################################
-# Public entry point: config_sshd AND ensure_ssh_authorized_keys(user)
+# Public entry points: sshd_server(on) OR sshd_server(off)
+#                      ensure_ssh_authorized_keys(user)
 ######################################################################
 
 # NOTES for future development of configuration:
-# Consider managing a temporary file that can be validated with sshd -t -c
-# If that check returns zero then you can promise that the real sshd config
-# is a copy of the validated file. and then define the class used to restart
-# if the main config is repaired by the copy from the validated temporary
-# file. This improves resilience, and tries to avoid deploying a potentially
-# broken config.bundle agent configfiles
+# 1. currently the sshd -t -f (and similarly the visudo -c -f) validation check on cached file runs every time.
+# 2. if we ever implement a centralized tripwire hash checking of essential system files, then look at defining a set of classes to only run the template expansion and validation checks if either the config variables/template changes OR if tripwire policy alerts that /etc/ssh/sshd_config (or /etc/sudoers) file has been modified on the host. This enhancement then allows for alert/logging of intrusion detection and automated self-healing of host, but without these continuous validation checks occuring.
 
-bundle agent sshd_server
-# bundle agent sshd_server(state)
-# @description:
+# bundle agent sshd_server
+bundle agent sshd_server(state)
+# @description: installs and configures sshd server with defined configuration using mustache template
+# NOTE: uses the CFE service state on/off for enabling configuration!!
 {
   vars:      
       "sshd_exec" string => "/usr/sbin/sshd";
 
   classes:
       # DEFINE SERVER STATES
-      "on"  expression => "any";
-      # "on"  expression => strcmp("$(state)","on");
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
 
       "sshd_exists"
@@ -57,9 +56,13 @@ bundle agent sshd_server
       	classes => if_ok("sshd_server_on");
 
       "generate all sshd server variables"  usebundle => sshd_server_vars;
+
+      "copy sshd_config file from mustache template and validate config"
+    	usebundle => config_sshd( "sshd_server_vars" ),
+        classes => results("bundle", "sshd_config");
       
-    on.sshd_repaired::
-      "restart sshd service after configuration"
+    on.sshd_config_repaired::
+      "restart sshd service after configuration changes"
       	usebundle => standard_services( "sshd", "restart" ),
       	classes => if_ok("sshd_server_restart");
 
@@ -75,7 +78,7 @@ bundle agent sshd_server
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_sshd_server)::
+    (DEBUG|DEBUG_sshd)::
       "=== $(this.bundle) ===";
 
       "sshd server is not installed on this host"
@@ -105,15 +108,10 @@ bundle agent sshd_server_vars
     any::
       "sshd_config_file" string => "/etc/ssh/sshd_config";
       "sshd_config_template" string => "$(this.promise_dirname)/data/sshd_config.mustache";      
-      "sshd_config_cache" string => "$(sys.workdir)/state/security/sshd_config",
+      "sshd_config_cache" string => "$(sys.workdir)/state/security/sshd_config";
 
-      "authorized_keys_dist" string => "/srv/cfengine/configs/ssh_authorized_keys/",
-        comment => "server location where agents look for each user ssh authorized_keys file.";
-      "authorized_keys_cache" string => "$(sys.workdir)/state/security/ssh_key_cache/",
-        comment => "local directory where agents cache the user ssh authorized_keys file
-        (for offline enforcement).";
-
-     ## SSHD_CONFIG: NETWORKING
+    ## SSHD_CONFIG: NETWORKING
+    any::
       "sshd[Port]"                                    string => "22";
       "sshd[Protocol]"                                string => "2";
       "sshd[ClientAliveInterval]"                     string => "120";
@@ -121,27 +119,30 @@ bundle agent sshd_server_vars
       "sshd[UseDNS]"                                  string => "no";
 
     ## SSHD_CONFIG: AUTHENTICATION
+    any::
       "sshd[RSAAuthentication]"                       string => "yes";
       "sshd[PubkeyAuthentication]"                    string => "yes";
       "sshd[ChallengeResponseAuthentication]"         string => "no";
       "sshd[HostbasedAuthentication]"                 string => "no";
 
     !infrastructure::
-      "sshd[PasswordAuthentication]"                    string => "yes";
+      "sshd[PasswordAuthentication]"                  string => "yes";
       
     infrastructure::
-      "sshd[PasswordAuthentication]"                    string => "yes",
+      "sshd[PasswordAuthentication]"                  string => "yes",
       comment => "allow no password auth for infrastructure servers/nodes in future";
 
     ## SSHD_CONFIG: SECURITY
+    any::
       "sshd[UsePAM]"                                  string => "yes";
       "sshd[StrictModes]"                             string => "yes";
       "sshd[PermitRootLogin]"                         string => "no";
       "sshd[PermitEmptyPasswords]"                    string => "no";
       "sshd[UsePrivilegeSeparation]"                  string => "sandbox";
       "sshd[ChrootDirectory]"                         string => "none";
-      
+
     ## SSHD_CONFIG: MISC OPTIONS
+    any::
       "sshd[AllowTcpForwarding]"                      string => "yes";
       "sshd[AllowAgentForwarding]"                    string => "yes";
       "sshd[X11Forwarding]"                           string => "yes"; 
@@ -154,85 +155,79 @@ bundle agent sshd_server_vars
 
 ######################################################################
 
-
-bundle common ssh_settings
-{
-  vars:
-            
-      "authorized_keys_dist"
-        string => "/srv/cfengine/configs/ssh_authorized_keys/",
-        comment => "server location where agents look for each user ssh authorized_keys file.";
-      "authorized_keys_cache"
-        string => "$(sys.workdir)/state/ssh_key_cache/",
-        comment => "local directory where agents cache the user ssh authorized_keys file
-        (for offline enforcement).";
-
-}
-
-########################################################
-
-bundle agent config_sshd
+bundle agent config_sshd(params)
 {
   vars:  
-      # Files to edit
-      "files[sshd]"   string => "/etc/ssh/sshd_config";
+      "config_file" string => "$($(params).sshd_config_file)";
+      "config_cache" string => "$($(params).sshd_config_cache)";
+      "config_cache_dir" string => dirname( "$($(params).sshd_config_cache)" );
 
-      # SSHD configuration options to set
-      "sshd[Port]"                                    string => "22";
-      "sshd[Protocol]"                                string => "2";
+      "sshd_chk_cmd" string => "/usr/sbin/sshd -t -f ",
+      comment => "-t = config validation test-mode -q = quiet mode -f = sshd_config file location";
 
-      "sshd[X11Forwarding]"                           string => "yes";
-      "sshd[AllowAgentForwarding]"                    string => "yes";
-      "sshd[RSAAuthentication]"                       string => "yes";
-      "sshd[PubkeyAuthentication]"                    string => "yes";
-      
-      "sshd[UseDNS]"                                  string => "no";
-      "sshd[PermitRootLogin]"                         string => "no";
-      "sshd[PermitEmptyPasswords]"                    string => "no";
+  classes:
+      "have_cached_config"
+	expression => fileexists( $(config_cache) );
 
-    !infrastructure::
-      "sshd[PasswordAuthentication]"                    string => "yes";      
+      "sshd_check_passed"
+        expression => returnszero( "$(sshd_chk_cmd) $(config_cache)", "useshell" ),
+        ifvarclass => "have_cached_config";
 
-    # allow SSH password authentication to be turned off for infrastructure servers and nodes if wanted in future
-    infrastructure::
-      "sshd[PasswordAuthentication]"                    string => "yes";      
-      
-  methods:
-      "sshd"    usebundle => edit_sshd;
+      "sshd_check_failed"
+        not => returnszero( "$(sshd_chk_cmd) $(config_cache)", "useshell" ),
+	ifvarclass => "have_cached_config";
+       
+  files:
+      "$(config_cache_dir)/."
+	create => "true",
+        comment => "ensure the cache directory exists";
+
+      "$(config_cache)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).sshd_config_template)",
+	# action => if_elapsed("60"),
+        # classes => results("bundle", "config_cache"),
+        comment => "expand config file to cache using template in this promise directory";
+
+    have_cached_config.sshd_check_passed::
+      "$(config_file)"
+      	copy_from => local_dcp( "$(config_cache)" ),
+      	perms => mog( "444","root","root" ),
+        classes => results("bundle", "config_file"),
+      	comment => "copy config file from local staging cache and ensure correct permissions ONLY if validated";
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_config_files)::
-      
+    (DEBUG|DEBUG_sshd)::
+      "=== $(this.bundle) ===";
+
+      "cached sshd_config passed validation check"
+	ifvarclass => "sshd_check_passed";
+      "cached sshd_config failed validation check and will not be copied to $(config_file)"
+	ifvarclass => "sshd_check_failed";
+
+      "$(config_file) copied to system"
+	ifvarclass => "config_file_repaired";
+      "$(config_file) exists on system"
+	ifvarclass => "config_file_kept";
 }
 
 ########################################################
 
-bundle agent edit_sshd
+bundle common ssh_settings
 {
-  files:
-      "$(config_sshd.files[sshd])"
-      handle => "edit_sshd",
-      comment => "Set desired sshd parameters",
-      edit_line => set_line_based("config_sshd.sshd", " ", "\s+", ".*", "\s*#\s*"),
-      classes => results("bundle", "sshd");
-
-  methods:
-    sshd_repaired.debian.!no_restarts::
-      "debian reload sshd service if config file modified" usebundle => standard_services("sshd", "reload"),
-      classes => results("bundle", "sshd_reload");
-
-    sshd_repaired.redhat.!no_restarts::
-      "redhat restart sshd service if config file modified" usebundle => standard_services("sshd", "restart"),
-      classes => results("bundle", "sshd_restart");
-
-  reports:
-    (DEBUG|DEBUG_config_files).sshd_reload_repaired::
-      "sshd service reloaded after $(config_sshd.files[sshd]) file repaired";
-    (DEBUG|DEBUG_config_files).sshd_restart_repaired::
-      "sshd service restarted after $(config_sshd.files[sshd]) file repaired";
+  vars:
+      "authorized_keys_dist"
+        string => "/srv/cfengine/configs/ssh_authorized_keys/",
+        comment => "server location where agents look for each user ssh authorized_keys file.";
+      "authorized_keys_cache"
+        string => "$(sys.workdir)/state/ssh_key_cache/",
+              comment => "local directory where agents cache the user ssh authorized_keys file
+        (for offline enforcement).";
 }
 
 ########################################################
@@ -286,7 +281,7 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
 
     user_home_exists.have_cached_auth_keys:: 
       "$(user_auth_keys_file)"
-    	copy_from => local_dcp( $(auth_keys_cache) ),
+    	copy_from => local_dcp( "$(auth_keys_cache)" ),
     	perms => mog( "400","$(user)","$(group)" ),
         classes => results("bundle", "auth_keys_file"),
     	comment => "copy authorized_keys file from local staging cache and ensure correct permissions";
