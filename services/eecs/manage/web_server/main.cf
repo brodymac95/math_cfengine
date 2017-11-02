@@ -23,7 +23,8 @@ body file control
 ######################################################################
 
 # NOTES for future development of configuration:
-# 1. For ensuring secure websites, check out: https://www.ssllabs.com 
+# 1. For ensuring secure websites, check out: https://www.ssllabs.com
+# 2. enhancement for self-healing: look at using apachectl -t to run a validation check on all config cached files before copying into production files and restarting apache!
 
 # bundle agent web_server
 bundle agent web_server(state)
