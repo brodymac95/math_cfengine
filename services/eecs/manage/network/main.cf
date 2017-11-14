@@ -112,10 +112,10 @@ bundle agent config_hosts_file
   vars:
       "custom_hosts"   string => "";
       
-    routinglabsrv::
+    rslabsrv::
       "custom_hosts"
 	slist => { "192.168.77.1 data", "192.168.77.2 obrien", "192.168.77.3 laforge", "192.168.77.5 barclay",
-		   "192.168.77.21 rack1", "192.168.77.22 rack2", "192.168.77.23 rack3", "192.168.77.24 rack4", };
+		   "192.168.77.21 rack1", "192.168.77.22 rack2", "192.168.77.23 rack3", "192.168.77.24 rack4", "192.168.77.25 rack5", };
 
   files:
 
