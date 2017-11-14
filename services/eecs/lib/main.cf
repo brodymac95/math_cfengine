@@ -21,8 +21,56 @@ body file control
 
 ######################################################################
 
+bundle agent install_tarball_v2(source_path, source_server, local_directory)
+# @description: generic bundle to download .tar.gz archive tarball file from source_path on source_server and unroll in local_directory 
+# NEW VERSION 2
+{
+  vars:
+      "tarball_file" string => lastnode( "$(source_path)", "/" );
+      "tar_expand_cmd" string => "/bin/tar -xzf ";
+      
+  classes:
+      "tarball_is_present"
+        expression => fileexists( "$(local_directory)/$(tarball_file)" );
+
+      "local_dir_is_present"
+        expression => fileexists( "$(local_directory)/." );
+
+      # "unrolled_dir_is_present"
+      #   expression => fileexists("$($(params)[_unrolled_dir])");
+
+  files: 
+    !local_dir_is_present::
+      "$(local_directory)/."
+    	create => "true",
+        comment => "ensure the local directory exists";
+
+      
+    !tarball_is_present.local_dir_is_present::
+      "$(local_directory)/$(tarball_file)"
+        copy_from => secure_cp( "$(source_path)", "$(source_server)" ),
+        comment => "copying installer tarball from source server";
+
+  commands:
+    tarball_is_present::
+      "$(tar_expand_cmd)"
+        args => "$(tarball_file)",
+        contain => in_dir_shell( "$(local_directory)" ),
+        comment => "unrolling installer tarball in local directory";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    DEBUG|DEBUG_tarball::
+      "=== $(this.bundle) ===";
+
+      "Installation tarball is on disk."
+        ifvarclass => "tarball_is_present";
+}
+
 bundle agent install_tarball(params)
-# @description: generic bundle to download and unroll a .tar.gz archive file found on the policyhub
+# @description: older form of bundle to download and unroll a .tar.gz archive file found on the policyhub
 {
   classes:
       "tarball_is_present"

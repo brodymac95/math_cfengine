@@ -1,0 +1,382 @@
+##############################################################################
+#
+#   manage/ballast/main.cf - EECS ballast ssh installation and configuration
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: ballast_server(on) ballast_server(off)
+#                     ballast_agent
+#                     ballast_client
+######################################################################
+
+# NOTES for future development of configuration:
+# 1.
+
+bundle agent ballast_server
+# bundle agent ballast_server(state)
+# @description:
+{
+  vars:      
+      "ballastd_exec" string => "/usr/local/sbin/ballastd";
+
+  classes:
+      # DEFINE SERVER STATES
+      "on"  expression => "any";
+      # "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "ballastd_exists"
+	expression => fileexists( "$(ballastd_exec)" );
+
+  methods:
+
+    off.ballastd_exists::
+      "ensure service is stopped if ballast_server is off"
+      	usebundle => standard_services( "ballast", "stop" ),
+      	classes => if_ok("ballast_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.ballastd_exists::
+      "ensure service is running if ballast_server is on"
+      	usebundle => standard_services( "ballast", "start" ),
+      	classes => if_ok("ballast_server_on");
+
+      "generate all ballast server variables" usebundle => ballast_vars;
+      
+    on.ballastd_repaired::
+      "restart ballast service after configuration"
+      	usebundle => standard_services( "ballast", "restart" ),
+      	classes => if_ok("ballast_server_restart");
+
+    ## INSTALL ALL SOFTWARE FOR BALLAST SERVER
+    on.install_software::
+      "generate all ballast server variables" usebundle => ballast_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest("$(ballast_vars.dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+      
+      "install and configure ballast server"
+      	usebundle => install_ballast_server( "ballast_vars" ),
+        classes => results("bundle", "ballast_server_install");
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_ballast_server)::
+      "=== $(this.bundle) ===";
+
+      "ballast server is not installed on this host"
+        ifvarclass => "!ballastd_exists";
+      "ballast server is turned off"
+        ifvarclass => "ballast_server_off";
+      "ballast server is turned on and running"
+        ifvarclass => "ballast_server_on";
+      "ballast server restarted due to configuration change"
+        ifvarclass => "ballast_server_restart";
+      "$(ballast_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+bundle agent ballast_vars
+{
+  vars:
+
+      ## INSTALL PARAMETERS FOR ALL SOFTWARE
+    debian::
+      "dependent_packages" slist => { "perl", "netcat", },
+        comment => "set of packages required for ballast server, client, and agent";
+      
+      "install_tarball_path"  string => "/srv/cfengine/packages/ballast.tar.gz";
+      "install_server"        string => "$(sys.policy_hub)";
+      "install_dir"           string => "/root/";
+      "install_unrolled_dir"  string => "$(install_directory)/ballast/";
+
+      "ballast_server_install_path"   string => "$(install_unrolled_dir)/perl/ballastd";
+      "ballast_agent_install_path"    string => "$(install_unrolled_dir)/perl/ballast-agent";
+      "ballast_pclient_install_path"  string => "$(install_unrolled_dir)/perl/ballast";
+      "ballast_cclient_install_path"  string => "$(install_unrolled_dir)/c/ballast";
+
+      "local_bin_dir"  string => "/usr/local/bin/";
+      "local_sbin_dir"  string => "/usr/local/sbin/";
+      
+      ## FILE PARAMETERS
+    any::
+      "ballast_config_file" string => "/etc/ballastrc";
+      "ballast_config_template" string => "$(this.promise_dirname)/data/ballastrc.mustache";
+      "ballast_service_file" string => "/etc/systemd/system/ballast.service";
+      "ballast_service_template" string => "$(this.promise_dirname)/data/ballast.service.mustache";
+      "ballast_socket_file" string => "/etc/systemd/system/ballast.socket";
+      "ballast_socket_template" string => "$(this.promise_dirname)/data/ballast.socket.mustache";
+
+      ## CLUSTER PARAMETERS
+      "cluster_name" string => "$(classify_host.host_purpose)",
+	comment => "host alias name needed in ballast configuration";
+
+      ## GLOBAL CONFIG PARAMETERS
+      "config[data_port]" string => "4411",
+	comment => "port used for server communication. Default = 4411";
+      "config[data_timeout]" string => "2",
+	comment => "amount of time to wait during server communication. Default = 2
+                  (if multiple data servers are defined, will wait this amount for each)
+                  (client will use default host set if all servers time out)";
+      
+      ## AGENT/CLIENT SPECIFIC CONFIG PARAMETERS
+      "config[data_host]" string => "need gateway/server internal address", # CAN THIS BE FOUND USING OPENSTACK METADATA?
+	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
+
+      ## SERVER/CLIENT SPECIFIC CONFIG PARAMETERS
+      "config[alias_last]" string => "-last",
+	comment => "suffix that triggers return of last chosen host for given alias/user. Default = -last";
+
+      ## AGENT/SERVER SPECIFIC CONFIG PARAMETERS
+      "config[data_cipher]" string => "XXTEA_PP",
+	comment => "cipher that should be used to encrypt data sent to server. Default = XXTEA_PP
+                  (requires Crypt::X module installed for a cipher X other than XXTEA_PP) (example: data_cipher Rijndael)";
+      "config[key_file]" string => "/etc/ballast.key",
+	comment => "file containing encryption key. Default = /etc/ballast.key
+                  (should only be readable by agent and server user) (encryption key may be any text value)";
+      "config[run_group]" string => "no_group",
+	comment => "group that agent/server will run as. No default";
+      "config[run_user]" string => "nobody",
+	comment => "user that agent/server will run as. No default";
+
+      ## AGENT SPECIFIC CONFIG PARAMETERS
+      "config[data_alias]" string => "$(cluster_name)",
+	comment => "alias to which collected data pertains. No default";
+      "config[random_wait]" string => "0",
+	comment => "number of seconds to randomly wait before collecting data. Default = 0";
+      "config[user_load]" string => "1",
+	comment => "collect user specific information. Default = 1";
+      # "config[load_hook]" string => "", # NOTE: COMMENTED OUT IN TEMPLATE
+      #  comment => "location of executable called to generate custom load data. No default
+      #              (example: load_hook /usr/local/bin/myload)";
+      
+      ## CLIENT SPECIFIC CONFIG PARAMETERS
+      "config[alias_domain]" string => "$(global.cs_domain)",
+	comment => "domain for which aliases are relevant. No default
+                  (value must begin with a period ".")";
+      "config[alias_text]" string => "unavailable",
+	comment => "text that will be displayed when no host available. Default = unavailable
+                  (this will complete the message 'ERROR: all hosts for alias foo are ...')";
+      "config[hosts_for_cluster]" string => "$(cluster_name)-node0 $(cluster_name)-node1 $(cluster_name)-node2",
+	comment => "default set of hosts for each alias when server cannot be contacted (i.e. used for failover). No default
+                  (form is hosts_X where X is the name of an alias)"; # should we try node ip addresses pulled from metadata?
+      "config[relay_path]" string => "/usr/bin/netcat",
+	comment => "path to tcp relay. No default, but example has /usr/bin/netcat
+                  (perl client has beta relay feature built-in so this can be commented out)
+                  (c client requires external program such as netcat or tcpconnect)";
+      "config[relay_port]" string => "22",
+	comment => "port used to connect to sshd by tcp relay. Default = 22";
+      
+      ## SERVER SPECIFIC CONFIG PARAMETERS
+      "config[policy_for_cluster]" string => "cpu + sum(user_i_cpu)",
+	comment => "policy expression to be evaluated across all hosts. No default (using predictive least load example)
+                  (form is policy_X where X is the name of an alias) see docs/policy.txt in git repo for more info
+                  Example: policy_foo cpu * ram * io_sectors * net_bytes OR policy_bar load_5";
+      "config[data_db]" string => "/var/lib/ballast/ballast.db",
+	comment => "location of database. No default
+                   (directory must exist, but file will be created)";
+      "config[data_alias_for_cluster]" string => "",
+	comment => "use collected data of given alias(es) for load calculations. No default
+                 (form is data_alias_X where X is the name of an alias)
+                 (for example, 'data_alias_foo foo bar' would evaluate policies against data collected from any agents that have data_alias set to either 'foo' or 'bar')";
+      "config[host_timeout]" string => "180",
+	comment => "time in seconds to wait for agent data before host considered down. Default = 180";
+
+      "config[log_file]" string => "Sys::Syslog",
+	comment => "location of log file or Sys::Syslog to log via syslog. No default";
+      "config[log_level]" string => "2",
+	comment => "log level from 0 to 4 (off to very verbose). Default = 2
+                  (currently, there is only logging at levels 2 and 4)";
+      "config[syslog_facility]" string => "syslog",
+	comment => "syslog facility when log_file is Sys::Syslog. Default = syslog";
+      "config[syslog_ident]" string => "ballast",
+        comment => "syslog identifier when log_file is Sys::Syslog. Default = ballast";
+      "config[syslog_logopt]" string => "ndelay,pid",
+	comment => "syslog log options when log_file is Sys::Syslog. Default = ndelay,pid";
+
+      "config[pid_file]" string => "",
+	comment => "location of pid file. No default";
+      "config[run_fork_max]" string => "",
+	comment => "maximum number of child forks active at any given time. No default";
+      "config[run_fork_min]" string => "",
+	comment => "minimum number of child forks active at any given time. No default";
+      "config[run_setid]" string => "1",
+	comment => "run server in background. Default = 1";
+
+      "config[tcp_allow]" string => "",
+	comment => "regex to specify which ips are allowed to connect. No default
+                  (recommended if data_port is externally accessible)
+                  (example: tcp_allow 192\.168\..*)";
+      "config[tcp_deny]" string => "",
+	comment => "regex to specify which ips are not allowed to connect. No default
+                  (example: tcp_deny 192\.168\..*)";
+      "config[user_sum]" string => "cpu mem ram io_bytes io_ops io_reads io_read_bytes io_writes io_write_bytes",
+	comment => "fields for which running averages will be kept for each user
+                  Default = user_sum cpu mem ram io_bytes io_ops io_reads io_read_bytes io_writes io_write_bytes
+                 (do not modify this unless you know what you're doing!)";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent install_ballast_server(params)
+# @description: install and configure ballastd server
+{
+  vars:
+      "ballastd_file" string => lastnode( "$($(params).ballast_server_install_path)" );
+      "ballast_database_dir" string => dirname( "$($(params).config[data_db])" );
+      
+  classes:
+      "install_dir_exists"
+	expression => fileexists( "$($(params).install_unrolled_dir)/." );
+      
+  methods:
+    !install_dir_exists::
+      "download and expand ballast installation tarball"
+    	usebundle => install_tarball_v2( "$($(params).install_tarball_path)", "$($(params).install_server)","$($(params).install_dir)" );
+        # classes => results("bundle", "install_tarball");
+
+  files:
+    install_dir_exists::
+      "$($(params).local_sbin_dir)/$(ballastd_file)"
+        create => "true",
+	perms => mog("755", "root", "root" ),
+	copy_from => local_dcp( "$($(params).ballast_server_install_path)" ),
+        classes => results("bundle", "ballastd_install");
+
+    any::
+      "$($(params).ballast_config_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).ballast_config_template)",
+	# action => if_elapsed("60"),
+        classes => results("bundle", "config_file"),
+        comment => "expand config file to /etc using template in this promise directory";
+
+      "$($(params).ballast_service_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).ballast_service_template)",
+	# action => if_elapsed("60"),
+        classes => results("bundle", "service_file"),
+        comment => "expand systemd service file to /etc/systemd/system using template in this promise directory";
+
+      "$($(params).ballast_socket_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).ballast_socket_template)",
+	# action => if_elapsed("60"),
+        classes => results("bundle", "socket_file"),
+        comment => "expand systemd socket file to /etc/systemd/system using template in this promise directory";
+
+      "$(ballast_database_dir)/."
+        create => "true",
+	perms => mog("755", "root", "root" ),
+        classes => results("bundle", "database_dir"),
+        comment => "ensure directory for ballast server database exists";;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      "$($(params).local_sbin_dir)/$(ballastd_file) installed"
+        ifvarclass => "ballastd_install_repaired";
+}
+
+######################################################################
+
+bundle agent install_ballast_agent(params)
+# @description: install and configure ballast agent
+{
+  vars:
+      "ballast_agent_file" string => lastnode( "$($(params).ballast_agent_install_path)" );
+      
+  classes:
+      "install_dir_exists"
+	expression => fileexists( "$($(params).install_unrolled_dir)/." );
+      
+  methods:
+    !install_dir_exists::
+      "download and expand ballast installation tarball"
+    	usebundle => install_tarball_v2( "$($(params).install_tarball_path)", "$($(params).install_server)","$($(params).install_dir)" );
+        # classes => results("bundle", "install_tarball");
+
+  files:
+    install_dir_exists::
+      "$($(params).local_sbin_dir)/$(ballast_agent_file)"
+        create => "true",
+	perms => mog("755", "root", "root" ),
+	copy_from => local_dcp( "$($(params).ballast_agent_install_path)" ),
+        classes => results("bundle", "ballast_agent_install");
+
+    any::
+      "$($(params).ballast_config_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).ballast_config_template)",
+	# action => if_elapsed("60"),
+        classes => results("bundle", "config_file"),
+        comment => "expand config file to /etc using template in this promise directory";
+
+      # "$($(params).ballast_service_file)"
+      #   create => "true",
+      # 	perms => mog("644","root", "root"),
+      #   template_method => "mustache",
+      #   edit_template => "$($(params).ballast_service_template)",
+      # 	# action => if_elapsed("60"),
+      #   classes => results("bundle", "service_file"),
+      #   comment => "expand systemd service file to /etc/systemd/system using template in this promise directory";
+
+      # "$($(params).ballast_socket_file)"
+      #   create => "true",
+      # 	perms => mog("644","root", "root"),
+      #   template_method => "mustache",
+      #   edit_template => "$($(params).ballast_socket_template)",
+      # 	# action => if_elapsed("60"),
+      #   classes => results("bundle", "socket_file"),
+      #   comment => "expand systemd socket file to /etc/systemd/system using template in this promise directory";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      "$($(params).local_sbin_dir)/$(ballastd_file) installed"
+        ifvarclass => "ballastd_install_repaired";
+}
+
+######################################################################
+
+
+# AGENT needs to be called at regular intervals, can do this with cron if run at < 5 mins or with cfengine at > 5 mins?
+# client ssh config needs to be set in /etc/ssh/ssh_config
+# need to create systemd/init.d scripts for ballast server

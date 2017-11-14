@@ -1,0 +1,229 @@
+## {{{vars.ballast_vars.ballast_config_file}}} is managed by CFEngine v{{{vars.sys.cf_version}}} at {{{vars.sys.policy_hub}}}
+## Support for {{{vars.global.eecs_support}}}
+#
+# Configuration file for Ballast SSH load-balancer.
+#
+# The Ballast agent, client, and server can all share this file.
+#
+# The header of each section indicates one or more components to which
+# the items within that section pertain to.
+#
+# Items that are commented out show the default value.
+#
+# A value of nodefault indicates no default value for that item.
+#
+# Items that are not commented out indicate values that must be
+# explicitly configured.  The values given for these items are
+# examples only.
+#
+########################
+#### GLOBAL PARAMS  ####
+########################
+
+# BEN: SEPARATE THIS INTO 3+ CONFIG FILES?
+
+########################
+#### Ballast agent  ####
+########################
+#### Ballast client ####
+########################
+#### Ballast server ####
+########################
+
+# port used for server communication
+#data_port 4411
+data_port {{{vars.ballast_vars.config[data_port]}}}
+
+# amount of time to wait during server communication
+#   (if multiple data servers are defined, will wait this amount for each)
+#   (client will use default host set if all servers time out)
+#data_timeout 2
+data_timeout {{{vars.ballast_vars.config[data_timeout]}}}
+
+{{#classes.ballast_agent|ballast_client}}
+########################
+#### Ballast agent  ####
+########################
+#### Ballast client ####
+########################
+
+# host name(s) and/or IP address(es) of Ballast server(s)
+# example: data_host myserver1 myserver2
+data_host {{{vars.ballast_vars.config[data_server]}}}
+{{/classes.ballast_agent|ballast_client}}
+
+{{#classes.ballast_client|ballast_server}}
+########################
+#### Ballast client ####
+########################
+#### Ballast server ####
+########################
+
+# suffix that triggers return of last chosen host for given alias/user
+#alias_last -last
+alias_last {{{vars.ballast_vars.config[alias_last]}}}
+{{/classes.ballast_client|ballast_server}}
+
+{{#classes.ballast_agent|ballast_server}}
+########################
+#### Ballast agent  ####
+########################
+#### Ballast server ####
+########################
+
+# cipher that should be used to encrypt data sent to server
+#   (requires Crypt::X module installed for a cipher X other than XXTEA_PP)
+#   (example: data_cipher Rijndael)
+#data_cipher XXTEA_PP
+data_cipher {{{vars.ballast_vars.config[data_cipher]}}}
+
+# file containing encryption key
+#   (should only be readable by agent and server user)
+#   (encryption key may be any text value)
+#key_file /etc/ballast.key
+key_file {{{vars.ballast_vars.config[key_file]}}}
+
+# group that agent/server will run as
+# Example: run_group nogroup
+run_group {{{vars.ballast_vars.config[run_group]}}}
+
+# user that agent/server will run as
+# Example: run_user nobody
+run_user {{{vars.ballast_vars.config[run_user]}}}
+{{/classes.ballast_agent|ballast_server}}
+
+{{#classes.ballast_agent}}
+########################
+#### Ballast agent  ####
+########################
+
+# alias to which collected data pertains
+# Example: data_alias foo
+data_alias {{{vars.ballast_vars.config[data_alias]}}}
+
+# location of executable called to generate custom load data
+#   (example: load_hook /usr/local/bin/myload)
+#load_hook nodefault
+#load_hook {{{vars.ballast_vars.config[load_hook]}}}
+
+# number of seconds to randomly wait before collecting data
+#random_wait 0
+random_wait {{{vars.ballast_vars.config[random_wait]}}}
+
+# collect user specific information
+#user_load 1
+user_load {{{vars.ballast_vars.config[user_load]}}}
+{{/classes.ballast_agent}}
+
+{{#classes.ballast_client}}
+########################
+#### Ballast client ####
+########################
+
+# domain for which aliases are relevant
+#   (value must begin with a period ".")
+# Example: alias_domain .example.com
+alias_domain {{{vars.ballast_vars.config[alias_domain]}}}
+
+# text that will be displayed when no host available
+#   (this will complete the message "ERROR: all hosts for alias foo are ...")
+#alias_text unavailable
+alias_text {{{vars.ballast_vars.config[alias_text]}}}
+
+# default set of hosts for each alias when server cannot be contacted
+#   (form is hosts_X where X is the name of an alias)
+#   (this can be a subset of the actual hosts for each alias)
+# Examples: hosts_foo foo1 foo2 foo3 OR hosts_bar bar1 bar2
+hosts_{{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.config[hosts_for_cluster]}}}
+
+# path to tcp relay
+#   (perl client has beta relay feature built-in so this can be commented out)
+#   (c client requires external program such as netcat or tcpconnect)
+# Example: relay_path /usr/bin/netcat
+relay_path {{{vars.ballast_vars.config[relay_path]}}}
+
+# port used to connect to sshd by tcp relay
+#relay_port 22
+relay_port {{{vars.ballast_vars.config[relay_port]}}}
+{{/classes.ballast_agent}}
+
+{{#classes.ballast_server}}
+########################
+#### Ballast server ####
+########################
+
+# location of database
+#   (directory must exist, but file will be created)
+# Example: data_db /var/lib/ballast/ballast.db
+data_db {{{vars.ballast_vars.config[data_db]}}}
+
+# use collected data of given alias(es) for load calculations
+#   (form is data_alias_X where X is the name of an alias)
+#   (for example, "data_alias_foo foo bar" would evaluate policies
+#     against data collected from any agents that have data_alias set
+#     to either "foo" or "bar")
+# Example: data_alias_foo foo OR data_alias_bar bar
+data_alias_{{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.config[data_alias_for_cluster]}}}
+
+# time in seconds to wait for agent data before host considered down
+#host_timeout 180
+host_timeout {{{vars.ballast_vars.config[host_timeout]}}}
+
+# location of log file or Sys::Syslog to log via syslog
+#log_file nodefault
+log_file {{{vars.ballast_vars.config[log_file]}}}
+
+# log level from 0 to 4 (off to very verbose)
+#   (currently, there is only logging at levels 2 and 4)
+#log_level 2
+log_level {{{vars.ballast_vars.config[log_level]}}}
+
+# location of pid file
+#pid_file nodefault
+pid_file {{{vars.ballast_vars.config[pid_file]}}}
+
+# policy expression to be evaluated across all hosts
+#   (form is policy_X where X is the name of an alias)
+# Example: policy_foo cpu * ram * io_sectors * net_bytes OR policy_bar load_5
+policy_{{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.server[policy_for_cluster]}}}
+
+# maximum number of child forks active at any given time
+#run_fork_max nodefault
+run_fork_max {{{vars.ballast_vars.config[run_fork_max]}}}
+
+# minimum number of child forks active at any given time
+#run_fork_min nodefault
+run_fork_min {{{vars.ballast_vars.config[run_fork_min]}}}
+
+# run server in background
+#run_setsid 1
+run_setsid {{{vars.ballast_vars.config[run_setsid]}}}
+
+# syslog facility when log_file is Sys::Syslog
+#syslog_facility syslog
+syslog_facility {{{vars.ballast_vars.config[syslog_facility]}}}
+
+# syslog identifier when log_file is Sys::Syslog
+#syslog_ident ballast
+syslog_ident {{{vars.ballast_vars.config[syslog_ident]}}}
+
+# syslog log options when log_file is Sys::Syslog
+#syslog_logopt ndelay,pid
+syslog_logopt {{{vars.ballast_vars.config[syslog_logopt]}}}
+
+# regex to specify which ips are allowed to connect
+#   (recommended if data_port is externally accessible)
+#   (example: tcp_allow 192\.168\..*)
+#tcp_allow nodefault
+tcp_allow {{{vars.ballast_vars.config[tcp_allow]}}}
+
+# regex to specify which ips are not allowed to connect
+#   (example: tcp_deny 192\.168\..*)
+#tcp_deny nodefault
+tcp_deny {{{vars.ballast_vars.config[tcp_deny]}}}
+
+# fields for which running averages will be kept for each user
+#   (do not modify this unless you know what you're doing)
+#user_sum cpu mem ram io_bytes io_ops io_reads io_read_bytes io_writes io_write_bytes
+user_sum {{{vars.ballast_vars.config[user_sum]}}}
+{{/classes.ballast_server}}
