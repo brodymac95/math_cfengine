@@ -68,6 +68,9 @@ bundle agent reboot_with_warning(reboot_delay_time, reboot_message)
       "zenity_cmd" string => "/usr/bin/zenity --warning --text '$(reboot_message)'";
       "zenity_exec" string => "/usr/bin/zenity";
 
+      "force_reboot_cmd" string => "/sbin/reboot -f",
+        comment => "-f = instantly force the reboot instead of calling shutdown script";
+
       "dependent_packages" slist => { "zenity", },
         comment => "install awk and zenity for sending warning to graphical desktop users";
 
@@ -97,6 +100,11 @@ bundle agent reboot_with_warning(reboot_delay_time, reboot_message)
       	classes => results("bundle", "warning_message"),
         comment => "display a warning dialog message on desktop for all users connected to host",
         ifvarclass => isvariable( "xrdp_users" );
+
+    FORCE_NODE_REBOOT::
+      "$(force_reboot_cmd)"
+      	classes => results("bundle", "force_reboot"),
+        comment => "WARNING: node has not rebooted normally for past week, running reboot -f to force node to reboot";
       
   reports:
     (inform_mode|verbose_mode)::
@@ -105,7 +113,7 @@ bundle agent reboot_with_warning(reboot_delay_time, reboot_message)
     (DEBUG|DEBUG_reboot)::
       "=== $(this.bundle): ===";
       "desktop_users to send warning: $(xrdp_users_data[$(xrdp_users)][0]) with display = $(xrdp_users_data[$(xrdp_users)][1])";
-
+      
       "$(dependent_packages) installed"
         ifvarclass => "dependent_packages_install_repaired";
 }
