@@ -3,8 +3,10 @@
 
 ## GUACD CONFIGURATION
 ## changes here need to mirror changes in /etc/guacamole/guacd.conf
-guacd-hostname: localhost
-guacd-port:     4822
+guacd-hostname: $(guacamole_vars.conf[guac_props][guacd-hostname])
+guacd-port: $(guacamole_vars.conf[guac_props][guacd-port])
+
+api-session-timeout: $(guacamole_vars.conf[guac_props][api-session-timeout])
 
 [%CFEngine enable_auth_mysql_module:: %]
 ## MYSQL CONFIGURATION

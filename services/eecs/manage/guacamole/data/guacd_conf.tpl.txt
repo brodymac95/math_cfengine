@@ -1,0 +1,22 @@
+## $(guacamole_vars.conf[guacd_conf_file]) is managed by CFEngine v$(sys.cf_version) at $(sys.policy_hub)
+## Support for $(global.eecs_support)
+
+## GUACD CONFIGURATION
+[daemon]
+
+#pid_file = /var/run/guacd.pid
+log_level = $(guacamole_vars.conf[guac_props][guacd_log_level])
+
+[server]
+
+bind_host = $(guacamole_vars.conf[guac_props][guacd-hostname])
+bind_port = $(guacamole_vars.conf[guac_props][guacd-port])
+
+#
+# The following parameters are valid only if
+# guacd was built with SSL support.
+#
+#[ssl]
+#
+#server_certificate = /etc/ssl/certs/guacd.crt
+#server_key = /etc/ssl/private/guacd.key

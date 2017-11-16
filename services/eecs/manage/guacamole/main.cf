@@ -76,7 +76,7 @@ bundle agent guacamole_server(state)
 
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
-    on.(guac_configuration_repaired|guac_install_repaired).!NO_RESTARTS::
+    on.(guac_authentication_repaired|guac_install_repaired).!NO_RESTARTS::
       "restart guacd service if configuration changed"
       	usebundle => standard_services( "guacd", "restart" ),
       	classes => if_ok("guacd_server_restart");
@@ -207,10 +207,19 @@ bundle agent guacamole_vars(params1, params2)
     ## CONFIGURATION PARAMETERS IN GUACAMOLE.PROPERTIES FOR AUTHENTICATION
       "conf[guac_props_file]" string => "/etc/guacamole/guacamole.properties";
       "conf[guac_template_file]" string => "$(this.promise_dirname)/data/guacamole_properties.tpl.txt";
+      "conf[guacd_conf_file]" string => "/etc/guacamole/guacd.conf";
+      "conf[guacd_conf_template]" string => "$(this.promise_dirname)/data/guacd_conf.tpl.txt";
 
       "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/001-create-schema.sql";
       # IF BELOW IS ENABLED, THEN THE DEFAULT guacadmin USER IS CREATED!
       # "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
+      
+      "conf[guac_props][guacd-hostname]" string => "localhost";
+      "conf[guac_props][guacd-port]" string => "4822";
+      "conf[guac_props][guacd_log_level]" string => "info";
+
+      "conf[guac_props][api-session-timeout]" string => "45",
+        comment => "The amount of time, in minutes, to allow Guacamole sessions (authentication tokens) to remain valid despite inactivity";
       
       "conf[guac_props][mysql-hostname]" string => "localhost";
       "conf[guac_props][mysql-port]" string => "3306";
@@ -484,6 +493,12 @@ bundle agent configure_guac_authentication(params)
         edit_template => "$($(params)[guac_template_file])",
         classes => results("bundle", "guac_config"),
 	comment => "expand guacamole.properies file using template from staging cache in this promise directory";
+
+      "$($(params)[guacd_conf_file])"
+        create => "true",
+        edit_template => "$($(params)[guacd_conf_template])",
+        classes => results("bundle", "guacd_conf"),
+	comment => "expand guacd.conf file using template from staging cache in this promise directory";
       
     ## CREATE GUAC DATABASE AND ADDING GUAC SCHEMA INTO DB ONCE MYSQL PASSWORD IS CACHED
   methods:
@@ -511,6 +526,8 @@ bundle agent configure_guac_authentication(params)
         ifvarclass => "tomcat_config_repaired";
       "$($(params)[guac_props_file]) edited"
         ifvarclass => "guac_config_repaired";
+      "$($(params)[guacd_conf_file]) edited"
+        ifvarclass => "guacd_conf_repaired";
       "$($(params)[guac_props][mysql-database]) created in mysql and guacamole schema added from $($(params)[guac_mysql_schema_files])"
 	ifvarclass => "adding_mysql_schema_repaired";
       
