@@ -221,7 +221,7 @@ bundle agent manage_sudo_users(settings)
       description => "$($(settings).sudo_user_data[$(user)])",
       shell => "/bin/bash",
       home_dir => "/home/$(user)",
-      home_bundle => home_skel( "$(user)", "$($(settings).shared_group_primary)", "$($(settings).default_mode)", "$($(settings).home_skeleton)" ),
+      home_bundle => home_skel( "$(user)", "$($(settings).shared_group_primary)", "$($(settings).default_mode)", "/home/$(user)", "$($(settings).home_skeleton)" ),
       group_primary => "$($(settings).shared_group_primary)",
       groups_secondary => { "$($(settings).group_secondary)" },
 #      password => hashed_password( "!##lockedpassword##" ),
