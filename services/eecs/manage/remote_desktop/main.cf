@@ -124,8 +124,8 @@ bundle agent xrdp_vars(params)
   vars:
     ## INSTALL/REMOVE PARAMETERS FOR ALL SOFTWARE
     debian::
-      "dependent_packages" slist => { "xrdp", "lxde", },
-        comment => "install xrdp service and lxde desktop environment";
+      "dependent_packages" slist => { "xrdp", "lxde", "lightdm", "accountsservice", },
+        comment => "install xrdp service, lxde desktop environment, lightdm with its accountsservice ";
 
       "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
         comment => "remove all desktop/GUI-based network, screenlock, screensaver, torrent, web-browser packages from server";
