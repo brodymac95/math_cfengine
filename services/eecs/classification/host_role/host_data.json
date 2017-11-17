@@ -363,6 +363,19 @@
 	    "roose": "Ben Roose",
 	},
     },
+    "jb_253_5261_lt11": {
+	"machine": "workstation",
+	"purpose": "research",
+	"role": "laptop",
+	"owner": "abu_asaduzzaman",
+	"authentication": "local_users_shared_group",
+	"users": {
+	    "zaman": "Abu Asaduzzaman",
+	},
+	"extra_repository_packages": [ "linux-headers-amd64", "nvidia-cuda-toolkit", "nvidia-driver", "nvidia-libopencl1", "nvidia-opencl-common", "firmware-linux-nonfree", ],
+	"custom_packages": [ "cuda_by_example", ]
+
+    }
     "jb_258_3143_lab11": {
 	"machine": "workstation",
 	"purpose": "research",
