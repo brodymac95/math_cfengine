@@ -402,8 +402,7 @@
 	"users": {
 	    "zaman": "Abu Asaduzzaman",
 	},
-	"extra_repository_packages": [ "nvidia-legacy-340xx-kernel-dkms", "nvidia-settings-legacy-340xx", "firmware-brcm80211", ],
-	"custom_packages": [ "cuda_by_example", ]
+	"extra_repository_packages": [ "nvidia-legacy-340xx-kernel-dkms", "nvidia-settings-legacy-340xx", "firmware-brcm80211", "network-manager-gnome", ],
     }
     "jb_258_3143_lab11": {
 	"machine": "workstation",
