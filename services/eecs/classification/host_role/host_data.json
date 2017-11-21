@@ -370,7 +370,7 @@
 	"owner": "abu_asaduzzaman",
 	"authentication": "local_users_shared_group",
 	"users": {
-	    "zaman": "Abu Asaduzzaman",
+	    "drzaman": "Abu Asaduzzaman",
 	},
 	"extra_repository_packages": [ "nvidia-legacy-340xx-kernel-dkms", "nvidia-settings-legacy-340xx", "firmware-brcm80211", "network-manager-gnome", ],
     }
