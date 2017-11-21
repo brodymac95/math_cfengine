@@ -315,17 +315,27 @@ bundle agent install_ballast_agent(params)
 # @description: install and configure ballast agent
 {
   vars:
+      "ballast_agent_exec" string => "/usr/local/sbin/ballast-agent >/dev/null 2>&1";
       "ballast_agent_file" string => lastnode( "$($(params).ballast_agent_install_path)" );
+
+      "ballast_user" string => "ballast";
       
   classes:
       "install_dir_exists"
 	expression => fileexists( "$($(params).install_unrolled_dir)/." );
       
+      "ballast_agent_exists"
+	expression => fileexists( "$(ballast_agent_exec)" );
+
   methods:
     !install_dir_exists::
       "download and expand ballast installation tarball"
     	usebundle => install_tarball_v2( "$($(params).install_tarball_path)", "$($(params).install_server)","$($(params).install_dir)" );
         # classes => results("bundle", "install_tarball");
+
+    ballast_agent_exists::
+      "ensure cron"
+	usebundle => cronjob("$(ballast_agent_exec)","mark","*","*");
 
   files:
     install_dir_exists::
@@ -344,6 +354,8 @@ bundle agent install_ballast_agent(params)
 	# action => if_elapsed("60"),
         classes => results("bundle", "config_file"),
         comment => "expand config file to /etc using template in this promise directory";
+
+
 
       # "$($(params).ballast_service_file)"
       #   create => "true",
