@@ -132,6 +132,7 @@ bundle agent manage_repository_packages
     ## Required packages to be REMOVED
     debian|ubuntu::
       "core_removals" slist => {
+				 "wicd",
                                };
       
     workstation.(debian|ubuntu)::      
