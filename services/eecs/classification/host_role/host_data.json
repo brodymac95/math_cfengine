@@ -372,7 +372,7 @@
 	"users": {
 	    "drzaman": "Abu Asaduzzaman",
 	},
-	"extra_repository_packages": [ "firmware-brcm80211", "network-manager-gnome", ],
+	"extra_repository_packages": [ "firmware-brcm80211", ],
 	"_internal_comment": "laptop has a NVIDIA Quatro FX 880M graphics. Can install nvidia-legacy-340xx-kernel-dkms, nvidia-settings-legacy-340xx but this causes a graphics issue when laptop attempts to wake from suspend mode"
     }
     "jb_258_3143_lab11": {

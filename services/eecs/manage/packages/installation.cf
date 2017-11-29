@@ -111,6 +111,7 @@ bundle agent manage_repository_packages
     workstation.(debian|ubuntu):: 
       # libvte9 is needed by geany to show a terminal window inside
       "workstation_installs" slist => {
+					"network-manager-gnome",
 					"network-manager-openconnect-gnome",
 					"arandr",
 					"libreoffice",
