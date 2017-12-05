@@ -29,6 +29,12 @@
         "role": "capplab",
         "owner": "Abu Asaduzzaman",
     },
+    "jb_253_5261_lt11": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "capplab",
+        "owner": "Abu Asaduzzaman",
+    },
     "wh_330_a01": {
 	"machine": "workstation",
 	"purpose": "research",
