@@ -20,8 +20,6 @@
 #### GLOBAL PARAMS  ####
 ########################
 
-# BEN: SEPARATE THIS INTO 3+ CONFIG FILES?
-
 ########################
 #### Ballast agent  ####
 ########################
@@ -40,7 +38,6 @@ data_port {{{vars.ballast_vars.config[data_port]}}}
 #data_timeout 2
 data_timeout {{{vars.ballast_vars.config[data_timeout]}}}
 
-{{#classes.ballast_agent|ballast_client}}
 ########################
 #### Ballast agent  ####
 ########################
@@ -50,9 +47,7 @@ data_timeout {{{vars.ballast_vars.config[data_timeout]}}}
 # host name(s) and/or IP address(es) of Ballast server(s)
 # example: data_host myserver1 myserver2
 data_host {{{vars.ballast_vars.config[data_server]}}}
-{{/classes.ballast_agent|ballast_client}}
 
-{{#classes.ballast_client|ballast_server}}
 ########################
 #### Ballast client ####
 ########################
@@ -62,9 +57,7 @@ data_host {{{vars.ballast_vars.config[data_server]}}}
 # suffix that triggers return of last chosen host for given alias/user
 #alias_last -last
 alias_last {{{vars.ballast_vars.config[alias_last]}}}
-{{/classes.ballast_client|ballast_server}}
 
-{{#classes.ballast_agent|ballast_server}}
 ########################
 #### Ballast agent  ####
 ########################
@@ -90,9 +83,7 @@ run_group {{{vars.ballast_vars.config[run_group]}}}
 # user that agent/server will run as
 # Example: run_user nobody
 run_user {{{vars.ballast_vars.config[run_user]}}}
-{{/classes.ballast_agent|ballast_server}}
 
-{{#classes.ballast_agent}}
 ########################
 #### Ballast agent  ####
 ########################
@@ -113,9 +104,7 @@ random_wait {{{vars.ballast_vars.config[random_wait]}}}
 # collect user specific information
 #user_load 1
 user_load {{{vars.ballast_vars.config[user_load]}}}
-{{/classes.ballast_agent}}
 
-{{#classes.ballast_client}}
 ########################
 #### Ballast client ####
 ########################
@@ -145,9 +134,7 @@ relay_path {{{vars.ballast_vars.config[relay_path]}}}
 # port used to connect to sshd by tcp relay
 #relay_port 22
 relay_port {{{vars.ballast_vars.config[relay_port]}}}
-{{/classes.ballast_agent}}
 
-{{#classes.ballast_server}}
 ########################
 #### Ballast server ####
 ########################
@@ -185,15 +172,15 @@ pid_file {{{vars.ballast_vars.config[pid_file]}}}
 # policy expression to be evaluated across all hosts
 #   (form is policy_X where X is the name of an alias)
 # Example: policy_foo cpu * ram * io_sectors * net_bytes OR policy_bar load_5
-policy_{{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.server[policy_for_cluster]}}}
+policy_{{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.config[policy_for_cluster]}}}
 
 # maximum number of child forks active at any given time
 #run_fork_max nodefault
-run_fork_max {{{vars.ballast_vars.config[run_fork_max]}}}
+#run_fork_max {{{vars.ballast_vars.config[run_fork_max]}}}
 
 # minimum number of child forks active at any given time
 #run_fork_min nodefault
-run_fork_min {{{vars.ballast_vars.config[run_fork_min]}}}
+#run_fork_min {{{vars.ballast_vars.config[run_fork_min]}}}
 
 # run server in background
 #run_setsid 1
@@ -215,15 +202,14 @@ syslog_logopt {{{vars.ballast_vars.config[syslog_logopt]}}}
 #   (recommended if data_port is externally accessible)
 #   (example: tcp_allow 192\.168\..*)
 #tcp_allow nodefault
-tcp_allow {{{vars.ballast_vars.config[tcp_allow]}}}
+#tcp_allow {{{vars.ballast_vars.config[tcp_allow]}}}
 
 # regex to specify which ips are not allowed to connect
 #   (example: tcp_deny 192\.168\..*)
 #tcp_deny nodefault
-tcp_deny {{{vars.ballast_vars.config[tcp_deny]}}}
+#tcp_deny {{{vars.ballast_vars.config[tcp_deny]}}}
 
 # fields for which running averages will be kept for each user
 #   (do not modify this unless you know what you're doing)
 #user_sum cpu mem ram io_bytes io_ops io_reads io_read_bytes io_writes io_write_bytes
 user_sum {{{vars.ballast_vars.config[user_sum]}}}
-{{/classes.ballast_server}}

@@ -5,6 +5,8 @@ ConditionPathExists=!/etc/ballastd_not_to_be_run
 
 [Service]
 ExecStart={{{vars.ballast_server.ballastd_exec}}}
+Type=forking
+PIDFile={{{vars.ballast_vars.config[pid_file]}}}
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
 Restart=on-failure
