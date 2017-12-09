@@ -192,7 +192,7 @@
         {
 	    "comment": "allow incoming CFEngine connections from WSU VPN subnet for policy_server only"
             "chain": "INPUT"
-            "source_ip": "10.1.1.0/24",
+            "source_ip": "10.250.0.0/24",
             "destination_port": "5308",
             "target": "ACCEPT",
 	    "context": "policy_server",
