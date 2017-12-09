@@ -58,11 +58,15 @@ bundle agent sshd_server(state)
       "generate all sshd server variables"  usebundle => sshd_server_vars;
 
       "copy sshd_config file from mustache template and validate config"
-    	usebundle => config_sshd( "sshd_server_vars" ),
+    	usebundle => config_sshd_server( "sshd_server_vars" ),
         classes => results("bundle", "sshd_config");
+
+      "copy ssh_config file from mustache template"
+    	usebundle => config_ssh_client( "sshd_server_vars" ),
+        classes => results("bundle", "ssh_config");
       
     on.sshd_config_repaired::
-      "restart sshd service after configuration changes"
+      "restart sshd service after server configuration changes"
       	usebundle => standard_services( "sshd", "restart" ),
       	classes => if_ok("sshd_server_restart");
 
@@ -109,6 +113,8 @@ bundle agent sshd_server_vars
       "sshd_config_file" string => "/etc/ssh/sshd_config";
       "sshd_config_template" string => "$(this.promise_dirname)/data/sshd_config.mustache";      
       "sshd_config_cache" string => "$(sys.workdir)/state/security/sshd_config";
+      "ssh_config_file" string => "/etc/ssh/ssh_config";
+      "ssh_config_template" string => "$(this.promise_dirname)/data/ssh_config.mustache";
 
     ## SSHD_CONFIG: NETWORKING
     any::
@@ -120,7 +126,7 @@ bundle agent sshd_server_vars
 
     ## SSHD_CONFIG: AUTHENTICATION
     any::
-      "sshd[RSAAuthentication]"                       string => "yes";
+      # DEPRECIATED IN SSH 7.4 "sshd[RSAAuthentication]"                       string => "yes";
       "sshd[PubkeyAuthentication]"                    string => "yes";
       "sshd[ChallengeResponseAuthentication]"         string => "no";
       "sshd[HostbasedAuthentication]"                 string => "no";
@@ -155,7 +161,8 @@ bundle agent sshd_server_vars
 
 ######################################################################
 
-bundle agent config_sshd(params)
+bundle agent config_sshd_server(params)
+# @description: create cache file and then configure /etc/ssh/sshd_config if cache file passes validation check
 {
   vars:  
       "config_file" string => "$($(params).sshd_config_file)";
@@ -209,6 +216,41 @@ bundle agent config_sshd(params)
 	ifvarclass => "sshd_check_passed";
       "cached sshd_config failed validation check and will not be copied to $(config_file)"
 	ifvarclass => "sshd_check_failed";
+
+      "$(config_file) copied to system"
+	ifvarclass => "config_file_repaired";
+      "$(config_file) exists on system"
+	ifvarclass => "config_file_kept";
+}
+
+########################################################
+
+bundle agent config_ssh_client(params)
+# @description: configure /etc/ssh/ssh_config
+{
+  vars:  
+      "config_file" string => "$($(params).ssh_config_file)";
+
+  classes:
+      # "have_cached_config"
+      # 	expression => fileexists( $(config_file) );
+
+  files:
+      "$(config_file)"
+        create => "true",
+	perms => mog("644","root", "root"),
+        template_method => "mustache",
+        edit_template => "$($(params).ssh_config_template)",
+	# action => if_elapsed("60"),
+        classes => results("bundle", "config_file"),
+        comment => "expand config file using template in this promise directory";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_sshd)::
+      "=== $(this.bundle) ===";
 
       "$(config_file) copied to system"
 	ifvarclass => "config_file_repaired";

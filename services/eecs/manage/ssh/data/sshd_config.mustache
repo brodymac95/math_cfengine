@@ -46,7 +46,7 @@ StrictModes {{{vars.sshd_server_vars.sshd[StrictModes]}}}
 #MaxAuthTries 6
 #MaxSessions 10
 
-RSAAuthentication {{{vars.sshd_server_vars.sshd[RSAAuthentication]}}}
+# DEPRECIATED: RSAAuthentication {{{vars.sshd_server_vars.sshd[RSAAuthentication]}}}
 PubkeyAuthentication {{{vars.sshd_server_vars.sshd[PubkeyAuthentication]}}}
 #AuthorizedKeysFile	%h/.ssh/authorized_key
 
@@ -58,7 +58,6 @@ PubkeyAuthentication {{{vars.sshd_server_vars.sshd[PubkeyAuthentication]}}}
 # Don't read the user's ~/.rhosts and ~/.shosts files
 IgnoreRhosts yes
 # For this to work you will also need host keys in /etc/ssh_known_hosts
-RhostsRSAAuthentication no
 # similar for protocol version 2
 HostbasedAuthentication {{{vars.sshd_server_vars.sshd[HostbasedAuthentication]}}}
 # Uncomment if you don't trust ~/.ssh/known_hosts for RhostsRSAAuthentication
