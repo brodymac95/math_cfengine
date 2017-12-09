@@ -22,20 +22,26 @@
 	"authentication": "local_users_shared_group",
 	"users": {
             "roose": "Ben Roose",
-	   },
+	},
+	"_comment": "testing internal comment"
     },
-    "dev_cluster_guac_gw": {
+    "cstest_gateway": {
 	"machine": "os_tenant_cluster",
-	"purpose": "testing-gateway",
+	"purpose": "cstest-gateway",
         "role": "guac_gateway",
         "owner": "development",
     },
-    "dev_cluster_node": {
+    "cstest_bastion": {
 	"machine": "os_tenant_cluster",
-	"purpose": "testing-node",
+	"purpose": "cstest-bastion",
+        "role": "ssh_bastion",
+        "owner": "development",
+    },
+    "cstest_node": {
+	"machine": "os_tenant_cluster",
+	"purpose": "cstest-node",
         "role": "cluster_node",
         "owner": "development",
-	"authentication": "uaf2_client",
     },
     "cslab_guac_gw": {
 	"machine": "os_tenant_cluster",
@@ -50,7 +56,7 @@
         "owner": "teaching",
 	"authentication": "uaf2_client",
     },
-    "cstest": {
+    "cstesting_server": {
 	"machine": "server",
 	"purpose": "testing",
         "role": "testingsystem",
