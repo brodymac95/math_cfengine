@@ -1,0 +1,71 @@
+## {{{vars.sshd_server_vars.ssh_config_file}}} is managed by CFEngine v{{{vars.sys.cf_version}}} at {{{vars.sys.policy_hub}}}
+## Support for {{{vars.global.eecs_support}}}
+
+# This is the ssh client system-wide configuration file.  See
+# ssh_config(5) for more information.  This file provides defaults for
+# users, and the values can be changed in per-user configuration files
+# or on the command line.
+
+# Configuration data is parsed as follows:
+#  1. command line options
+#  2. user-specific file
+#  3. system-wide file
+# Any configuration value is only changed the first time it is set.
+# Thus, host-specific definitions should be at the beginning of the
+# configuration file, and defaults at the end.
+
+{{#classes.ballast_client}}
+## BALLAST CLIENT OPTIONS
+# Aliases for least loaded and last utilized system
+Host {{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}} {{{vars.ballast_vars.cluster_name}}}.{{{vars.ballast_vars.config[alias_domain]}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}}.{{{vars.ballast_vars.config[alias_domain]}}}
+
+     # Use the ballast balancer when connecting to these aliases
+     ProxyCommand {{{vars.ballast_vars.local_bin_dir}}}/ballast %h
+
+     # Avoids host key checks for all variants when
+     # StrictHostKeyChecking is enabled (optional)
+     HostKeyAlias {{{vars.ballast_vars.cluster_name}}}.{{{vars.ballast_vars.config[alias_domain]}}}
+     
+{{/classes.ballast_client}}
+
+							     
+# Site-wide defaults for some commonly used options.  For a comprehensive
+# list of available options, their meanings and defaults, please see the
+# ssh_config(5) man page.
+
+Host *
+#   ForwardAgent no
+#   ForwardX11 no
+#   ForwardX11Trusted yes
+#   RhostsRSAAuthentication no
+#   RSAAuthentication yes
+#   PasswordAuthentication yes
+#   HostbasedAuthentication no
+#   GSSAPIAuthentication no
+#   GSSAPIDelegateCredentials no
+#   GSSAPIKeyExchange no
+#   GSSAPITrustDNS no
+#   BatchMode no
+#   CheckHostIP yes
+#   AddressFamily any
+#   ConnectTimeout 0
+#   StrictHostKeyChecking ask
+#   IdentityFile ~/.ssh/identity
+#   IdentityFile ~/.ssh/id_rsa
+#   IdentityFile ~/.ssh/id_dsa
+#   Port 22
+#   Protocol 2,1
+#   Cipher 3des
+#   Ciphers aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,aes128-cbc,3des-cbc
+#   MACs hmac-md5,hmac-sha1,umac-64@openssh.com,hmac-ripemd160
+#   EscapeChar ~
+#   Tunnel no
+#   TunnelDevice any:any
+#   PermitLocalCommand no
+#   VisualHostKey no
+#   ProxyCommand ssh -q -W %h:%p gateway.example.com
+#   RekeyLimit 1G 1h
+    SendEnv LANG LC_*
+    HashKnownHosts yes
+    GSSAPIAuthentication yes
+    GSSAPIDelegateCredentials no
