@@ -92,7 +92,7 @@ bundle agent config_policy_server
 # @description: ensure custom elements for policy hub are running
 {
   vars:
-      "cf_pwhash_file" string => "/var/local/bin/cf-pwhash.sh";
+      "cf_pwhash_file" string => "/usr/local/bin/cf-pwhash.sh";
       "cf_pwhash_template" string => "$(this.promise_dirname)/data/cf-pwhash.sh.mustache";
 
       "master_root_passwd_location" string => "/root/master_root_passwd";
