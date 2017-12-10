@@ -1,0 +1,14 @@
+[Unit]
+Description=Emacs: the extensible, self-documenting text editor
+ConditionPathExists=!/etc/emacs_not_to_be_run
+
+[Service]
+Type=forking
+ExecStart={{{vars.emacs_server_vars.emacs_exec}}} --daemon
+ExecStop={{{vars.emacs_server_vars.emacsclient_exec}}} --eval "(kill-emacs)"
+Environment=SSH_AUTH_SOCK=%t/keyring/ssh
+Restart=always
+
+[Install]
+WantedBy=default.target
+Alias=emacsd.service
