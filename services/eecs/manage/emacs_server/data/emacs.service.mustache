@@ -4,7 +4,7 @@ ConditionPathExists=!/etc/emacs_not_to_be_run
 
 [Service]
 Type=forking
-ExecStart={{{vars.emacs_server_vars.emacs_exec}}} --daemon
+ExecStart={{{vars.emacs_server_vars.emacs_exec}}} --daemon --user=root
 ExecStop={{{vars.emacs_server_vars.emacsclient_exec}}} --eval "(kill-emacs)"
 Environment=SSH_AUTH_SOCK=%t/keyring/ssh
 Restart=always

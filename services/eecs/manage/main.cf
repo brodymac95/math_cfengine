@@ -13,6 +13,7 @@ bundle common manage_main_file_control
 
       "input[active_directory_auth]" string => "$(this.promise_dirname)/ad_auth/main.cf";
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
+      "input[emacs_server]" string => "$(this.promise_dirname)/emacs_server/main.cf";
       "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
@@ -232,6 +233,9 @@ bundle agent manage_server_host
       "configure_firewall" usebundle => config_iptables;
       "use_custom_network_interfaces" usebundle => config_net_interfaces;
       "configure_hosts_file" usebundle => config_hosts_file;
+
+    emacs_server::
+      "install and configure emacs as a service if defined in custom packages" usebundle => emacs_server("on");
 
     tftp_server::
       "install and configure tftp server if defined in custom packages" usebundle => config_tftp_server;
