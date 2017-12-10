@@ -92,8 +92,8 @@ bundle agent config_policy_server
 # @description: ensure custom elements for policy hub are running
 {
   vars:
-      "dependent_packages" slist => { "binutils", },
-        comment => "set of packages required for cf-pwhash.sh script (strings command)";
+      "dependent_packages" slist => { "git", "binutils", },
+        comment => "set of packages required for policy server (cf-pwhash.sh needs strings command in binutils)";
 
       "cf_pwhash_file" string => "/usr/local/sbin/cf-pwhash.sh";
       "cf_pwhash_template" string => "$(this.promise_dirname)/data/cf-pwhash.sh.mustache";
