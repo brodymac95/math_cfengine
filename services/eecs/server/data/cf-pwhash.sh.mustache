@@ -114,7 +114,7 @@ build_host_list() {
 
     # By ppkey sha/md5
     HOSTS=$(cf-key -s | awk '/Incoming/ { print $NF }')
-    HUBS=$(cf-key -s | awk '/Outgoing/ { print $NF }')
+    HOSTS=$HOSTS$(cf-key -s | awk '/Outgoing/ { print $NF }')
 
     # Simple: Unqualified host name $(sys.uqhost)
     # HOSTS=(host001 host002 host003)
@@ -126,32 +126,15 @@ build_host_list() {
 generate_hashes() {
     #HOST_COUNT=${#HOSTS[@]} : This does not work, counts only 1 line. Alternative counting using wc below
     HOST_COUNT=$(wc -w <<< "$HOSTS")
-    HOST_COUNT=$HOST_COUNT + $(wc -w <<< "$HUBS")
-
+    
     echo "Generating unique password hashes for all 'Incoming/Outgoing' hosts that are present in the lastseen database"
     echo "Note: By default hosts not seen within 7 days are purged from the lastseen database."
 
     echo "Host Count: $HOST_COUNT"
     #echo "$HOSTS"
-    #echo "$HUBS"
     COUNT=0
 
     for each in $HOSTS; do
-	echo "Generating Unique Hash for $each"
-
-	mkdir -p $HASHED_OUTPUT_DIR/$each &> /dev/null
-	export _salt=$(openssl rand 1000 | strings | grep -io [0-9A-Za-z\.\/] | head -n 16 | tr -d '\n' )
-	export _password=$PASSWORD
-
-	echo $(perl -e 'print crypt("$ENV{'_password'}","\$$ENV{'_algo'}\$"."$ENV{'_salt'}"."\$")') > ${HASHED_OUTPUT_DIR}/${each}/$HASHED_OUTPUT_FILENAME && echo Wrote hash for ${each} to ${HASHED_OUTPUT_DIR}/${each}/${HASHED_OUTPUT_FILENAME} && COUNT=$((COUNT+1))
-	# Useful if you want to store the plaintext version for reference
-
-	if [ "${STORE_PLAINTEXT}" = true ]; then
-	    echo "$PASSWORD" > ${PLAINTEXT_OUTPUT_DIR}/${each}/${PLAINTEXT_OUTPUT_FILENAME}
-	fi
-    done
-
-    for each in $HUBS; do
 	echo "Generating Unique Hash for $each"
 
 	mkdir -p $HASHED_OUTPUT_DIR/$each &> /dev/null

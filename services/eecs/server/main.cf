@@ -92,6 +92,9 @@ bundle agent config_policy_server
 # @description: ensure custom elements for policy hub are running
 {
   vars:
+      "dependent_packages" slist => { "binutils", },
+        comment => "set of packages required for cf-pwhash.sh script (strings command)";
+
       "cf_pwhash_file" string => "/usr/local/sbin/cf-pwhash.sh";
       "cf_pwhash_template" string => "$(this.promise_dirname)/data/cf-pwhash.sh.mustache";
 
@@ -119,6 +122,10 @@ bundle agent config_policy_server
         comment => "expand pwhash script to /usr/local/bin using template in this promise directory";
       
   methods:
+    install_software::
+      "install dependent packages"
+    	usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");      
 
   reports:
     (inform_mode|verbose_mode)::
