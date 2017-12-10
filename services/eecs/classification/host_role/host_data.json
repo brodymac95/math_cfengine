@@ -437,6 +437,7 @@
             "roose": "Ben Roose",
 	},
 	"custom_packages": [ "emacs_server", ],
+	"security": [ "ssh_public", ],
 	"_comment": "portable policy server"
     },
 }
