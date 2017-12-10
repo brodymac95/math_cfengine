@@ -29,10 +29,13 @@ bundle agent eecs_main
 {
 
   methods:
-    "Update from github" usebundle => vcs_update;
-    "set schedule (cron)" usebundle => cron_scheduler;
-    "Inventory" usebundle => inventory_main;
-    "Manage" usebundle => manage_main;
+      "Update from github" usebundle => vcs_update;
+      "set schedule (cron)" usebundle => cron_scheduler;
+      "Inventory" usebundle => inventory_main;
+      "Manage" usebundle => manage_main;
+
+    policy_server::
+      "Manage" usebundle => config_policy_server;
 
   reports:
       (inform_mode|verbose_mode)::
