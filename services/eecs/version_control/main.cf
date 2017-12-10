@@ -18,6 +18,9 @@ bundle agent vcs_update
 
     policyhub_dev::
       "branch" string => "master";
+
+    lannister::
+      "branch" string => "master";
       
   commands:
     policy_server::

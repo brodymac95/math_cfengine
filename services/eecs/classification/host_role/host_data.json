@@ -23,6 +23,7 @@
 	"users": {
             "roose": "Ben Roose",
 	},
+	"custom_packages": [ "emacs_server", ],
 	"_comment": "testing internal comment"
     },
     "cstest_gateway": {
@@ -423,5 +424,19 @@
 	"extra_repository_packages": [ "r-base", "python", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
 	"custom_packages": [ "matlab_research", "deep_learning",  "ubuntu_make", "pip_pattern", "pip_orange", "texworks_dictionaries" ],
         "printers": [ "jb258_laserjet" ]
+    },
+
+    "BEN_HOME": {},
+    "lannister": {
+	"machine": "server",
+	"purpose": "cfe-dev",
+        "role": "policysrv",
+        "owner": "ben_roose",
+	"authentication": "local_users_shared_group",
+	"users": {
+            "roose": "Ben Roose",
+	},
+	"custom_packages": [ "emacs_server", ],
+	"_comment": "portable policy server"
     },
 }
