@@ -432,7 +432,7 @@
 	"purpose": "cfe-dev",
         "role": "policysrv",
         "owner": "ben_roose",
-        "extra_repository_packages": [ "wireless-tools", "wpasupplicant", ],
+        "extra_repository_packages": [ "wireless-tools", "wpasupplicant", "lvm2", ],
 	"custom_packages": [ "emacs_server", ],
 	"security": [ "ssh_public", ],
 	"_comment": "portable policy server"
