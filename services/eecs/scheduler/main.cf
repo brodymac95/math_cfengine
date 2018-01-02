@@ -52,6 +52,9 @@ bundle common cron_scheduler
       "install_software" and => { "Q6H", "Min00_05", },
       comment => "install/update software at start of every 6 hours only if system load is low (removed)";
 
+      "ssl_cert_renew" and => { "Q1", "Hr02", "Monday", "certbot_exists", },
+      comment => "run a web_server certbot ssl renewal check each Monday at 2am if certbot is installed on system";
+
       "run_uaf2_client" and => { "Q15M", "uaf2_client", },
       comment => "run Tom's uaf2_client to update users every 15 minutes only if installed and system load is low";
 

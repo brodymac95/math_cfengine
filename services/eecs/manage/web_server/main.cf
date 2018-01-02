@@ -34,6 +34,7 @@ bundle agent web_server(state)
 
   vars:      
       "apache_exec" string => "/usr/sbin/apache2";
+      "certbot_exec" string => "/usr/bin/certbot";
 
   classes:
       # Only use a certbot SSL testing_cert on development systems!
@@ -45,7 +46,12 @@ bundle agent web_server(state)
       "off" expression => strcmp("$(state)","off");
 
       "apache_exists"
-	expression => fileexists( "$(apache_exec)" );
+      expression => fileexists( "$(apache_exec)" );
+
+      "certbot_exists"
+	expression => fileexists( "$(certbot_exec)" ),
+        persistence => "120",
+        comment => "set 2hr globally persistent class for certbot (used by cron_scheduler for cert renewal)";
 
   methods:
 
@@ -81,8 +87,13 @@ bundle agent web_server(state)
         inherit => "true",
         classes => results("bundle", "install_cert");
 
-    on.(enable_site|install_cert_repaired)::
-      "reload apache2 service after generating and enabling new sites"
+    on.ssl_cert_renew::
+      "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
+    	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
+        classes => results("bundle", "renew_certs");
+
+    on.(enable_site|install_cert_repaired|renew_certs_repaired)::
+      "reload apache2 service after generating and enabling new sites or renewing ssl certs"
       	usebundle => standard_services( "apache2", "reload" ),
       	classes => if_ok("web_server_reload");
 
@@ -104,10 +115,6 @@ bundle agent web_server(state)
         classes => results("bundle", "disable_default_site");
 
     ## SSL CERTIFICATE RENEWAL
-    on.ssl_cert_renew::
-      "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
-    	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
-        classes => results("bundle", "renew_certs");
       
   reports:
     (inform_mode|verbose_mode)::
@@ -232,8 +239,8 @@ bundle agent manage_certbot(params, site, action)
       "certbot_exec" string => "/usr/bin/certbot";
 
     !testing_cert::
-      "certbot_install_cmd" string => "$(certbot_exec) run --apache --non-interactive --config ";
-      "certbot_renew_cmd" string => "$(certbot_exec) renew --non-interactive";
+      "certbot_install_cmd" string => "$(certbot_exec) run --apache --non-interactive --domains $($(params).certbot_domains_to_register) --config ";
+      "certbot_renew_cmd" string => "$(certbot_exec) renew";
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --non-interactive --cert-path ";
 
     testing_cert::
@@ -248,8 +255,8 @@ bundle agent manage_certbot(params, site, action)
       "revoke_cert" expression => strcmp("$(action)","revoke");
 
       "certbot_exists"
-	expression => fileexists( "$(certbot_exec)" );
-
+        expression => fileexists( "$(certbot_exec)" );
+      
       "certbot_config_exists"
 	expression => fileexists( "$($(params).certbot_config_file)" );
 
@@ -281,8 +288,8 @@ bundle agent manage_certbot(params, site, action)
     revoke_cert.certificate_for_domain_exists.certbot_exists.debian::
       "$(certbot_revoke_cmd)"
         args => "$(cert_dir)/$(domain_hostname)/$(cert_filename)",
-	classes => results("bundle", "certbot_renew"),
-        comment => "revoke certificate  if cert exists";
+	classes => results("bundle", "certbot_revoke"),
+        comment => "revoke certificate  if cert exists. UNTESTED!";
       
   reports:
     (inform_mode|verbose_mode)::
