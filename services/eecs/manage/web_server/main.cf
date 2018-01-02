@@ -240,12 +240,12 @@ bundle agent manage_certbot(params, site, action)
 
     !testing_cert::
       "certbot_install_cmd" string => "$(certbot_exec) run --apache --non-interactive --domains $($(params).certbot_domains_to_register) --config ";
-      "certbot_renew_cmd" string => "$(certbot_exec) renew";
+      "certbot_renew_cmd" string => "$(certbot_exec) renew --quiet";
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --non-interactive --cert-path ";
 
     testing_cert::
       "certbot_install_cmd" string => "$(certbot_exec) run --test-cert --apache --config ";
-      "certbot_renew_cmd" string => "$(certbot_exec) renew --test-cert --non-interactive --config ";
+      "certbot_renew_cmd" string => "$(certbot_exec) renew --quiet";
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --test-cert --non-interactive --cert-path ";
       
 
