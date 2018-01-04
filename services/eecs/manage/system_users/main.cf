@@ -65,17 +65,19 @@ bundle common sys_user_settings
 
       "shared_group_primary" string => "sysusers";
 
-      debian::
-      "group_secondary" string => "sudo,audio,plugdev",
+    debian::
+      # NOTE: can only add to one secondary group, else it will run a usermod each time to reset group list
+      "group_secondary" string => "sudo",
+      # "group_secondary" string => "sudo,audio,plugdev",
 	comment => "add all system users to sudo group for full superuser access
         (need to change this for more granular control over sudo commands for specific sys_users)";
 
-      redhat::
+    redhat::
       "group_secondary" string => "wheel",
 	comment => "add all system users to wheel group for full superuser access
         (need to change this for more granular control over sudo commands for specific sys_users)";
 
-      any::
+    any::
       "sys_user_data" data => readjson("$(this.promise_dirname)/data/system_users.json",1M),
         comment => "pull in external json file containing system administration users defined by role";
       
@@ -212,7 +214,7 @@ bundle agent manage_sudo_users(settings)
 # Does NOT add or change user local password, but will add ssh public key access
 {
   vars:
-      "user" slist => getvalues( "$(settings).sudo_users" );      
+      "user" slist => getvalues( "$(settings).sudo_users" );
 
   users:
     linux.(shared_group_exists_repaired|shared_group_exists_kept)::
