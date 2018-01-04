@@ -114,7 +114,7 @@ build_host_list() {
 
     # By ppkey sha/md5
     HOSTS=$(cf-key -s | awk '/Incoming/ { print $NF }')
-    HOSTS=$HOSTS$(cf-key -s | awk '/Outgoing/ { print $NF }')
+    HOSTS="$HOSTS"$'\n'"$(cf-key -s | awk '/Outgoing/ { print $NF }')"
 
     # Simple: Unqualified host name $(sys.uqhost)
     # HOSTS=(host001 host002 host003)
