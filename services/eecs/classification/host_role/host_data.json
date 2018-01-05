@@ -175,6 +175,14 @@
 	"custom_packages": [ "wsu_local_repo", "ad_authentication", "tftp_server", ],
 	"security": [ "tftp_rslab_internal", ],
     },
+    "bugs": {
+	"machine": "server",
+	"purpose": "teaching",
+        "role": "sshsrv",
+        "owner": "eecs",
+	"authentication": "uaf2_legacy",
+	"security": [ "ssh_public", ],
+    },
     "roger": {
 	"machine": "server",
 	"purpose": "teaching",
