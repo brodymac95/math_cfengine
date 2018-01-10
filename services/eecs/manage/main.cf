@@ -13,6 +13,7 @@ bundle common manage_main_file_control
 
       "input[active_directory_auth]" string => "$(this.promise_dirname)/ad_auth/main.cf";
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
+      "input[ballast]" string => "$(this.promise_dirname)/ballast/main.cf";
       "input[emacs_server]" string => "$(this.promise_dirname)/emacs_server/main.cf";
       "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database.cf";
@@ -105,8 +106,11 @@ bundle agent manage_os_tenant_cluster
       "configure login motd"     usebundle => config_login_banner;
       "configure login defaults" usebundle => config_login_defs;
       "configure timezone"       usebundle => config_timezone;
-      "turn on sshd server"      usebundle => sshd_server("on");
       "turn on mail send-only"   usebundle => mail_server("on");
+      "turn on sshd server"      usebundle => sshd_server("on");
+
+      "ensure ssh host keys"     usebundle => ensure_ssh_host_keys("$(classify_host.host_purpose)"),
+        comment => "all nodes should share the same ssh host keys for ballast access";
 
       # future: not configuring root on tenant clusters, using sudo access only for uaf2 and non-uaf2 hosts? 
       "manage root password"     usebundle => manage_root_passwd,
@@ -118,21 +122,28 @@ bundle agent manage_os_tenant_cluster
 
       
     ## DEFINE ROLE SUBSETS
+    ssh_bastion::
+      "admin user management"       usebundle => manage_sys_users;
+      "turn on ballast service"     usebundle => ballast_server("on");
+      "ballast client management"   usebundle => manage_ballast_client;
+
     guac_gateway::
-      "admin user management"      usebundle => manage_sys_users;
-      "turn on guacamole service"  usebundle => guacamole_server("on");
-      "turn on apache web service" usebundle => web_server("on");
+      "admin user management"       usebundle => manage_sys_users;
+      "turn on guacamole service"   usebundle => guacamole_server("on");
+      "turn on apache web service"  usebundle => web_server("on");
 
     cluster_node.!uaf2_client::
-      "admin user management"      usebundle => manage_sys_users;
-      "standard user management"   usebundle => manage_users;
+      "admin user management"       usebundle => manage_sys_users;
+      "standard user management"    usebundle => manage_users;
+      "ballast agent management"    usebundle => manage_ballast_agent;
 
     cluster_node.uaf2_client::
-      "uaf2 user management"       usebundle => install_uaf2_client,
+      "uaf2 user management"        usebundle => install_uaf2_client,
       	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
-      "join host to ad domain"     usebundle => join_host_to_ad;
-      "mount emcity nfs shares"    usebundle => autofs("on");
-      "turn on xrdp remote access" usebundle => xrdp("on");
+      "join host to ad domain"      usebundle => join_host_to_ad;
+      "mount emcity nfs shares"     usebundle => autofs("on");
+      "turn on xrdp remote access"  usebundle => xrdp("on");
+      "ballast agent management"    usebundle => manage_ballast_agent;
       
     ## SYSTEM CONTROL AND SCHEDULED TASKS
 

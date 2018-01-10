@@ -27,7 +27,6 @@ bundle agent configure_guac_database
 # @description: manipulates underlying mySQL database for Guacamole server
 # NOTE: uses the CFE service state on/off for enabling configuration!!
 {
-
   vars:
 
       ## TESTING VARS ONLY
@@ -35,64 +34,64 @@ bundle agent configure_guac_database
 
       ## GLOBAL PARAMETERS
       "params" string => "guac_database_vars";
-      "wget_cmd" string => "/usr/bin/wget -q --timeout=10";
+    #   "wget_cmd" string => "/usr/bin/wget -q --timeout=10";
       
-      ## OPENSTACK METADATA
-      "openstack_metadata_link" string => "http://169.254.169.254/openstack/latest/meta_data.json";
-      "openstack_metadata_cache" string => "meta_data.json";
-      "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
+    #   ## OPENSTACK METADATA
+    #   "openstack_metadata_link" string => "http://169.254.169.254/openstack/latest/meta_data.json";
+    #   "openstack_metadata_cache" string => "meta_data.json";
+    #   "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
 
-    metadata_cache_exists.(copy_metadata_repaired|copy_metadata_kept)::
-      "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
-        comment => "pull in external json file from OpenStack Nova API";
+    # metadata_cache_exists.(copy_metadata_repaired|copy_metadata_kept)::
+    #   "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
+    #     comment => "pull in external json file from OpenStack Nova API";
 
-      "json_str_openstack_metadata" string => format("%S", "openstack_metadata");
+    #   "json_str_openstack_metadata" string => format("%S", "openstack_metadata");
 
-      "cluster_host_data"
-        data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
-        comment => "create data subset of cluster host ip addresses from openstack metadata";
+    #   "cluster_host_data"
+    #     data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
+    #     comment => "create data subset of cluster host ip addresses from openstack metadata";
 
-      "clean_cluster_string1" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
-      "clean_cluster_string2" string => regex_replace( "$(clean_cluster_string1)", "\"\", ", "", "" );
-      "cluster_ip_list" slist => splitstring( "$(clean_cluster_string2)", "\", \"", "1000" ),
-        comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
-                    since this parameter is defined as a comma_limited_list in openstack heat templates.
-                    Need to clean it by removing start/end chars, null entries, then split ips into a list"; 
+    #   "clean_cluster_string1" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
+    #   "clean_cluster_string2" string => regex_replace( "$(clean_cluster_string1)", "\"\", ", "", "" );
+    #   "cluster_ip_list" slist => splitstring( "$(clean_cluster_string2)", "\", \"", "1000" ),
+    #     comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
+    #                 since this parameter is defined as a comma_limited_list in openstack heat templates.
+    #                 Need to clean it by removing start/end chars, null entries, then split ips into a list"; 
      
-  classes:      
-      "openstack_cache_dir_exists"
-      	expression => fileexists( "$(openstack_cache_dir)/." );
+  # classes:      
+  #     "openstack_cache_dir_exists"
+  #     	expression => fileexists( "$(openstack_cache_dir)/." );
 
-      "metadata_cache_exists"
-      	expression => fileexists( "$(openstack_cache_dir)$(openstack_metadata_cache)" );
+  #     "metadata_cache_exists"
+  #     	expression => fileexists( "$(openstack_cache_dir)$(openstack_metadata_cache)" );
 
-      "have_cluster_ip_list"
-      	expression => isvariable( "cluster_ip_list" );
+  #     "have_cluster_ip_list"
+  #     	expression => isvariable( "cluster_ip_list" );
 
-  files:
-      "$(openstack_cache_dir)/."
-        create => "true";
+  # files:
+  #     "$(openstack_cache_dir)/."
+  #       create => "true";
       
-  commands:
-    openstack_cache_dir_exists::
-      "$(wget_cmd)"
-        args => "-O $(openstack_metadata_cache) $(openstack_metadata_link)",
-        contain => in_dir_shell("$(openstack_cache_dir)"),
-        classes => results("bundle", "copy_metadata"),
-        comment => "download metadata file from openstack nova api link";
+  # commands:
+  #   openstack_cache_dir_exists::
+  #     "$(wget_cmd)"
+  #       args => "-O $(openstack_metadata_cache) $(openstack_metadata_link)",
+  #       contain => in_dir_shell("$(openstack_cache_dir)"),
+  #       classes => results("bundle", "copy_metadata"),
+  #       comment => "download metadata file from openstack nova api link";
 
   methods:
       "create required variables"
         usebundle => guac_database_vars;
 
-    have_cluster_ip_list::
+    # have_cluster_ip_list::
       "add all groups and connections into guacamole database"
-        usebundle => guac_add_all_connections( "@(cluster_ip_list)", "$(params)" ),
+        usebundle => guac_add_all_connections( "@(os_metadata.cluster_ip_list)", "$(params)" ),
         classes => if_ok("connections_added");
 
     connections_added::
       "import and add all users into guacamole database"
-        usebundle => guac_add_all_users( "@(cluster_ip_list)", "$(params)" );
+        usebundle => guac_add_all_users( "@(os_metadata.cluster_ip_list)", "$(params)" );
 
     any::
       "delete temporary sql query and insert files from cache directory after file is older than 1 day"
@@ -108,8 +107,8 @@ bundle agent configure_guac_database
       # "initial openstack metadata: $(cluster_host_data)";
       # "cleaned string 1 from openstack metadata: $(clean_cluster_string1)";
       # "cleaned string 2 from openstack metadata: $(clean_cluster_string2)";
-      "cluster host ips found in openstack metadata: $(cluster_ip_list)"
-	ifvarclass => "have_cluster_ip_list";
+      # "cluster host ips found in openstack metadata: $(cluster_ip_list)"
+      # 	ifvarclass => "have_cluster_ip_list";
 }
 
 ######################################################################

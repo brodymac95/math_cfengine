@@ -12,9 +12,21 @@ bundle common classification_main_file_control
       slist =>
       {
 	"$(this.promise_dirname)/host_role/main.cf",
+	"$(this.promise_dirname)/metadata/main.cf",
 	"$(this.promise_dirname)/subnet_location/main.cf",
       };
+      
+    os_tenant_cluster::
+    "bundles"
+      slist =>
+      {
+	"global",
+	"classify_host",
+	"classify_subnet_location",
+	"os_metadata",
+      };
 
+    !os_tenant_cluster::
     "bundles"
       slist =>
       {

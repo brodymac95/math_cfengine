@@ -14,19 +14,19 @@
 # Thus, host-specific definitions should be at the beginning of the
 # configuration file, and defaults at the end.
 
-{{#classes.ballast_client}}
+{{#classes.ballast_client_exists}}
 ## BALLAST CLIENT OPTIONS
 # Aliases for least loaded and last utilized system
-Host {{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}} {{{vars.ballast_vars.cluster_name}}}.{{{vars.ballast_vars.config[alias_domain]}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}}.{{{vars.ballast_vars.config[alias_domain]}}}
+Host {{{vars.ballast_vars.cluster_name}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_domain]}}} {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_last]}}}{{{vars.ballast_vars.config[alias_domain]}}}
 
      # Use the ballast balancer when connecting to these aliases
-     ProxyCommand {{{vars.ballast_vars.local_bin_dir}}}/ballast %h
+     ProxyCommand {{{vars.ballast_vars.local_bin_dir}}}ballast %h
 
      # Avoids host key checks for all variants when
      # StrictHostKeyChecking is enabled (optional)
-     HostKeyAlias {{{vars.ballast_vars.cluster_name}}}.{{{vars.ballast_vars.config[alias_domain]}}}
+     HostKeyAlias {{{vars.ballast_vars.cluster_name}}}{{{vars.ballast_vars.config[alias_domain]}}}
      
-{{/classes.ballast_client}}
+{{/classes.ballast_client_exists}}
 
 							     
 # Site-wide defaults for some commonly used options.  For a comprehensive

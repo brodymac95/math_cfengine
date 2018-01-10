@@ -82,7 +82,7 @@ bundle agent sshd_server(state)
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_sshd)::
+    (DEBUG|DEBUG_ssh)::
       "=== $(this.bundle) ===";
 
       "sshd server is not installed on this host"
@@ -209,7 +209,7 @@ bundle agent config_sshd_server(params)
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_sshd)::
+    (DEBUG|DEBUG_ssh)::
       "=== $(this.bundle) ===";
 
       "cached sshd_config passed validation check"
@@ -249,7 +249,7 @@ bundle agent config_ssh_client(params)
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_sshd)::
+    (DEBUG|DEBUG_ssh)::
       "=== $(this.bundle) ===";
 
       "$(config_file) copied to system"
@@ -270,6 +270,80 @@ bundle common ssh_settings
         string => "$(sys.workdir)/state/ssh_key_cache/",
               comment => "local directory where agents cache the user ssh authorized_keys file
         (for offline enforcement).";
+}
+
+########################################################
+
+bundle agent ensure_ssh_host_keys(host)
+# @description: ensure ssh host key files are deployed for specified host
+{
+  vars:
+      "system_ssh_dir" string => "/etc/ssh";
+
+      "host_keys_tarball" string =>"$(host)_host_keys.tar.gz";
+      "host_keys_dir" string =>"$(host)_host_keys";
+
+      "install_server" string => "$(sys.policy_hub)";
+      "host_keys_dist" string => "$(ssh_settings.authorized_keys_dist)/$(host_keys_tarball)";
+      "host_keys_cache" string => "$(ssh_settings.authorized_keys_cache)/$(host_keys_dir)";
+      "host_keys_cache_dir" string => "$(ssh_settings.authorized_keys_cache)";
+
+    # redhat.!scientific::
+    #   "restorecon_cmd" string => "/usr/sbin/restorecon -R ",
+    #   comment => "-R = recursive";
+      
+  classes:
+      "have_cached_host_keys"
+	expression => fileexists( "$(host_keys_cache)/." );
+      
+  methods:
+
+    !have_cached_host_keys::
+      "download and expand host keys tarball"
+    	usebundle => install_tarball_v2( "$(host_keys_dist)", "$(install_server)", "$(host_keys_cache_dir)" );
+        # classes => results("bundle", "install_tarball");
+
+  files:
+      "$(host_keys_cache_dir)/."
+    	create => "true",
+        comment => "ensure the cache directory exists";
+
+    have_cached_host_keys::
+      "$(system_ssh_dir)"
+    	copy_from => local_dcp( "$(host_keys_cache)" ),
+    	perms => og( "root","root" ),
+        depth_search => recurse("inf"),
+        classes => results("bundle", "host_keys_files"),
+    	comment => "copy host_key files from local staging cache and ensure root ownership";
+
+  # commands:
+  #   redhat.!scientific::
+  #     "$(restorecon_cmd) $(user_ssh_dir)"
+  #       classes => results("bundle", "restorecon"),
+  #       comment => "if redhat system run SELinux restorecon on user .ssh dir to allow for public key authentication",
+  #     	ifvarclass => "auth_keys_file_repaired";
+  
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_ssh)::
+      "=== $(this.bundle) ===";
+      "host_keys_cache found at $(host_keys_cache)"
+        ifvarclass => "have_cached_host_keys";
+
+      "WARNING: host_keys_cache not found at $(host_keys_cache)"
+        ifvarclass => "!have_cached_host_keys";
+
+      "ssh host keys copied for $(host)"
+	ifvarclass => "host_keys_files_repaired";
+
+      "ssh host keys exist for $(host)"
+	ifvarclass => "host_keys_files_kept";
+
+      # "SELinux restorecon ran on $(user_ssh_dir)"
+      # 	ifvarclass => "restorecon_repaired";
+
 }
 
 ########################################################
@@ -339,7 +413,7 @@ bundle agent ensure_user_ssh_authorized_keys(user, group, user_home)
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
-    (DEBUG|DEBUG_sys_users)::
+    (DEBUG|DEBUG_ssh)::
       "=== $(this.bundle) ===";
       "auth_keys_cache found at $(auth_keys_cache)"
         ifvarclass => "have_cached_auth_keys";

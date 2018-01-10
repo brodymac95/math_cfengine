@@ -26,8 +26,8 @@ body file control
 # NOTES for future development of configuration:
 # 1.
 
-bundle agent ballast_server
-# bundle agent ballast_server(state)
+# bundle agent ballast_server
+bundle agent ballast_server(state)
 # @description:
 {
   vars:      
@@ -35,8 +35,8 @@ bundle agent ballast_server
 
   classes:
       # DEFINE SERVER STATES
-      "on"  expression => "any";
-      # "on"  expression => strcmp("$(state)","on");
+      # "on"  expression => "any";
+      "on"  expression => strcmp("$(state)","on");
       "off" expression => strcmp("$(state)","off");
 
       "ballastd_exists"
@@ -55,7 +55,8 @@ bundle agent ballast_server
       	usebundle => standard_services( "ballast", "start" ),
       	classes => if_ok("ballast_server_on");
 
-      "generate all ballast server variables" usebundle => ballast_vars;
+      "generate all ballast server variables" usebundle => ballast_vars,
+        inherit => "true";
       
       "install and configure ballast server"
       	usebundle => install_ballast_server( "ballast_vars" ),
@@ -106,7 +107,7 @@ bundle agent ballast_vars
 
       ## INSTALL PARAMETERS FOR ALL SOFTWARE
     debian::
-      "dependent_packages" slist => { "perl", "libtimedate-perl", "libdatetime-timezone-perl", "netcat", },
+      "dependent_packages" slist => { "perl", "libtimedate-perl", "libdatetime-timezone-perl", "libnet-address-ip-local-perl", "netcat", },
         comment => "set of packages required for ballast server, client, and agent";
       
       "install_tarball_path"  string => "/srv/cfengine/packages/ballast.tar.gz";
@@ -122,7 +123,7 @@ bundle agent ballast_vars
       "local_bin_dir"  string => "/usr/local/bin/";
       "local_sbin_dir"  string => "/usr/local/sbin/";
       
-      ## FILE PARAMETERS
+      ## FILE PARAMETERS FOR BALLAST CONFIG
     any::
       "ballast_config_file" string => "/etc/ballastrc";
       "ballast_config_template" string => "$(this.promise_dirname)/data/ballastrc.mustache";
@@ -131,25 +132,49 @@ bundle agent ballast_vars
       "ballast_socket_file" string => "/etc/systemd/system/ballast.socket";
       "ballast_socket_template" string => "$(this.promise_dirname)/data/ballast.socket.mustache";
 
+    ## FILE PARAMETERS FOR BALLAST KEY DISTRIBUTION/CACHING
+      "ballast_key_file" string => "/etc/ballast.key";
+      "ballast_key_dist" string => "/srv/cfengine/configs/service_credentials/ballast_key",
+        comment => "server location where agents look for ballast key file
+                    (WARNING: STORED IN PLAIN TEXT, ENSURE SECURITY ON THIS FILE).";
+      "ballast_key_cache" string => "$(sys.workdir)/state/security/ballast_key_cached",
+        comment => "local directory where agents cache ballast key
+                    (for offline enforcement).";
+      "ballast_key_cache_dir" string => dirname( "$(ballast_key_cache)" );
+ 
       ## CLUSTER PARAMETERS
       "cluster_name" string => "$(classify_host.host_purpose)",
 	comment => "host alias name needed in ballast configuration";
 
+    ballastd_exists::
+      "ballast_user" string => "root",
+      	comment => "user and group for running ballastd (set as root due to needing access to database and pid_file)";
+
+    !ballastd_exists::
       "ballast_user" string => "ballast",
-      	comment => "user and group name to use for running ballastd and ballast-agent";
+      	comment => "user and group for running ballast-agent (set as ballast user for least privilege)";
 
       ## GLOBAL CONFIG PARAMETERS
       "config[data_port]" string => "4411",
-	comment => "port used for server communication. Default = 4411";
+	comment => "port used for server communication. Default = 4411 (must open ingress to this port on ballast server)";
       "config[data_timeout]" string => "2",
 	comment => "amount of time to wait during server communication. Default = 2
                   (if multiple data servers are defined, will wait this amount for each)
                   (client will use default host set if all servers time out)";
       
       ## AGENT/CLIENT SPECIFIC CONFIG PARAMETERS
-      "config[data_host]" string => "need gateway/server internal address", # CAN THIS BE FOUND USING OPENSTACK METADATA?
+
+    ssh_bastion::
+      "config[data_host]" string => "$(sys.ipv4)", # Using own first IP address
 	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
 
+    !ssh_bastion.os_tenant_cluster::
+      # "config[data_host]" string => "$(os_metadata.ballast_host_data)", # Using underlying OpenStack metadata
+      # 	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
+      "config[data_host]" string => "10.10.10.10", # hardcoding ssh bastion for testing
+      	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
+
+    any::
       ## SERVER/CLIENT SPECIFIC CONFIG PARAMETERS
       "config[alias_last]" string => "-last",
 	comment => "suffix that triggers return of last chosen host for given alias/user. Default = -last";
@@ -158,7 +183,7 @@ bundle agent ballast_vars
       "config[data_cipher]" string => "XXTEA_PP",
 	comment => "cipher that should be used to encrypt data sent to server. Default = XXTEA_PP
                   (requires Crypt::X module installed for a cipher X other than XXTEA_PP) (example: data_cipher Rijndael)";
-      "config[key_file]" string => "/etc/ballast.key",
+      "config[key_file]" string => "$(ballast_key_file)",
 	comment => "file containing encryption key. Default = /etc/ballast.key
                   (should only be readable by agent and server user) (encryption key may be any text value)";
       "config[run_group]" string => "$(ballast_user)",
@@ -166,6 +191,7 @@ bundle agent ballast_vars
       "config[run_user]" string => "$(ballast_user)",
 	comment => "user that agent/server will run as. No default";
 
+    any::
       ## AGENT SPECIFIC CONFIG PARAMETERS
       "config[data_alias]" string => "$(cluster_name)",
 	comment => "alias to which collected data pertains. No default";
@@ -173,6 +199,8 @@ bundle agent ballast_vars
 	comment => "number of seconds to randomly wait before collecting data. Default = 0";
       "config[user_load]" string => "1",
 	comment => "collect user specific information. Default = 1";
+      "config[use_ip_address]" string => "1",
+	comment => "use primary ip address for agent host instead of hostname (leave commented out if hostname wanted)";
       # "config[load_hook]" string => "", # NOTE: COMMENTED OUT IN TEMPLATE
       #  comment => "location of executable called to generate custom load data. No default
       #              (example: load_hook /usr/local/bin/myload)";
@@ -184,10 +212,10 @@ bundle agent ballast_vars
       "config[alias_text]" string => "unavailable",
 	comment => "text that will be displayed when no host available. Default = unavailable
                   (this will complete the message 'ERROR: all hosts for alias foo are ...')";
-      "config[hosts_for_cluster]" string => "$(cluster_name)-node0 $(cluster_name)-node1 $(cluster_name)-node2",
+      "config[hosts_for_cluster]" string => "BALLAST_SERVER_NOT_AVAILABLE",
 	comment => "default set of hosts for each alias when server cannot be contacted (i.e. used for failover). No default
                   (form is hosts_X where X is the name of an alias)"; # should we try node ip addresses pulled from metadata?
-      "config[relay_path]" string => "/usr/bin/netcat",
+      "config[relay_path]" string => "/bin/netcat",
 	comment => "path to tcp relay. No default, but example has /usr/bin/netcat
                   (perl client has beta relay feature built-in so this can be commented out)
                   (c client requires external program such as netcat or tcpconnect)";
@@ -263,21 +291,10 @@ bundle agent install_ballast_server(params)
       "install_dir_exists"
 	expression => fileexists( "$($(params).install_unrolled_dir)/." );
 
-  users:
-    ballast_group_exists::
-      "$(ballast_user)"
-	policy => "present",
-	description => "ballast_server_and_agent_user",
-	uid => "201",
-	shell => "/usr/sbin/nologin",
-	group_primary => "$(ballast_user)",
-        # password => hashed_password( "*" ),
-	comment => "add local system user for running the ballast-agent via cron";
+      "have_cached_ballast_key"
+	expression => fileexists( "$($(params).ballast_key_cache)" );
             
   methods:
-      "ensure ballast system group exists"
-        usebundle => group_exist( "$(ballast_user)" ),
-        classes => if_ok("ballast_group_exists");
 
     !install_dir_exists::
       "download and expand ballast installation tarball"
@@ -285,6 +302,23 @@ bundle agent install_ballast_server(params)
         # classes => results("bundle", "install_tarball");
 
   files:
+      "$($(params).ballast_key_cache_dir)/."
+	create => "true",
+        comment => "ensure the cache directory exists";
+
+      "$($(params).ballast_key_cache)"
+	perms => mo("400","root"),
+	copy_from => secure_cp( "$($(params).ballast_key_dist)", $(sys.policy_hub) ),
+	action => if_elapsed("60"),
+	comment => "perform a secure remote copy of the ballast key file";
+
+    have_cached_ballast_key::
+      "$($(params).ballast_key_file)"
+        create => "true",
+	perms => mog("400", "$(ballast_user)", "$(ballast_user)" ),
+	copy_from => local_dcp( "$($(params).ballast_key_cache)" ),
+        classes => results("bundle", "ballast_key");
+      
     install_dir_exists::
       "$($(params).local_sbin_dir)/$(ballastd_file)"
         create => "true",
@@ -335,16 +369,27 @@ bundle agent install_ballast_server(params)
 
       "$($(params).local_sbin_dir)/$(ballastd_file) installed"
         ifvarclass => "ballastd_install_repaired";
+
+      "ballast key file cached in $($(params).ballast_key_cache)"
+         ifvarclass => "have_cached_ballast_key";
+      "ALERT: ballast key file not found in cache. Check connection to policyhub server"
+        ifvarclass => "!have_cached_ballast_key";
 }
 
 ######################################################################
 
-bundle agent install_ballast_agent(params)
+bundle agent manage_ballast_agent
+# bundle agent install_ballast_agent(params)
 # @description: install and configure ballast agent
 {
   vars:
+      "params" string => "ballast_vars";
+      "dependent_packages" slist => { @(ballast_vars.dependent_packages) };
+      
       "ballast_agent_file" string => lastnode( "$($(params).ballast_agent_install_path)", "/" );
-      "ballast_agent_exec" string => "$($(params).local_sbin_dir)/$(ballast_agent_file) >/dev/null 2>&1";
+      "ballast_agent_exec" string => "$($(params).local_sbin_dir)/$(ballast_agent_file)";
+
+      "ballast_agent_cron_entry" string => "$($(params).local_sbin_dir)/$(ballast_agent_file) > /dev/null 2>&1";
 
       "ballast_user" string => "$($(params).ballast_user)";
       
@@ -355,13 +400,16 @@ bundle agent install_ballast_agent(params)
       "ballast_agent_exists"
 	expression => fileexists( "$(ballast_agent_exec)" );
 
+      "have_cached_ballast_key"
+	expression => fileexists( "$($(params).ballast_key_cache)" );
+
   users:
     ballast_group_exists::
       "$(ballast_user)"
 	policy => "present",
 	description => "ballast_server_and_agent_user",
 	uid => "201",
-	shell => "/usr/sbin/nologin",
+	shell => "/bin/bash",
 	group_primary => "$(ballast_user)",
         # password => hashed_password( "*" ),
 	comment => "add local system user for running the ballast-agent via cron";
@@ -369,7 +417,7 @@ bundle agent install_ballast_agent(params)
   methods:
     install_software::
       "install dependent packages"
-    	usebundle => package_latest("$($(params).dependent_packages)"),
+    	usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_install");
 
     !install_dir_exists::
@@ -383,10 +431,27 @@ bundle agent install_ballast_agent(params)
         classes => if_ok("ballast_group_exists");
 
       "ensure cronjob for ballast-agent to collect usage data every 2 minutes"
-	usebundle => cronjob("$(ballast_agent_exec)","$(ballast_user)","*","/2"),
+	usebundle => cronjob("$(ballast_agent_cron_entry)","$(ballast_user)","*","*"),
         classes => results("bundle", "ballast_cronjob");
 
   files:
+      "$($(params).ballast_key_cache_dir)/."
+	create => "true",
+        comment => "ensure the cache directory exists";
+
+      "$($(params).ballast_key_cache)"
+	perms => mo("400","root"),
+	copy_from => secure_cp( "$($(params).ballast_key_dist)", $(sys.policy_hub) ),
+	action => if_elapsed("60"),
+	comment => "perform a secure remote copy of the ballast key file";
+
+    have_cached_ballast_key::
+      "$($(params).ballast_key_file)"
+        create => "true",
+	perms => mog("400", "$(ballast_user)", "$(ballast_user)" ),
+	copy_from => local_dcp( "$($(params).ballast_key_cache)" ),
+        classes => results("bundle", "ballast_key");
+
     install_dir_exists::
       "$($(params).local_sbin_dir)/$(ballast_agent_file)"
         create => "true",
@@ -417,26 +482,37 @@ bundle agent install_ballast_agent(params)
       "$(ballast_agent_exec) inserted into crontab"
         ifvarclass => "ballast_crontab_repaired";
 
-      "$($(params).dependent_packages) installed"
+      "$(dependent_packages) installed"
         ifvarclass => "dependent_packages_install_repaired";
+
+      "ballast key file cached in $($(params).ballast_key_cache)"
+         ifvarclass => "have_cached_ballast_key";
+      "ALERT: ballast key file not found in cache. Check connection to policyhub server"
+        ifvarclass => "!have_cached_ballast_key";
 }
 
 ######################################################################
 
-bundle agent install_ballast_client(params)
+bundle agent manage_ballast_client
+# bundle agent install_ballast_client(params)
 # @description: install and configure ballast client
 # NOTE: /etc/ssh/ssh_config is also configured for ballast clients in ssh/data/ssh_config.mustache
 {
   vars:
+      "params" string => "ballast_vars";
+      "dependent_packages" slist => { @(ballast_vars.dependent_packages) };
+
       "ballast_client_file" string => lastnode( "$($(params).ballast_pclient_install_path)", "/" );
-      "ballast_client_exec" string => "$($(params).local_bin_dir)/$(ballast_pclient_file)";
+      "ballast_client_exec" string => "$($(params).local_bin_dir)/$(ballast_client_file)";
       
   classes:
       "install_dir_exists"
 	expression => fileexists( "$($(params).install_unrolled_dir)/." );
       
       "ballast_client_exists"
-	expression => fileexists( "$(ballast_client_exec)" );
+	expression => fileexists( "$(ballast_client_exec)" ),
+        persistence => "120",
+        comment => "set 2hr globally persistent class for ballast client (used by config_ssh_client bundle)";
       
   methods:
     install_software::
@@ -477,7 +553,7 @@ bundle agent install_ballast_client(params)
       "$(ballast_client_exec) installed"
         ifvarclass => "ballast_client_install_repaired";
 
-      "$($(params).dependent_packages) installed"
+      "$(dependent_packages) installed"
         ifvarclass => "dependent_packages_install_repaired";
 }
 

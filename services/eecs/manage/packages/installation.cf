@@ -71,6 +71,8 @@ bundle agent manage_repository_packages
 				 "emacs",
 				 "screen",
 				 "tmux",
+				 "man-db",
+				 "info",
                                 };
 
     cslab_node.(debian)::

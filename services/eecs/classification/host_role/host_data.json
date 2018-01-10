@@ -28,19 +28,19 @@
     },
     "cstest_gateway": {
 	"machine": "os_tenant_cluster",
-	"purpose": "cstest-gateway",
+	"purpose": "cstest-cluster",
         "role": "guac_gateway",
         "owner": "development",
     },
     "cstest_bastion": {
 	"machine": "os_tenant_cluster",
-	"purpose": "cstest-bastion",
+	"purpose": "cstest-cluster",
         "role": "ssh_bastion",
         "owner": "development",
     },
     "cstest_node": {
 	"machine": "os_tenant_cluster",
-	"purpose": "cstest-node",
+	"purpose": "cstest-cluster",
         "role": "cluster_node",
         "owner": "development",
     },

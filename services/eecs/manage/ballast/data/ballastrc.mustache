@@ -46,7 +46,7 @@ data_timeout {{{vars.ballast_vars.config[data_timeout]}}}
 
 # host name(s) and/or IP address(es) of Ballast server(s)
 # example: data_host myserver1 myserver2
-data_host {{{vars.ballast_vars.config[data_server]}}}
+data_host {{{vars.ballast_vars.config[data_host]}}}
 
 ########################
 #### Ballast client ####
@@ -104,6 +104,9 @@ random_wait {{{vars.ballast_vars.config[random_wait]}}}
 # collect user specific information
 #user_load 1
 user_load {{{vars.ballast_vars.config[user_load]}}}
+
+# use primary ip address for agent host instead of hostname (leave commented out if hostname wanted)
+use_ip_address {{{vars.ballast_vars.config[use_ip_address]}}}
 
 ########################
 #### Ballast client ####

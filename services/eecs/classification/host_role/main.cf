@@ -118,8 +118,11 @@ bundle common classify_host
       "cslab_node" expression => classmatch( "cslab_node.*", hardclass ),
         comment => "create generic cluster class on each cslab_node host";
 
-      "cstest" expression => classmatch( "cstest.*", hardclass ),
-        comment => "testing classmatch for cstesting host";
+      "cstest_node" expression => classmatch( "cstest_node.*", hardclass ),
+        comment => "create generic cluster class on each cstest_node host";
+
+      # "cstest" expression => classmatch( "cstest.*", hardclass ),
+      #   comment => "testing classmatch for cstesting host";
 
     ## DEFINE HOST SPECIFIC CLASSES
       "$(host_data[$(hosts)][machine])"
