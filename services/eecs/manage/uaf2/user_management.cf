@@ -183,6 +183,9 @@ bundle agent reset_grader(user, grader_home)
   classes:
       "assign_dir_exists"
 	expression =>  fileexists( "$(grader_home)/$(assign_dir)/." );
+
+      "handin_exec_exists"
+	expression =>  fileexists( "$(grader_home)/$(handin_exec)" );
       
   commands:
     assign_dir_exists::
@@ -199,7 +202,7 @@ bundle agent reset_grader(user, grader_home)
         comment => "ensure correct perms on old assign tarball";
          
   methods:
-    tar_create_repaired|tar_create_kept::
+    tar_create_repaired|tar_create_kept|!handin_exec_exists::
       "remove all files in grader home excluding wildcard regex for tarball archives"
 	usebundle => cleanup_ignore( "$(grader_home)", ".*$(tarball_ext)" ),
 	classes => results("bundle", "cleanup");
