@@ -137,7 +137,7 @@ bundle agent ensure_grader_perms(user, grader_home)
 
   files:
       "$(grader_home)/."
-	perms => mog("755","$(user)","$(user)"),
+	perms => mog("751","$(user)","$(user)"),
 	comment => "set global read permissions for grader home directory";
 
     handin_exec_exists::
