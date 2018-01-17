@@ -151,7 +151,8 @@ bundle agent ballast_vars
       	comment => "user and group for running ballastd (set as root due to needing access to database and pid_file)";
 
     !ballastd_exists::
-      "ballast_user" string => "ballast",
+      "ballast_user" string => "ballast";
+      "ballast_group" string => "users",
       	comment => "user and group for running ballast-agent (set as ballast user for least privilege)";
 
       ## GLOBAL CONFIG PARAMETERS
@@ -185,10 +186,10 @@ bundle agent ballast_vars
       "config[key_file]" string => "$(ballast_key_file)",
 	comment => "file containing encryption key. Default = /etc/ballast.key
                   (should only be readable by agent and server user) (encryption key may be any text value)";
-      "config[run_group]" string => "$(ballast_user)",
-	comment => "group that agent/server will run as. No default";
       "config[run_user]" string => "$(ballast_user)",
 	comment => "user that agent/server will run as. No default";
+      "config[run_group]" string => "$(ballast_group)",
+	comment => "group that agent/server will run as. No default";
 
     any::
       ## AGENT SPECIFIC CONFIG PARAMETERS
@@ -390,7 +391,7 @@ bundle agent manage_ballast_agent
       "ballast_agent_cron_entry" string => "$($(params).local_sbin_dir)/$(ballast_agent_file) > /dev/null 2>&1";
 
       "ballast_user" string => "$($(params).ballast_user)";
-      "ballast_group" string => "users";
+      "ballast_group" string => "$($(params).ballast_group)";
       
   classes:
       "install_dir_exists"
