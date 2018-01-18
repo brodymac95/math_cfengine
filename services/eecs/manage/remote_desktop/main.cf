@@ -127,7 +127,7 @@ bundle agent xrdp_vars(params)
       "dependent_packages" slist => { "xrdp", "lxde", "lightdm", "accountsservice", },
         comment => "install xrdp service, lxde desktop environment, lightdm with its accountsservice ";
 
-      "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
+      "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "clipit", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
         comment => "remove all desktop/GUI-based network, screenlock, screensaver, torrent, web-browser packages from server";
 
       "guacctl_download_weblink"  string => "https://raw.githubusercontent.com/apache/incubator-guacamole-server/master/bin/guacctl";
