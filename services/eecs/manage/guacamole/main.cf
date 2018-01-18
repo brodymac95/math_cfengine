@@ -71,7 +71,7 @@ bundle agent guacamole_server(state)
 
     on.(guac_authentication_repaired|guac_authentication_kept)::
       "configure guacamole database with connections and users (ensure guacamole.cf input file is loaded)"
-    	usebundle =>configure_guac_database,
+      	usebundle =>configure_guac_database,
       	classes => if_ok("config_guac_db");
 
 
@@ -584,7 +584,7 @@ bundle agent create_mysql_db(database, user, password)
       "=== $(this.bundle) ===";
       "Database $(database) exists"
         ifvarclass => "database_exists";
-      "$(database) created for $(user)@$(host)"
+      "$(database) created for $(user)@$(host) with $(password)"
         ifvarclass => "mysql_db_repaired";
       "WARNING: $(database) NOT created for $(user)@$(host)"
         ifvarclass => "mysql_db_failed";
