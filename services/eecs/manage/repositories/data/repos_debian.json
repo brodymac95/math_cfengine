@@ -99,6 +99,17 @@
 	    types: [ "deb" ],
 	},
 	
+	"5101": {
+	    comment: "atom.io custom repo",
+	    context: "teaching",
+	    url: "https://packagecloud.io/AtomEditor/atom/any/",
+	    distribution: "any",
+	    components: [ "main" ],
+	    types: [ "deb" ],
+	    keyfile: "debian_atom_editor.txt",
+	    keyfile_fingerprint: "0A0FAB860D48560332EFB581B75442BBDE9E3B09",
+	},
+	
     	"8101": {
 	    comment: "External network WSU VTW10 Tom Wallis debian repository",
 	    context: "wsu_local_repo & !subnet_cs_blue & !subnet_cs_pink",
@@ -107,7 +118,7 @@
 	    components: [ "main" ],
 	    types: [ "deb" ],
 	    keyfile: "debian_wsu_local.txt",
-	    keyfile_fingerprint: "C454 80EB B31E 8487 DC98  09E7 3077 B433 E194 1965",
+	    keyfile_fingerprint: "C45480EBB31E8487DC9809E73077B433E1941965",
 	},
     	"8102": {
 	    comment: "bluenet WSU VTW10 Tom Wallis debian repository",
@@ -117,7 +128,7 @@
 	    components: [ "main" ],
 	    types: [ "deb" ],
 	    keyfile: "debian_wsu_local.txt",
-	    keyfile_fingerprint: "C454 80EB B31E 8487 DC98  09E7 3077 B433 E194 1965",
+	    keyfile_fingerprint: "C45480EBB31E8487DC9809E73077B433E1941965",
 	},
     	"8103": {
 	    comment: "pinknet WSU VTW10 Tom Wallis debian repository",
@@ -127,7 +138,7 @@
 	    components: [ "main" ],
 	    types: [ "deb" ],
 	    keyfile: "debian_wsu_local.txt",
-	    keyfile_fingerprint: "C454 80EB B31E 8487 DC98  09E7 3077 B433 E194 1965",
+	    keyfile_fingerprint: "C45480EBB31E8487DC9809E73077B433E1941965",
 	},
     	"9101": {
 	    comment: "NOT USED: cfengine debian repository on amazonaws, added as file in sources.list.d",

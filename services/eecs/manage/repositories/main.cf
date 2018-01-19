@@ -109,7 +109,10 @@ bundle agent ensure_repos(file, repo, options)
       comment => "set comment for each ensure entry or set as [url] for reporting and logging";
 
       # apt-key list variables
-      "apt_key_list_cmd" string => "/usr/bin/apt-key finger | grep fingerprint | tr -d '\n'";
+      # "apt_key_list_cmd" string => "/usr/bin/apt-key finger | grep fingerprint | tr -d '\n'"; # No longer works in Deb9
+
+      "apt_key_list_cmd" string => "apt-key adv --list-public-keys --with-fingerprint --with-colons | grep fpr | tr -d 'fpr:'"
+      ;    
       "max_fingerprint_entries" string => "10000";
 
       "apt_key_list_tmpstring" string => execresult("$(apt_key_list_cmd)","useshell");
@@ -198,7 +201,7 @@ bundle agent ensure_apt_key(repo, i)
       "key_list" slist => getindices( "$(ensure_repos.apt_key_list)" );
 
   classes:
-      "key_not_in_list" expression => none( "$(key_fingerprint)", "ensure_repos.apt_key_list" );
+      "key_not_in_list" expression => none( "$(key_fingerprint)", "$(ensure_repos.apt_key_list)" );
 
       "keyfile_exists" expression => fileexists( "$(key_filepath)" );
     
