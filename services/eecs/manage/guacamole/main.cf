@@ -211,6 +211,9 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guacd_conf_template]" string => "$(this.promise_dirname)/data/guacd_conf.tpl.txt";
 
       "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/001-create-schema.sql";
+      # NOTE FOR FUTURE GUAC RELEASE: By default the guacamole username is case-insensitive. This can cause issue with users logging in using capital letters for myWSU_ID, but then being kicked out of the Linux nodes!
+      # If you want username to be case-sensitive, then change username field from varchar to varbinary in the 001-create-schema.sql file
+      
       # IF BELOW IS ENABLED, THEN THE DEFAULT guacadmin USER IS CREATED!
       # "conf[guac_mysql_schema_files]" string => "$(install[client_source_dir])extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/*.sql";
       
@@ -224,6 +227,7 @@ bundle agent guacamole_vars(params1, params2)
       "conf[guac_props][mysql-hostname]" string => "localhost";
       "conf[guac_props][mysql-port]" string => "3306";
       "conf[guac_props][mysql-database]" string => "guacamole_db";
+      "conf[guac_props][mysql-user-required]" string => "true";
       "conf[guac_props][mysql-username]" string => "guacamole_user";
 
       "conf[guac_props][cas-authorization-endpoint]" string => " https://cas-test.wichita.edu/cas";

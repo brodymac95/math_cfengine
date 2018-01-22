@@ -1,5 +1,5 @@
 ## $(guacamole_vars.conf[guac_props_file]) is managed by CFEngine v$(sys.cf_version) at $(sys.policy_hub)
-## Support for $(config_login_banner.support)
+## Support for $(global.eecs_support)
 
 ## GUACD CONFIGURATION
 ## changes here need to mirror changes in /etc/guacamole/guacd.conf
@@ -14,6 +14,7 @@ api-session-timeout: $(guacamole_vars.conf[guac_props][api-session-timeout])
 mysql-hostname: $(guacamole_vars.conf[guac_props][mysql-hostname])
 mysql-port:     $(guacamole_vars.conf[guac_props][mysql-port])
 mysql-database: $(guacamole_vars.conf[guac_props][mysql-database])
+mysql-user-required: $(guacamole_vars.conf[guac_props][mysql-user-required])
 mysql-username: $(guacamole_vars.conf[guac_props][mysql-username])
 mysql-password: $(configure_guac_authentication.mysql_passwd)
 
