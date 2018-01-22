@@ -34,57 +34,12 @@ bundle agent configure_guac_database
 
       ## GLOBAL PARAMETERS
       "params" string => "guac_database_vars";
-    #   "wget_cmd" string => "/usr/bin/wget -q --timeout=10";
-      
-    #   ## OPENSTACK METADATA
-    #   "openstack_metadata_link" string => "http://169.254.169.254/openstack/latest/meta_data.json";
-    #   "openstack_metadata_cache" string => "meta_data.json";
-    #   "openstack_cache_dir" string => "$(sys.workdir)/state/openstack/";
-
-    # metadata_cache_exists.(copy_metadata_repaired|copy_metadata_kept)::
-    #   "openstack_metadata" data => readjson("$(openstack_cache_dir)$(openstack_metadata_cache)",1M),
-    #     comment => "pull in external json file from OpenStack Nova API";
-
-    #   "json_str_openstack_metadata" string => format("%S", "openstack_metadata");
-
-    #   "cluster_host_data"
-    #     data => mergedata( "openstack_metadata[meta][cluster_ips]" ),
-    #     comment => "create data subset of cluster host ip addresses from openstack metadata";
-
-    #   "clean_cluster_string1" string => regex_replace( "$(cluster_host_data)", "..(.+)..", "\1", "" );
-    #   "clean_cluster_string2" string => regex_replace( "$(clean_cluster_string1)", "\"\", ", "", "" );
-    #   "cluster_ip_list" slist => splitstring( "$(clean_cluster_string2)", "\", \"", "1000" ),
-    #     comment => "list of cluster host ips comes in from openstack metadata as a noisy string,
-    #                 since this parameter is defined as a comma_limited_list in openstack heat templates.
-    #                 Need to clean it by removing start/end chars, null entries, then split ips into a list"; 
-     
-  # classes:      
-  #     "openstack_cache_dir_exists"
-  #     	expression => fileexists( "$(openstack_cache_dir)/." );
-
-  #     "metadata_cache_exists"
-  #     	expression => fileexists( "$(openstack_cache_dir)$(openstack_metadata_cache)" );
-
-  #     "have_cluster_ip_list"
-  #     	expression => isvariable( "cluster_ip_list" );
-
-  # files:
-  #     "$(openstack_cache_dir)/."
-  #       create => "true";
-      
-  # commands:
-  #   openstack_cache_dir_exists::
-  #     "$(wget_cmd)"
-  #       args => "-O $(openstack_metadata_cache) $(openstack_metadata_link)",
-  #       contain => in_dir_shell("$(openstack_cache_dir)"),
-  #       classes => results("bundle", "copy_metadata"),
-  #       comment => "download metadata file from openstack nova api link";
 
   methods:
       "create required variables"
         usebundle => guac_database_vars;
 
-    # have_cluster_ip_list::
+    # have_cluster_ip_list from classification/metadata/main.cf
       "add all groups and connections into guacamole database"
         usebundle => guac_add_all_connections( "@(os_metadata.cluster_ip_list)", "$(params)" ),
         classes => if_ok("connections_added");
@@ -103,12 +58,6 @@ bundle agent configure_guac_database
 
     (DEBUG|DEBUG_guacamole)::
       "=== $(this.bundle) ===";
-
-      # "initial openstack metadata: $(cluster_host_data)";
-      # "cleaned string 1 from openstack metadata: $(clean_cluster_string1)";
-      # "cleaned string 2 from openstack metadata: $(clean_cluster_string2)";
-      # "cluster host ips found in openstack metadata: $(cluster_ip_list)"
-      # 	ifvarclass => "have_cluster_ip_list";
 }
 
 ######################################################################
@@ -129,6 +78,8 @@ bundle agent guac_database_vars
       "create_user_template" string => "$(this.promise_dirname)/data/create_user.sql.mustache";
       "add_user_to_connection_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_to_connection";
       "add_user_to_connection_template" string => "$(this.promise_dirname)/data/add_user_to_connection.sql.mustache";
+      "add_user_as_admin_sql" string => "$(sys.workdir)/state/mysql/guac_add_user_as_admin";
+      "add_user_as_admin_template" string => "$(this.promise_dirname)/data/add_user_as_admin.sql.mustache";
      
       "user_cache_dir" string => "$(sys.workdir)/state/user_lists/";
       "student_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
@@ -137,12 +88,14 @@ bundle agent guac_database_vars
     development::
       "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
     !development::
-      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall.csv";
+      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_CURRENT.csv";
 
     any::
     ## USER PARAMETERS
       "eecs_user_organization" string => "EECS";
+      "admin_user_role"   string => "System Admin";
       "faculty_user_role" string => "Faculty";
+      "adjunct_user_role" string => "Adjunct";
       "student_user_role" string => "Student";
       "username" string => "${GUAC_USERNAME}",
         comment => "Parameter token: ${GUAC_USERNAME} = username of the current Guacamole user";
@@ -158,20 +111,21 @@ bundle agent guac_database_vars
       "max_connections_per_group" string => "128",
         comment => "maximum number of concurrent connections to allow to this group at any one time regardless of user
                     NULL will use the default value specified in guacamole.properties";
-      "max_connections_per_user_per_group" string => "16",
+      "max_connections_per_user_per_group" string => "4",
         comment => "maximum number of concurrent connections to allow to this group at any one time from a single user
-                    NULL will use the default value specified in guacamole.properties";
-      "max_connections_per_connection" string => "32",
-        comment => "maximum number of concurrent connections to allow to this connection at any one time regardless of user
-                    NULL will use the default value specified in guacamole.properties";
-      "max_connections_per_user_per_connection" string => "4",
-        comment => "maximum number of concurrent connections to allow to this connection at any one time from a single user
                     NULL will use the default value specified in guacamole.properties";
 
       "enable_sftp" string => "true",
         comment => "If set to true, the user will be allowed to upload or download files from the SSH server using SFTP";
 
     ## GLOBAL PARAMETERS SPECIFIC FOR SSH CONNECTIONS
+      "max_ssh_connections_per_connection" string => "16",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time regardless of user
+                    NULL will use the default value specified in guacamole.properties";
+      "max_ssh_connections_per_user_per_connection" string => "4",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time from a single user
+                    NULL will use the default value specified in guacamole.properties";
+      
       "ssh_port" string => "22",
         comment => "port the SSH server is listening on. If not specified, default of 22 will be used";
       "ssh_color_scheme" string => "white-black",
@@ -186,6 +140,13 @@ bundle agent guac_database_vars
                     If not specified, the SSH session will use the user's default shell";
 
     ## GLOBAL PARAMETERS SPECIFIC FOR RDP CONNECTIONS
+      "max_rdp_connections_per_connection" string => "4",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time regardless of user
+                    NULL will use the default value specified in guacamole.properties";
+      "max_rdp_connections_per_user_per_connection" string => "1",
+        comment => "maximum number of concurrent connections to allow to this connection at any one time from a single user
+                    NULL will use the default value specified in guacamole.properties";
+
       "rdp_port" string => "3389",
         comment => "The port the RDP server is listening on. If not specified, default of 3389 will be used";
       "rdp_security" string => "rdp",
@@ -264,6 +225,28 @@ bundle agent guac_add_all_users(cluster_ips, params)
         classes => if_ok("users_imported");
 
     users_imported::
+    ## ADMIN/SYSTEM USERS
+      "create each admin user from persistent user json file"
+      	usebundle => guac_create_user(
+    	  "$(import_user_data.admin_users)",
+    	  "$(import_user_data.admin_data[$(import_user_data.admin_users)][fullname])",
+    	  "$(import_user_data.admin_data[$(import_user_data.admin_users)][email])",
+    	  "$($(params).eecs_user_organization)",
+      	  "$($(params).admin_user_role)",
+          "$(params)" );
+        # classes => results("bundle", "admin_user");
+
+      "add each admin user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+          "$(import_user_data.admin_users)", "$(params)" );
+
+      "add each admin user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      "$(import_user_data.admin_users)", "$(params)" );
+
+      "add each admin user to have administer permissions into guacamole system"
+      	usebundle => guac_add_user_as_admin( "$(import_user_data.admin_users)", "$(params)" );
+
     ## FACULTY USERS
       "create each faculty user from persistent user json file"
       	usebundle => guac_create_user(
@@ -291,6 +274,25 @@ bundle agent guac_add_all_users(cluster_ips, params)
       # "add each faculty user to each RDP load-balanced connection"
       # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
       #     "$(import_user_data.faculty_users)", "$(params)" );
+
+    ## ADJUNCT USERS
+      "create each adjunct user from persistent user json file"
+      	usebundle => guac_create_user(
+    	  "$(import_user_data.adjunct_users)",
+    	  "$(import_user_data.adjunct_data[$(import_user_data.adjunct_users)][fullname])",
+    	  "$(import_user_data.adjunct_data[$(import_user_data.adjunct_users)][email])",
+    	  "$($(params).eecs_user_organization)",
+      	  "$($(params).adjunct_user_role)",
+          "$(params)" );
+        # classes => results("bundle", "adjunct_user");
+
+      "add each adjunct user to SSH load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+          "$(import_user_data.adjunct_users)", "$(params)" );
+
+      "add each adjunct user to RDP load-balanced connection group"
+      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      "$(import_user_data.adjunct_users)", "$(params)" );
 
     ## STUDENT USERS
       "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
@@ -603,6 +605,58 @@ bundle agent guac_add_user_to_connection(type, conname, username, params)
 
 ######################################################################
 
+bundle agent guac_add_user_as_admin(username, params)
+# @description: use a mustache template to add entries into required mySQL tables for giving a user permission to fully administer the entire guacamole system
+# USE THIS BUNDLE WISELY!
+{
+  vars:
+      "mysql_import_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' < ";
+      "mysql_execute_cmd" string => "/usr/bin/mysql -u root --database='$($(params).database)' --skip-column-names -e ";
+
+      "mysql_perm_query" string => " \"SELECT guacamole_system_permission.* FROM guacamole_system_permission JOIN guacamole_user ON (guacamole_user.user_id = guacamole_system_permission.user_id) WHERE username='$(username)';\" ";
+
+      "mysql_perm_result" string => execresult("$(mysql_execute_cmd) $(mysql_perm_query)","useshell");
+
+  classes:
+      "permission_does_not_exist"
+	not => regcmp(".+","$(mysql_perm_result)"),
+        comment => "check mysql query result does not contain one or more characters";
+      
+      "sql_insert_file_exists"
+	expression => fileexists( "$($(params).add_user_as_admin_sql)_$(username).sql" );
+
+  files:
+    permission_does_not_exist::
+      "$($(params).add_user_as_admin_sql)_$(username).sql"
+        create => "true",
+        template_method => "mustache",
+        edit_template => "$($(params).add_user_as_admin_template)",
+        classes => results("bundle", "add_user_as_admin_sql"),
+	comment => "expand sql insert file using template from staging cache in this promise directory";
+
+  commands:
+    sql_insert_file_exists.(add_user_as_admin_sql_repaired|add_user_as_admin_sql_kept)::
+      "$(mysql_import_cmd)"
+        args => "$($(params).add_user_as_admin_sql)_$(username).sql",
+        contain => in_shell,
+      	classes => results("bundle", "add_user_as_admin"),
+        comment => "give user permission to access entire guac system as admin into guacamole database";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_guacamole)::
+      "=== $(this.bundle) ===";
+      "$(username) given ADMIN access to guacamole database"
+        ifvarclass => "guac_connection.add_user_as_admin_repaired";
+      
+      "WARNING: Not adding admin permission. $(username) admin permission exists in database: $(mysql_perm_result)"
+        ifvarclass => "!permission_does_not_exist";
+}
+
+######################################################################
+
 bundle agent import_user_data(params)
 # @description: pulls in ITS .csv source file as per the file sent for uaf2 integration
 # Note: for readcsv function, CSV file must have ^M (DOS) EOL terminators (CRLF = /r/n) as per RFC 4180
@@ -629,9 +683,19 @@ bundle agent import_user_data(params)
         comment => "pull in data from cached persistent user json file";
       "json_str_persistent_user_data" string => format("%S", "persistent_user_data");
 
+      "admin_data" data => mergedata( "persistent_user_data[admins]" ),
+        comment => "create data subset of admin users from all persistent user data";
+      "admin_users" slist => getindices( "admin_data" ),
+        comment => "create a list of all admin user myWSU_IDs from admin_data subset";
+
       "faculty_data" data => mergedata( "persistent_user_data[faculty]" ),
         comment => "create data subset of faculty users from all persistent user data";
       "faculty_users" slist => getindices( "faculty_data" ),
+        comment => "create a list of all faculty user myWSU_IDs from faculty_data subset";
+
+      "adjunct_data" data => mergedata( "persistent_user_data[adjuncts]" ),
+        comment => "create data subset of faculty users from all persistent user data";
+      "adjunct_users" slist => getindices( "adjunct_data" ),
         comment => "create a list of all faculty user myWSU_IDs from faculty_data subset";
 
       # "grader_data" data => mergedata( "persistent_user_data[graders]" ),
@@ -698,7 +762,9 @@ bundle agent import_user_data(params)
       
       # "csv_str_student_data: $(csv_str_student_data)";
       # "student_data = all rows/all cols: $(student_data[$(row_index)])";
+      "System Admin myWSU_id = $(admin_users)";
       "Faculty myWSU_id = $(faculty_users)";
+      "Adjuncts myWSU_id = $(adjunct_users)";
 }
 
 ######################################################################

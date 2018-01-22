@@ -61,7 +61,8 @@ bundle common def
 
       # Mail settings used by body executor control found in controls/cf_execd.cf
       "mailto"
-        string => "root@$(def.domain)",
+        string => "$(global.root_email)", # SET TO THE GLOBAL EMAIL IN services/eecs/classification/main.cf
+        # string => "root@$(def.domain)", # THIS IS THE DEFAULT
         ifvarclass => not(isvariable("mailto"));
 
       "mailfrom"
@@ -463,6 +464,9 @@ bundle common def
         ifvarclass => "have_augments_file.feature_def_json_preparse";
       "DEBUG $(this.bundle): Policy parsed augments_file"
         ifvarclass => "have_augments_file.!feature_def_json_preparse";
+
+      "CFE root mail will be sent to: $(mailto)"
+        ifvarclass =>isvariable("mailto");
 }
 
 bundle common inventory_control

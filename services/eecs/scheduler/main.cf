@@ -49,6 +49,8 @@ bundle common cron_scheduler
       
       
       # DEFINE JOBS
+      # "install_software" and => { "any", };
+
       "install_software" and => { "Q6H", "Min00_05", },
       comment => "install/update software at start of every 6 hours only if system load is low (removed)";
 

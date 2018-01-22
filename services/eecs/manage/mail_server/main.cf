@@ -131,7 +131,7 @@ bundle agent mail_server_vars
       "parameter_name" slist => getindices("pf");
 
     ## ALIASES PARAMETERS
-      "root_email" string => "root@$(global.cs_domain)";
+      "root_email" string => "$(global.root_email)";
       
   reports:
     (inform_mode|verbose_mode)::

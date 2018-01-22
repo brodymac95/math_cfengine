@@ -16,7 +16,7 @@ bundle common classification_main_file_control
 	"$(this.promise_dirname)/subnet_location/main.cf",
       };
       
-    os_tenant_cluster::
+    # os_tenant_cluster::
     "bundles"
       slist =>
       {
@@ -26,14 +26,14 @@ bundle common classification_main_file_control
 	"os_metadata",
       };
 
-    !os_tenant_cluster::
-    "bundles"
-      slist =>
-      {
-	"global",
-	"classify_host",
-	"classify_subnet_location",
-      };
+    # !os_tenant_cluster::
+    # "bundles"
+    #   slist =>
+    #   {
+    # 	"global",
+    # 	"classify_host",
+    # 	"classify_subnet_location",
+    #   };
 }
 
 body file control
@@ -46,6 +46,7 @@ bundle common global
   vars:
       "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
       "cs_domain" string => "cs.wichita.edu";
+      "root_email" string => "roose@cs.wichita.edu";
       "time_zone" string => "America/Chicago";
 
       "system_creation_time" string => filestat( "/usr", "ctime" ),

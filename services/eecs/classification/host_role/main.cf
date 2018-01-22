@@ -22,31 +22,35 @@ bundle common classify_host
     "hosts_json_str" string => format("%S", host_data);
     	       	         # Just for printing seralized version of data container for debugging (note its JSON).
 
-    "canonified_host" string => canonify("$(sys.uqhost)");
+      "canonified_host" string => canonify("$(sys.uqhost)");
 
+    cslab_node::
+      "canonified_host" string => canonify("cslab_node");
+
+    any::
     "host_machine"
-      string => "$(host_data[$(hosts)][machine])",
-      ifvarclass => canonify("$(host_data[$(hosts)][machine])"),
+      string => "$(host_data[$(canonified_host)][machine])",
+      ifvarclass => canonify("$(host_data[$(canonified_host)][machine])"),
       meta => { "inventory", "attribute_name=machine" };
 
     "host_purpose"
-      string => "$(host_data[$(hosts)][purpose])",
-      ifvarclass => canonify("$(host_data[$(hosts)][purpose])"),
+      string => "$(host_data[$(canonified_host)][purpose])",
+      ifvarclass => canonify("$(host_data[$(canonified_host)][purpose])"),
       meta => { "inventory", "attribute_name=purpose" };
 
     "host_role"
-      string => "$(host_data[$(hosts)][role])",
-      ifvarclass => canonify("$(host_data[$(hosts)][role])"),
+      string => "$(host_data[$(canonified_host)][role])",
+      ifvarclass => canonify("$(host_data[$(canonified_host)][role])"),
       meta => { "inventory", "attribute_name=role" };
 
     "host_owner"
-      string => "$(host_data[$(hosts)][owner])",
-      ifvarclass => canonify("$(host_data[$(hosts)][owner])"),
+      string => "$(host_data[$(canonified_host)][owner])",
+      ifvarclass => canonify("$(host_data[$(canonified_host)][owner])"),
       meta => { "inventory", "attribute_name=owner" };      
 
     "host_authentication"
-      string => "$(host_data[$(hosts)][authentication])",
-      ifvarclass => canonify("$(host_data[$(hosts)][authentication])"),
+      string => "$(host_data[$(canonified_host)][authentication])",
+      ifvarclass => canonify("$(host_data[$(canonified_host)][authentication])"),
       meta => { "inventory", "attribute_name=authentication" };      
 
     "security_rules"
@@ -111,7 +115,10 @@ bundle common classify_host
 
       
   classes:
-    ## DEFINE CLUSTER CLASSES FOR INDIVIDUAL HOSTNAMES USING REGEX
+      ## DEFINE CLUSTER CLASSES FOR INDIVIDUAL HOSTNAMES USING REGEX
+      # "cluster_node" expression => classmatch( ".*_node.*", hardclass ),
+      #   comment => "create generic cluster class on each cslab_node host";
+
       "dev_node" expression => classmatch( "dev_node.*", hardclass ),
         comment => "create generic cluster class on each dev_node host";
 
@@ -125,31 +132,31 @@ bundle common classify_host
       #   comment => "testing classmatch for cstesting host";
 
     ## DEFINE HOST SPECIFIC CLASSES
-      "$(host_data[$(hosts)][machine])"
+      "$(host_data[$(canonified_host)][machine])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	meta => { "inventory", "attribute_name=machine class" },
 	comment => "Add host's specific machine type from external data file.";
       
-      "$(host_data[$(hosts)][purpose])"
+      "$(host_data[$(canonified_host)][purpose])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	meta => { "inventory", "attribute_name=purpose class" },
 	comment => "Add host's specific purpose from external data file.";
 
-      "$(host_data[$(hosts)][role])"
+      "$(host_data[$(canonified_host)][role])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	meta => { "inventory", "attribute_name=role class" },
 	comment => "Add host's specific role from external data file.";
 
-      "$(host_data[$(hosts)][owner])"
+      "$(host_data[$(canonified_host)][owner])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	meta => { "inventory", "attribute_name=owner class" },
 	comment => "Add host's specific owner from external data file.";
 
-      "$(host_data[$(hosts)][authentication])"
+      "$(host_data[$(canonified_host)][authentication])"
 	expression => "$(hosts)",
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
 	meta => { "inventory", "attribute_name=authentication class" },

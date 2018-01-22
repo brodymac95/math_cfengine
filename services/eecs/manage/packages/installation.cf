@@ -69,6 +69,7 @@ bundle agent manage_repository_packages
 				 "openssh-client",
 				 "dnsutils",
 				 "emacs",
+				 "vim",
 				 "screen",
 				 "tmux",
 				 "man-db",
@@ -79,6 +80,7 @@ bundle agent manage_repository_packages
       "server_installs" slist => {
 				   "openssh-server",
 				   "build-essential",
+				   "swi-prolog",
 				   "ddd",
 				   "tree",
 				   "terminator",
@@ -88,6 +90,7 @@ bundle agent manage_repository_packages
 				   "eclipse-cdt",
 				   "geany",
 				   "geany-plugins",
+				   "atom",
 				   "texlive",
 				   "texmaker",
 				   "subversion",

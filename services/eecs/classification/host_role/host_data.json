@@ -1,7 +1,7 @@
 {
     "hostname": {
 	"machine": "os_tenant_cluster OR os_node OR server OR workstation OR laptop"
-	"purpose": "testing OR teaching OR research OR infrastructure",
+	"purpose": "whatever",
         "role": "role",
         "owner": "client",
 	"security": [ "ssh_public", "rdp_public", ],
@@ -26,6 +26,7 @@
 	"custom_packages": [ "emacs_server", ],
 	"_comment": "testing internal comment"
     },
+    
     "cstest_gateway": {
 	"machine": "os_tenant_cluster",
 	"purpose": "cstest-cluster",
@@ -44,19 +45,29 @@
         "role": "cluster_node",
         "owner": "development",
     },
-    "cslab_guac_gw": {
+    
+    "cslab_gateway": {
 	"machine": "os_tenant_cluster",
-	"purpose": "cslab-gateway",
+	"purpose": "cslab",
         "role": "guac_gateway",
-        "owner": "eecs",
+        "owner": "teaching",
+    },
+     "cslab_bastion": {
+	"machine": "os_tenant_cluster",
+	"purpose": "cslab",
+        "role": "ssh_bastion",
+        "owner": "teaching",
+	"authentication": "uaf2_client",
     },
     "cslab_node": {
 	"machine": "os_tenant_cluster",
-	"purpose": "cslab-node",
+	"purpose": "cslab",
         "role": "cluster_node",
         "owner": "teaching",
 	"authentication": "uaf2_client",
     },
+
+    
     "cstesting_server": {
 	"machine": "server",
 	"purpose": "testing",
@@ -109,7 +120,7 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configuration": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", "fbreader", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "galileo", "fbreader", "cups-pdf", ],
 	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", "java_bluej_ide", ],
      	"security": [ "linux_show_player", ],
     },

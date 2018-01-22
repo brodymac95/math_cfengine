@@ -122,15 +122,22 @@ bundle agent manage_os_tenant_cluster
 
       
     ## DEFINE ROLE SUBSETS
-    ssh_bastion::
-      "admin user management"       usebundle => manage_sys_users;
-      "turn on ballast service"     usebundle => ballast_server("on");
-      "ballast client management"   usebundle => manage_ballast_client;
-
     guac_gateway::
       "admin user management"       usebundle => manage_sys_users;
       "turn on guacamole service"   usebundle => guacamole_server("on");
       "turn on apache web service"  usebundle => web_server("on");
+
+    ssh_bastion.!uaf2_client::
+      "admin user management"       usebundle => manage_sys_users;
+      "turn on ballast service"     usebundle => ballast_server("on");
+      "ballast client management"   usebundle => manage_ballast_client;
+
+    ssh_bastion.uaf2_client::
+      "uaf2 user management"        usebundle => install_uaf2_client,
+      	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
+      "join host to ad domain"      usebundle => join_host_to_ad;
+      "turn on ballast service"     usebundle => ballast_server("on");
+      "ballast client management"   usebundle => manage_ballast_client;
 
     cluster_node.!uaf2_client::
       "admin user management"       usebundle => manage_sys_users;
