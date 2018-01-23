@@ -336,6 +336,7 @@
 	"authentication": "local_users_shared_group",
 	"users": {
 	    "salinas": "Sergio Salinas",
+	    "mashhadi": "Farshad Mashhadi",
 	},
     },
     "jb_239_6528_lt12": {
@@ -346,6 +347,7 @@
 	"authentication": "local_users_shared_group",
 	"users": {
 	    "salinas": "Sergio Salinas",
+	    "mashhadi": "Farshad Mashhadi",
 	},
     },"jb_247_3918_lt1": {
 	"machine": "workstation",
