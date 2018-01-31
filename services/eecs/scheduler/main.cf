@@ -45,7 +45,8 @@ bundle common cron_scheduler
       # UPTIME PERIODS (defined in minutes)
       "UP_LESS_1HR" expression => eval( "$(sys.uptime) < 60", "class", "infix" );
       # "UP_LESS_1DY" expression => eval( "$(sys.uptime) < 1440", "class", "infix" );
-      "UP_MORE_1WK" expression => eval( "$(sys.uptime) > 10080", "class", "infix" );
+      "UP_MORE_1DY" expression => eval( "$(sys.uptime) > 1500", "class", "infix" );
+      # "UP_MORE_1WK" expression => eval( "$(sys.uptime) > 10080", "class", "infix" );
       
       
       # DEFINE JOBS
@@ -69,8 +70,8 @@ bundle common cron_scheduler
       "reboot_node_now" and => { "Hr02", splayclass("$(sys.host)$(sys.ipv4)","hourly"), },
       comment => "allow for node auto reboot every night sometime between 2am and 3am";
 
-      "FORCE_NODE_REBOOT" and => { "UP_MORE_1WK", "Hr02", },
-      comment => "node has failed to reboot on daily basis for past week, so force node to reboot when reboot_node_now is set and the reboot command is run";
+      "FORCE_NODE_REBOOT" and => { "UP_MORE_1DY", "Hr04", },
+      comment => "node failed to reboot earlier in night, so force node to reboot when reboot_node_now is set and the reboot command is run";
 
       ## NOT WORKING - JUST KEEPS REBOOTING
       # "reboot_20m_after_host_creation" expression => eval( "$(sys.systime) < $(20m_after_system_creation)","class", "infix" ),

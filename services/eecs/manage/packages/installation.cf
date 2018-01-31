@@ -81,6 +81,7 @@ bundle agent manage_repository_packages
 				   "openssh-server",
 				   "build-essential",
 				   "swi-prolog",
+				   "haskell-platform",
 				   "ddd",
 				   "tree",
 				   "terminator",
@@ -96,6 +97,9 @@ bundle agent manage_repository_packages
 				   "subversion",
 				   "git",
 				   "git-el",
+				   "hexchat",
+				   "weechat",
+				   "irssi",
                                  };
 
 
