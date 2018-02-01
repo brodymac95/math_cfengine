@@ -1,0 +1,24 @@
+## {{{vars.ballast_vars.ballast_config_file}}} is managed by CFEngine v{{{vars.sys.cf_version}}} at {{{vars.sys.policy_hub}}}
+## Support for {{{vars.global.eecs_support}}}
+
+## GUACD CONFIGURATION
+[daemon]
+
+#pid_file = /var/run/guacd.pid
+log_level = {{{vars.guacamole_vars.guac_props[guacd_log_level]}}}
+
+[server]
+
+bind_host = {{{vars.guacamole_vars.guac_props[guacd-hostname]}}}
+bind_port = {{{vars.guacamole_vars.guac_props[guacd-port]}}}
+
+#
+# The following parameters are valid only if
+# guacd was built with SSL support.
+# Not using SSL in guacd, since SSL is
+# implemented via the Apache proxy site
+#
+#[ssl]
+#
+#server_certificate = /etc/ssl/certs/guacd.crt
+#server_key = /etc/ssl/private/guacd.key
