@@ -1,4 +1,4 @@
-##############################################################################
+##############################################################################7
 #
 #   manage/packages/installation.cf - EECS package installation management
 #   Maintained: Ben Roose, ver 0.5
@@ -80,6 +80,12 @@ bundle agent manage_repository_packages
       "server_installs" slist => {
 				   "openssh-server",
 				   "build-essential",
+				   "python",
+				   "python3",
+				   "python-virtualenv",
+				   "python-pip",
+				   "python-numpy",
+				   "python-scipy",
 				   "swi-prolog",
 				   "haskell-platform",
 				   "ddd",
