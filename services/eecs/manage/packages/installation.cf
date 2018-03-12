@@ -90,6 +90,8 @@ bundle agent manage_repository_packages
 				   "python-scipy",
 				   "swi-prolog",
 				   "haskell-platform",
+				   "flex",
+				   "bison",
 				   "libssl-dev",
 				   "libgcrypt-dev",
 				   "gnupg",
@@ -186,6 +188,11 @@ bundle agent manage_repository_packages
     server.(debian|ubuntu)::
       "server_removals" slist => {
 		                 };
+    # cstest_node.(debian)::
+    #   "server_removals" slist => {
+    # 				   "ntp",
+    #                              };
+      
     any::
       "all_installs"       slist => {@(core_installs), @(workstation_installs), @(server_installs), @(extra_installs)};
       "all_removals"       slist => {@(core_removals), @(workstation_removals), @(server_removals)};
