@@ -328,7 +328,8 @@
 	},
 	"extra_repository_packages": [ "firmware-ralink", ],
     },
-    "jb_239_6528_lt11": {
+    "DEAD_jb_239_6528_lt11": {
+	"_comment": "Moved to WH331 AND policyhub-min",
 	"machine": "workstation",
 	"purpose": "research",
 	"role": "laptop",
@@ -339,7 +340,7 @@
 	    "mashhadi": "Farshad Mashhadi",
 	},
     },
-    "jb_239_6528_lt12": {
+    "wh_331_6528_12": {
 	"machine": "workstation",
 	"purpose": "research",
 	"role": "laptop",
@@ -347,9 +348,13 @@
 	"authentication": "local_users_shared_group",
 	"users": {
 	    "salinas": "Sergio Salinas",
+	    "ganepudi": "Sai Ganepudi",
 	    "mashhadi": "Farshad Mashhadi",
+	    "rajesh": "Ashwin Rajesh",
 	},
-    },"jb_247_3918_lt1": {
+        "printers": [ "wh331_laserjet" ]
+    },
+    "jb_247_3918_lt1": {
 	"machine": "workstation",
 	"purpose": "research",
         "role": "laptop",

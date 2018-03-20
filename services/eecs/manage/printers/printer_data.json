@@ -98,5 +98,26 @@ Option print-color-mode monochrome
 Option print-quality 5
 </Printer>
 " ]
+
+    "wh331_laserjet": [ "<Printer WH331_LaserJet>
+UUID urn:uuid:e69ecc7f-771d-35c8-5d70-627540674dd4
+Info HP LaserJet M402dne
+Location WH 331
+DeviceURI lpd://prt13285.dyn.wichita.edu
+PPDTimeStamp *
+State Idle
+StateTime 1521578520
+Type 8425556
+Accepting Yes
+Shared Yes
+ColorManaged Yes
+JobSheets none none
+QuotaPeriod 0
+PageLimit 0
+KLimit 0
+OpPolicy default
+ErrorPolicy retry-job
+</Printer>
+" ]
     
 }
