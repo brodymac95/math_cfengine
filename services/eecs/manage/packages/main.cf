@@ -98,7 +98,10 @@ bundle agent manage_custom_packages
       "install etc offline editor script" usebundle => install_etc_offline_editor;
       
     skype::
-      "install skype" usebundle => install_skype;
+      "install skype client" usebundle => install_skype;
+
+    zoom::
+      "install zoom client" usebundle => install_zoom;
 
     java_bluej_ide::
       "install Java BlueJ IDE from Duke University for Coursera Java Course" usebundle => install_java_bluej_ide;

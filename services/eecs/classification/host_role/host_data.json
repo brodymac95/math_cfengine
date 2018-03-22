@@ -28,22 +28,24 @@
     },
     
     "cstest_gateway": {
-	"machine": "os_tenant_cluster",
-	"purpose": "cstest-cluster",
+	"machine": "os_tenant_minimal_cluster",
+	"purpose": "cstest",
         "role": "guac_gateway",
         "owner": "development",
     },
     "cstest_bastion": {
-	"machine": "os_tenant_cluster",
-	"purpose": "cstest-cluster",
+	"machine": "os_tenant_minimal_cluster",
+	"purpose": "cstest",
         "role": "ssh_bastion",
         "owner": "development",
+	"authentication": "manage_debian_user",
     },
     "cstest_node": {
-	"machine": "os_tenant_cluster",
-	"purpose": "cstest-cluster",
+	"machine": "os_tenant_minimal_cluster",
+	"purpose": "cstest",
         "role": "cluster_node",
         "owner": "development",
+	"authentication": "manage_debian_user",
     },
     
     "cslab_gateway": {
@@ -134,7 +136,7 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configuration": [ "roose", ],
-       "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", ],
+       "extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "skype", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "firmware-realtek", "xournal", ],
         "custom_packages": [ "linux_show_player", "etc_offline_editor", ],
        	"security": [ "linux_show_player", ],
     },
@@ -158,7 +160,7 @@
 	"authentication": "local_users_shared_group",
 	"user_configuration": [ "roose", ],
 	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "thunar", "octave", "asunder", "audacity", "soundconverter", "calibre", "git", "firmware-realtek", ],
-	"custom_packages": [ "skype", ],
+	"custom_packages": [ "skype", "zoom", ],
     },
 
 
