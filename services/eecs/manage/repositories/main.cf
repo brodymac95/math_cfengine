@@ -111,20 +111,25 @@ bundle agent ensure_repos(file, repo, options)
       # apt-key list variables
       # "apt_key_list_cmd" string => "/usr/bin/apt-key finger | grep fingerprint | tr -d '\n'"; # No longer works in Deb9
 
-      "apt_key_list_cmd" string => "apt-key adv --list-public-keys --with-fingerprint --with-colons | grep fpr | tr -d 'fpr:'"
-      ;    
+      "apt_key_list_cmd" string => "apt-key adv --list-public-keys --with-fingerprint --with-colons | grep fpr | tr -d 'fpr:'";    
       "max_fingerprint_entries" string => "10000";
 
       "apt_key_list_tmpstring" string => execresult("$(apt_key_list_cmd)","useshell");
-      "apt_key_list" slist => string_split("$(apt_key_list_tmpstring)", "      Key fingerprint = ", "$(max_fingerprint_entries)"),
+      "apt_key_list" slist => string_split("$(apt_key_list_tmpstring)", "$(const.n)", "$(max_fingerprint_entries)"),
       comment => "build list of current apt keychain fingerprints once (accessed inside ensure_apt_key bundle)";
+
+      # "apt_key_list" slist => string_split("$(apt_key_list_tmpstring)", "      Key fingerprint = ", "$(max_fingerprint_entries)"),
+      # comment => "build list of current apt keychain fingerprints once (accessed inside ensure_apt_key bundle)";
+
+
+      # "apt_key_list" string => execresult("$(apt_key_list_cmd)","useshell");
 
   files:
       "$(file)"
         create        => "true",
         perms         => m("0644"),
-	edit_defaults => backup_and_empty,
-	edit_line     => repo_sources_list( $(CFEnotice), @(repo), $(options), @(index) ),
+        edit_defaults => backup_and_empty,
+        edit_line     => repo_sources_list( $(CFEnotice), @(repo), $(options), @(index) ),
         classes       => classes_generic("$(class_prefix)_ensure"),
         comment       => "edit $(file) adding repo entries and note that the file is managed by CFEngine";
 
@@ -143,6 +148,7 @@ bundle agent ensure_repos(file, repo, options)
       "repository sources file: $(file)";
       "Comment for ensured repository $(index) = $(comment[$(index)])"
         ifvarclass => and("$(context[$(index)])");
+      # "apt_key_list: $(apt_key_list)";
 }
 
 ######################################################################
@@ -201,12 +207,13 @@ bundle agent ensure_apt_key(repo, i)
       "key_list" slist => getindices( "$(ensure_repos.apt_key_list)" );
 
   classes:
-      "key_not_in_list" expression => none( "$(key_fingerprint)", "$(ensure_repos.apt_key_list)" );
+      # "key_not_in_list" expression => none( "$(key_fingerprint)", "$(ensure_repos.apt_key_list)" );
+      "key_in_list" expression => regarray( "ensure_repos.apt_key_list", "$(key_fingerprint)" );
 
       "keyfile_exists" expression => fileexists( "$(key_filepath)" );
     
   commands:
-    key_not_in_list::
+    keyfile_exists.!key_in_list::
       "$(apt_key_add_cmd) $(key_filepath)"
     	contain => in_shell,
         classes => results("bundle", "apt_key_add"),
@@ -224,10 +231,9 @@ bundle agent ensure_apt_key(repo, i)
     (DEBUG|DEBUG_manage_repositories).apt_key_add_repaired::
       "Key $(key_file) added to apt keychain";
 
-      (DEBUG|DEBUG_manage_repositories).!key_not_in_list::
+      (DEBUG|DEBUG_manage_repositories).key_in_list::
       "Key $(key_file) found in apt keychain";
 }
-
 
 ######################################################################
 

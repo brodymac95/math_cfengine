@@ -62,7 +62,7 @@ bundle agent manage_repository_packages
 				 "tmux",
                                 };
 
-    debian|ubuntu::
+    (debian|ubuntu).!ssh_bastion::
       "core_installs" slist => {
  				 "unattended-upgrades",
 				 "iptables",
@@ -76,6 +76,13 @@ bundle agent manage_repository_packages
 				 "info",
 				 "findutils",
 				 "locate",
+                                };
+    debian.ssh_bastion::
+      "core_installs" slist => {
+ 				 "unattended-upgrades",
+				 "iptables",
+				 "openssh-client",
+				 "openssh-server",
                                 };
 
     cslab_node.(debian)::
@@ -178,6 +185,12 @@ bundle agent manage_repository_packages
       "core_removals" slist => {
 				 "wicd",
                                };
+    # debian.minimal_host::
+    #   "core_removals" slist => {
+    # 				 "wicd",
+    # 				 "python",
+    # 				 "python3",
+    #                            };
       
     workstation.(debian|ubuntu)::      
       "workstation_removals" slist => {

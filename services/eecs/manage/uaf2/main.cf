@@ -95,24 +95,31 @@ bundle agent install_uaf2_client
       	comment => "database password to define in uaf2_dbpass_client.conf file (downloaded from host_by_key directory)";
 
     debian::
-      "add_arch_i386" string => "dpkg --add-architecture i386 && apt-get update",
+      "add_arch_i386_cmd" string => "/usr/bin/dpkg --add-architecture i386 && apt-get update",
         comment => "handin is part of uaf2 grader users, but is an old 32-bit app so needs i386 architecture added to host";
- 
+
+      "dpkg_arch_check_cmd" string => "/usr/bin/dpkg --print-foreign-architectures";
+
+      "dpkg_arch_check" string => execresult("$(dpkg_arch_check_cmd)","noshell");
+
   classes:
       
-    "server_public_keys_package_exists" 
-        expression => fileexists("$(install_dir)$(server_public_keys)");
+      "server_public_keys_package_exists" 
+      expression => fileexists("$(install_dir)$(server_public_keys)");
 
       "have_cached_password"
       expression => fileexists( $(passwd_cache) );
 
       "uaf2_client_installed"
-        expression => fileexists( $(executable_file) );
+      expression => fileexists( $(executable_file) );
+
+      "i386_arch_added"
+      expression => regcmp("i386","$(dpkg_arch_check)");
 
   commands:
-    debian.install_software::
-    # debian.!uaf2_client_installed::
-      "$(add_arch_i386)" 
+      # NEED TO FIND WHERE DPKG PLACES A CONFIG WITH i386 SO WE CAN CHECK IT IS THERE!
+    debian.install_software.!i386_arch_added::
+      "$(add_arch_i386_cmd)" 
         contain => in_dir_shell("/root"),
         classes => results("bundle", "add_arch"),
         comment => "update dpkg with i386 architecture for handin to work";
@@ -188,14 +195,18 @@ bundle agent install_uaf2_client
 
     (DEBUG|DEBUG_install_uaf2)::
       "=== $(this.bundle) ===";
-    (DEBUG|DEBUG_install_uaf2).uaf2_client_installed::
-      "uaf2_client has been installed on this system";
 
-    (DEBUG|DEBUG_install_uaf2).uaf2_client_config_repaired::
-      "uaf2_dbpass_client.conf has been configured on this system";
+      "uaf2_client has been previously installed"
+      ifvarclass => "uaf2_client_installed";
 
-    (DEBUG|DEBUG_install_uaf2).uaf2_globals_config_repaired::
-      "uaf2_support_globals.conf has been configured on this system";
+      "uaf2_dbpass_client.conf has been configured"
+      ifvarclass => "uaf2_client_config_repaired";
+
+      "uaf2_support_globals.conf has been configured"
+      ifvarclass => "uaf2_globals_config_repaired";
+
+      "32-bit (i386) architecture has previously been added"
+      ifvarclass => "i386_arch_added";
 }
 
 ######################################################################
