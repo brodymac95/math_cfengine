@@ -95,6 +95,13 @@
     }
 
     "10.10.10.0/24": {
+	"subnet_nickname": "os_teaching",
+	"location": "dc_openstack",
+	"vlan": "teaching",
+	"link_type": "neutron",
+	"site": "data_centre"
+    }
+    "10.10.11.0/24": {
 	"subnet_nickname": "os_testing",
 	"location": "dc_openstack",
 	"vlan": "testing",

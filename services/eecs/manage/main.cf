@@ -15,8 +15,15 @@ bundle common manage_main_file_control
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
       "input[ballast]" string => "$(this.promise_dirname)/ballast/main.cf";
       "input[emacs_server]" string => "$(this.promise_dirname)/emacs_server/main.cf";
+
+    development::
+      "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main_testing.cf";
+      "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database_testing.cf";
+    !development::
       "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main.cf";
       "input[guacamole_database]" string => "$(this.promise_dirname)/guacamole/database.cf";
+
+    any::
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
       "input[mail_server]" string => "$(this.promise_dirname)/mail_server/main.cf";
@@ -64,13 +71,17 @@ bundle agent manage_main
 
   classes:
 
-      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|minimal_server|server|workstation|laptop";
+      "NO_MACHINE_TYPE" not => "os_node|os_tenant_cluster|os_tenant_minimal_cluster|minimal_server|server|workstation|laptop";
       
   methods:
 
     ## DEFINE MACHINE TYPE
     os_tenant_cluster::
       "tenant VM clusters within openstack" usebundle => manage_os_tenant_cluster;
+
+    os_tenant_minimal_cluster::
+      "tenant VM clusters within openstack with minimal configuration"
+      usebundle => manage_os_tenant_minimal_cluster;
 
     os_node::
       "all physical undercloud nodes within openstack" usebundle => manage_os_node_host;
@@ -123,20 +134,21 @@ bundle agent manage_os_tenant_cluster
       
     ## DEFINE ROLE SUBSETS
     guac_gateway::
-      "admin user management"       usebundle => manage_sys_users;
+      # "admin user management"       usebundle => manage_sys_users;
+      "turn on ballast service"     usebundle => ballast_server("on_with_metrics");
       "turn on guacamole service"   usebundle => guacamole_server("on");
       "turn on apache web service"  usebundle => web_server("on");
+      "ballast client management"   usebundle => manage_ballast_client;
 
     ssh_bastion.!uaf2_client::
       "admin user management"       usebundle => manage_sys_users;
-      "turn on ballast service"     usebundle => ballast_server("on");
+      # "turn on ballast service"     usebundle => ballast_server("on");
       "ballast client management"   usebundle => manage_ballast_client;
 
     ssh_bastion.uaf2_client::
       "uaf2 user management"        usebundle => install_uaf2_client,
       	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
-      "join host to ad domain"      usebundle => join_host_to_ad;
-      "turn on ballast service"     usebundle => ballast_server("on");
+      "mount emcity nfs shares"     usebundle => autofs("on");
       "ballast client management"   usebundle => manage_ballast_client;
 
     cluster_node.!uaf2_client::
@@ -170,6 +182,60 @@ bundle agent manage_os_tenant_cluster
 
 }
 
+###################################
+
+bundle agent manage_os_tenant_minimal_cluster
+{
+# NOTE: all openstack nodes and tenant hosts handle their own networking and firewall rules!!
+# ONLY USE THIS BUNDLE IN CLUSTERS DESIGNED FOR STUDENTS TO HAVE ROOT ACCESS IN TEACHING EXERCISES
+      
+  methods:
+
+    ## ALL HOST GLOBAL CONFIGURATION
+    any::
+      "configure login motd"     usebundle => config_login_banner;
+      "configure login defaults" usebundle => config_login_defs;
+      "configure timezone"       usebundle => config_timezone;
+      "turn on sshd server"      usebundle => sshd_server("on");
+
+      "ensure ssh host keys"     usebundle => ensure_ssh_host_keys("$(classify_host.host_purpose)"),
+        comment => "all nodes should share the same ssh host keys for ballast access";
+
+    install_software.!NO_INSTALLS::
+      "repository management"    usebundle => manage_repositories;
+      "package management"       usebundle => manage_packages;
+
+    guac_gateway::
+      "turn on ballast service"     usebundle => ballast_server("on_with_metrics");
+      "turn on guacamole service"   usebundle => guacamole_server("on");
+      "turn on apache web service"  usebundle => web_server("on");
+      "ballast client management"   usebundle => manage_ballast_client;
+
+      # Need to autoset ballast_server depending on if cluster is full_access or ssh_only
+    ssh_bastion.!uaf2_client::
+      "turn on mail send-only"   usebundle => mail_server("on");
+      "admin user management"    usebundle => manage_sys_users;
+      "standard user management" usebundle => manage_users;
+      "ballast client manage"    usebundle => manage_ballast_client;
+
+      # "standard user management" usebundle => manage_users;
+      "manage root password"     usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by manually running the cf-pwhash.sh script";
+
+    ssh_bastion.uaf2_client::
+      "uaf2 user management"     usebundle => install_uaf2_client,
+      	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
+      "mount emcity nfs shares"  usebundle => autofs("on");
+      # "turn on ballast service"  usebundle => ballast_server("on");
+      "ballast client manage"    usebundle => manage_ballast_client;
+
+      "manage root password"     usebundle => manage_root_passwd,
+        comment => "add root password hash for new hosts by manually running the cf-pwhash.sh script";
+
+    cluster_node::
+      "ballast agent management" usebundle => manage_ballast_agent;
+
+}
 ###################################
 
 bundle agent manage_os_node_host

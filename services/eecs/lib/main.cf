@@ -27,7 +27,7 @@ bundle agent install_tarball_v2(source_path, source_server, local_directory)
 {
   vars:
       "tarball_file" string => lastnode( "$(source_path)", "/" );
-      "tar_expand_cmd" string => "/bin/tar -xzf ";
+      "tar_expand_cmd" string => "/bin/tar -xaf ";
       
   classes:
       "tarball_is_present"

@@ -19,17 +19,23 @@ VALUES ('{{{vars.guac_create_connection.conname}}}',
 
 {{#classes.parent_group_defined}}
 -- START GLOBAL PARAMETERS FOR CONNECTION WITH PARENT GROUP DEFINED
+-- connection_weight and failover_only are not implemented, but could be used in future for specific load balanced connections
 INSERT INTO guacamole_connection (connection_name, protocol, parent_id, max_connections, max_connections_per_user)
+-- INSERT INTO guacamole_connection (connection_name, protocol, parent_id, max_connections, max_connections_per_user, connection_weight, failover_only)
 VALUES ('{{{vars.guac_create_connection.conname}}}',
         '{{{vars.guac_create_connection.protocol}}}', -- must be ssh or rdp
         '{{{vars.guac_create_connection.mysql_parent_id_result}}}', -- id gained from mysql query on parent_group
   {{#classes.ssh_connection}}
         '{{{vars.guac_database_vars.max_ssh_connections_per_connection}}}',
         '{{{vars.guac_database_vars.max_ssh_connections_per_user_per_connection}}}'
+        -- '{{{vars.guac_database_vars.ssh_connection_weight}}}',
+        -- '{{{vars.guac_database_vars.ssh_failover_only}}}',
   {{/classes.ssh_connection}}
   {{#classes.rdp_connection}}
         '{{{vars.guac_database_vars.max_rdp_connections_per_connection}}}',
         '{{{vars.guac_database_vars.max_rdp_connections_per_user_per_connection}}}'
+        -- '{{{vars.guac_database_vars.rdp_connection_weight}}}',
+        -- '{{{vars.guac_database_vars.rdp_failover_only}}}',
   {{/classes.rdp_connection}}
        );
 {{/classes.parent_group_defined}}
@@ -43,6 +49,8 @@ FROM (
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'username' AS parameter_name, '{{{vars.guac_database_vars.username}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'password' AS parameter_name, '{{{vars.guac_database_vars.password}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'enable-sftp' AS parameter_name, '{{{vars.guac_database_vars.enable_sftp}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-root-directory' AS parameter_name, '{{{vars.guac_database_vars.sftp_root_directory}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'server-alive-interval' AS parameter_name, '{{{vars.guac_database_vars.ssh_server_alive_interval}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'port' AS parameter_name, '{{{vars.guac_database_vars.ssh_port}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'color-scheme' AS parameter_name, '{{{vars.guac_database_vars.ssh_color_scheme}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'font-name' AS parameter_name, '{{{vars.guac_database_vars.ssh_font_name}}}' AS parameter_value
@@ -64,13 +72,15 @@ FROM (
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'username' AS parameter_name, '{{{vars.guac_database_vars.username}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'password' AS parameter_name, '{{{vars.guac_database_vars.password}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'enable-sftp' AS parameter_name, '{{{vars.guac_database_vars.enable_sftp}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-server-alive-interval' AS parameter_name, '{{{vars.guac_database_vars.sftp_server_alive_interval}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-root-directory' AS parameter_name, '{{{vars.guac_database_vars.sftp_root_directory}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'port' AS parameter_name, '{{{vars.guac_database_vars.rdp_port}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'security' AS parameter_name, '{{{vars.guac_database_vars.rdp_security}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'color-depth' AS parameter_name, '{{{vars.guac_database_vars.rdp_color_depth}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'width' AS parameter_name, '{{{vars.guac_database_vars.rdp_width}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'height' AS parameter_name, '{{{vars.guac_database_vars.rdp_height}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'dpi' AS parameter_name, '{{{vars.guac_database_vars.rdp_dpi}}}' AS parameter_value
-    -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'resize-method' AS parameter_name, '{{{vars.guac_database_vars.rdp_resize_method}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'resize-method' AS parameter_name, '{{{vars.guac_database_vars.rdp_resize_method}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'enable-printing' AS parameter_name, '{{{vars.guac_database_vars.rdp_enable_printing}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-hostname' AS parameter_name, '{{{vars.guac_create_connection.hostname}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-port' AS parameter_name, '{{{vars.guac_database_vars.ssh_port}}}' AS parameter_value

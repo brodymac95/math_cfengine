@@ -26,6 +26,8 @@ bundle common classify_host
 
     cslab_node::
       "canonified_host" string => canonify("cslab_node");
+    cstest_node::
+      "canonified_host" string => canonify("cstest_node");
 
     any::
     "host_machine"

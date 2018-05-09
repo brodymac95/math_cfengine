@@ -35,6 +35,9 @@ bundle agent web_server(state)
   vars:      
       "apache_exec" string => "/usr/sbin/apache2";
       "certbot_exec" string => "/usr/bin/certbot";
+      
+      "certbot_domain_dir" string => "/etc/letsencrypt/live/$(sys.fqhost)";
+      "certbot_accounts_dir" string => "/etc/letsencrypt/accounts";
 
   classes:
       # Only use a certbot SSL testing_cert on development systems!
@@ -47,6 +50,11 @@ bundle agent web_server(state)
 
       "apache_exists"
       expression => fileexists( "$(apache_exec)" );
+
+      "certbot_registered_domain_exists"
+      expression => fileexists( "$(certbot_domain_dir)/." );
+      "certbot_accounts_exists"
+      expression => fileexists( "$(certbot_accounts_dir)/." );
 
       "certbot_exists"
 	expression => fileexists( "$(certbot_exec)" ),
@@ -82,22 +90,23 @@ bundle agent web_server(state)
     	usebundle => manage_apache_module("$(web_server_vars.modules_enabled)", enable),
         classes => if_ok("enable_module");
 
+    on.certbot_exists.!certbot_accounts_exists::
       "configure SSL/TLS certificates for each site using EFF certbot"
       	usebundle => manage_certbot( "web_server_vars", "$(web_server_vars.site_keys)", install ),
         inherit => "true",
         classes => results("bundle", "install_cert");
-
-    on.ssl_cert_renew::
+      
+    on.certbot_exists.ssl_cert_renew::
       "check if SSL/TLS certificates need to be renewed (set cert_renew class in cron_scheduler for once a week)"
     	usebundle => manage_certbot("web_server_vars", "$(web_server_vars.site_keys)", renew),
         classes => results("bundle", "renew_certs");
 
-    on.(enable_site|install_cert_repaired|renew_certs_repaired)::
+    on.enable_site::
       "reload apache2 service after generating and enabling new sites or renewing ssl certs"
       	usebundle => standard_services( "apache2", "reload" ),
       	classes => if_ok("web_server_reload");
 
-    on.enable_module::
+    on.(enable_module|install_cert_repaired|renew_certs_repaired)Z::
       "restart apache2 service after enabling new modules"
       	usebundle => standard_services( "apache2", "restart" ),
       	classes => if_ok("web_server_restart");
@@ -147,7 +156,7 @@ bundle agent web_server(state)
 
 ######################################################################
 
-bundle agent web_server_vars(params1, params2)
+bundle agent web_server_vars
 {
   vars:
 
@@ -168,11 +177,11 @@ bundle agent web_server_vars(params1, params2)
       "certbot_include_path" string => "/etc/letsencrypt/options-ssl-apache.conf";
       "certbot_cert_chain_file" string => "fullchain.pem";
       "certbot_cert_key_file" string => "privkey.pem";
-      "certbot_registered_email" string => "root@$(global.cs_domain)";
+      "certbot_registered_email" string => "$(global.root_email)";
       "certbot_domains_to_register" string => "$(sys.fqhost)",
       comment => "domain hostname defined using the fully qualified host var";
 
-      "apache_serveradmin_email" string => "root@$(global.cs_domain)";
+      "apache_serveradmin_email" string => "$(global.root_email)";
       "apache_available_sites_dir" string => "/etc/apache2/sites-available/";
       "apache_site_index_file" string => "index.html";
       "apache_site_index_template" string => "$(this.promise_dirname)/data/default_index_html.tpl.txt";
@@ -239,12 +248,15 @@ bundle agent manage_certbot(params, site, action)
       "certbot_exec" string => "/usr/bin/certbot";
 
     !testing_cert::
-      "certbot_install_cmd" string => "$(certbot_exec) run --apache --non-interactive --domains $($(params).certbot_domains_to_register) --config ";
+      # "certbot_install_cmd" string => "$(certbot_exec) run --apache --non-interactive --domains $($(params).certbot_domains_to_register) --config ";
+      "certbot_install_cmd" string => "$(certbot_exec) --authenticator standalone --installer apache --domains $($(params).certbot_domains_to_register) --pre-hook 'systemctl stop apache2' --post-hook 'systemctl start apache2' --config ";
+
       "certbot_renew_cmd" string => "$(certbot_exec) renew --quiet";
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --non-interactive --cert-path ";
 
     testing_cert::
-      "certbot_install_cmd" string => "$(certbot_exec) run --test-cert --apache --config ";
+      # "certbot_install_cmd" string => "$(certbot_exec) run --test-cert --apache --config ";
+      "certbot_install_cmd" string => "$(certbot_exec) --test-cert --authenticator standalone --installer apache --domains $($(params).certbot_domains_to_register) --pre-hook 'systemctl stop apache2' --post-hook 'systemctl start apache2' --config ";
       "certbot_renew_cmd" string => "$(certbot_exec) renew --quiet";
       "certbot_revoke_cmd" string => "$(certbot_exec) revoke --test-cert --non-interactive --cert-path ";
       

@@ -59,6 +59,7 @@
 	"purpose": "cslab",
         "role": "ssh_bastion",
         "owner": "teaching",
+     	"security": [ "ssh_no_password_access", ],
 	"authentication": "uaf2_client",
     },
     "cslab_node": {

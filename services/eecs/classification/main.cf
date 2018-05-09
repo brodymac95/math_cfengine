@@ -15,8 +15,7 @@ bundle common classification_main_file_control
 	"$(this.promise_dirname)/metadata/main.cf",
 	"$(this.promise_dirname)/subnet_location/main.cf",
       };
-      
-    # os_tenant_cluster::
+
     "bundles"
       slist =>
       {
@@ -44,10 +43,11 @@ body file control
 bundle common global
 {
   vars:
-      "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
+      "cluster_name" string => "$(classify_host.host_purpose)";
       "cs_domain" string => "cs.wichita.edu";
       "root_email" string => "roose@cs.wichita.edu";
       "time_zone" string => "America/Chicago";
+      "eecs_support" string => "EECS: Ben Roose (ben.roose@wichita.edu)";
 
       "system_creation_time" string => filestat( "/usr", "ctime" ),
         comment => "defining the unix epoch time of when the directory '/usr' was created

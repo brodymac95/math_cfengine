@@ -110,6 +110,10 @@ bundle agent manage_users
       "manage local users in custom groups"
       usebundle => manage_local_users_custom_groups("user_settings");
 
+    manage_debian_user::
+      "manage default debian user and add password on openstack burnable instances"
+      usebundle => manage_os_tenant_debian_user("user_settings");
+
 #    pam_ldap::
 #     "install and configure ldap client packages"
 #      usebundle => install_ldap_client;
@@ -370,6 +374,60 @@ bundle agent manage_local_users_custom_groups(settings)
     # user_exists_not_kept::
     #   "user_exists_not_kept";
 
+}
+
+########################################################
+
+bundle agent manage_os_tenant_debian_user(settings)
+# @description: sets password for the debian user on an openstack tenant instance/node
+# NOTE: ONLY USE FOR BURNABLE OPENSTACK INSTANCES
+{
+  vars:
+      "user" string => "debian";
+      "user_description" string => "Cloud-init-user";
+      "sudo_group" string => "sudo";
+
+      "passwd_dist" string => "/srv/cfengine/configs/service_credentials/debian_user_passwd.hash";
+      "passwd_cache" string => "$(sys.workdir)/state/passwd/debian_user.hash";
+      "passwd_cache_dir" string => dirname("$(passwd_cache)");
+
+    have_cached_hashed_passwd::
+      "passwd_hash" string => readfile($(passwd_cache), 4096);
+
+  classes:
+      "have_cached_hashed_passwd"
+      expression => fileexists($(passwd_cache));
+
+  files:
+      "$(passwd_cache_dir)/."
+      create => "true";
+      
+      "$(passwd_cache)"
+      perms => mo("600","root"),
+      copy_from => secure_cp( $(passwd_dist), $(sys.policy_hub) ),
+      action => if_elapsed("60"),
+      comment => "perform a secure remote copy of the passwd hash file";
+      
+  users:
+    linux::
+      "$(user)"
+      policy => "present",
+      description => "$(user_description)",
+      password => hashed_password( "$(passwd_hash)" ),
+      shell => "/bin/bash",
+      home_dir => "/home/$(user)",
+      home_bundle => home_skel( "$(user)","$(user)", "$($(settings).default_mode)", "/home/$(user)", "$($(settings).home_skeleton)" ),
+      groups_secondary => { "users" },
+      # groups_secondary => { "$(sudo_group)" },
+      comment => "add local user (with group = user) from debian cloud init user with no sudo rights";
+ 
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_local_users)::
+      "=== $(this.bundle) ===";
+      "Local user set on this system: $(user)";
 }
 
 ########################################################

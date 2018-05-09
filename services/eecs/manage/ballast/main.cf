@@ -36,7 +36,8 @@ bundle agent ballast_server(state)
   classes:
       # DEFINE SERVER STATES
       # "on"  expression => "any";
-      "on"  expression => strcmp("$(state)","on");
+      "on"  or => { strcmp("$(state)","on"), strcmp("$(state)","on_with_metrics") };
+      "use_ballast_metrics"  expression => strcmp("$(state)","on_with_metrics");
       "off" expression => strcmp("$(state)","off");
 
       "ballastd_exists"
@@ -62,6 +63,12 @@ bundle agent ballast_server(state)
       	usebundle => install_ballast_server( "ballast_vars" ),
         classes => results("bundle", "ballastd");
 
+      "dump ballast server metrics data" -> "guacamole_server"
+      	usebundle => ballast_metrics( "ballast_vars" ),
+        inherit => "true",
+        classes => if_ok("ballast_metrics_collect"),
+        ifvarclass => "use_ballast_metrics";
+
     on.ballastd_repaired::
       "restart ballast service after configuration"
       	usebundle => standard_services( "ballast", "restart" ),
@@ -69,11 +76,12 @@ bundle agent ballast_server(state)
 
     ## INSTALL ALL SOFTWARE FOR BALLAST SERVER
     on.install_software::
-      "generate all ballast server variables" usebundle => ballast_vars;
+      "generate all ballast server variables" usebundle => ballast_vars,
+        inherit => "true";
 
       "install dependent packages"
     	usebundle => package_latest("$(ballast_vars.dependent_packages)"),
-        classes => results("bundle", "dependent_packages_install");      
+        classes => results("bundle", "dependent_packages_install");
 
       "install and configure ballast server"
       	usebundle => install_ballast_server( "ballast_vars" ),
@@ -93,6 +101,8 @@ bundle agent ballast_server(state)
         ifvarclass => "ballast_server_off";
       "ballast server is turned on and running"
         ifvarclass => "ballast_server_on";
+      "ballast server metrics collected"
+        ifvarclass => "ballast_metrics_collected";
       "ballast server restarted due to configuration change"
         ifvarclass => "ballast_server_restart";
       "$(ballast_vars.dependent_packages) installed"
@@ -110,7 +120,7 @@ bundle agent ballast_vars
       "dependent_packages" slist => { "perl", "libtimedate-perl", "libdatetime-timezone-perl", "libnet-address-ip-local-perl", "netcat", },
         comment => "set of packages required for ballast server, client, and agent";
       
-      "install_tarball_path"  string => "/srv/cfengine/packages/ballast.tar.gz";
+      "install_tarball_path"  string => "/srv/cfengine/packages/ballast.tar.xz";
       "install_server"        string => "$(sys.policy_hub)";
       "install_dir"           string => "/root/";
       "install_unrolled_dir"  string => "$(install_dir)/ballast/";
@@ -143,9 +153,6 @@ bundle agent ballast_vars
       "ballast_key_cache_dir" string => dirname( "$(ballast_key_cache)" );
  
       ## CLUSTER PARAMETERS
-      "cluster_name" string => "$(classify_host.host_purpose)",
-	comment => "host alias name needed in ballast configuration";
-
     ballastd_exists::
       "ballast_user" string => "root",
       	comment => "user and group for running ballastd (set as root due to needing access to database and pid_file)";
@@ -155,6 +162,7 @@ bundle agent ballast_vars
       "ballast_group" string => "users",
       	comment => "user and group for running ballast-agent (set as ballast user for least privilege)";
 
+    any::
       ## GLOBAL CONFIG PARAMETERS
       "config[data_port]" string => "4411",
 	comment => "port used for server communication. Default = 4411 (must open ingress to this port on ballast server)";
@@ -165,12 +173,12 @@ bundle agent ballast_vars
       
       ## AGENT/CLIENT SPECIFIC CONFIG PARAMETERS
 
-    ssh_bastion::
-      "config[data_host]" string => "$(sys.ipv4)", # Using own first IP address
-	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
+    # DELETE AFER TESTING ssh_bastion::
+    #   "config[data_host]" string => "$(sys.ipv4)", # Using own first IP address
+    # 	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
 
-    !ssh_bastion.os_tenant_cluster::
-      "config[data_host]" string => "$(os_metadata.bastion_host_data)", # Using underlying OpenStack metadata, but needs to be called in template directly
+    os_tenant_cluster::
+      "config[data_host]" string => "$(os_metadata.ballastd_host_data)", # Using underlying OpenStack metadata, but needs to be called in template directly
       	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
       # "config[data_host]" string => "10.10.10.10"; # hardcoding ssh bastion for testing
 
@@ -193,7 +201,7 @@ bundle agent ballast_vars
 
     any::
       ## AGENT SPECIFIC CONFIG PARAMETERS
-      "config[data_alias]" string => "$(cluster_name)",
+      "config[data_alias]" string => "$(global.cluster_name)",
 	comment => "alias to which collected data pertains. No default";
       "config[random_wait]" string => "0",
 	comment => "number of seconds to randomly wait before collecting data. Default = 0";
@@ -227,10 +235,14 @@ bundle agent ballast_vars
 	comment => "policy expression to be evaluated across all hosts. No default (using predictive least load example)
                   (form is policy_X where X is the name of an alias) see docs/policy.txt in git repo for more info
                   Example: policy_foo cpu * ram * io_sectors * net_bytes OR policy_bar load_5";
+      "config[policy_for_cluster]" string => "sessions * -1",
+        comment => "allow only one user sesson on the host. ballast assumes host is unavailable if policy = negative integer",
+        ifvarclass => "cstest";
+
       "config[data_db]" string => "/var/lib/ballast/ballast.db",
 	comment => "location of database. No default
                    (directory must exist, but file will be created)";
-      "config[data_alias_for_cluster]" string => "$(cluster_name)",
+      "config[data_alias_for_cluster]" string => "$(global.cluster_name)",
 	comment => "use collected data of given alias(es) for load calculations. No default
                  (form is data_alias_X where X is the name of an alias)
                  (for example, 'data_alias_foo foo bar' would evaluate policies against data collected from any agents that have data_alias set to either 'foo' or 'bar')";
@@ -274,7 +286,6 @@ bundle agent ballast_vars
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
-      "Ballast IP: $(ballast_server_data)";
 }
 
 ######################################################################
@@ -285,8 +296,6 @@ bundle agent install_ballast_server(params)
   vars:
       "ballastd_file" string => lastnode( "$($(params).ballast_server_install_path)", "/" );
       "ballast_database_dir" string => dirname( "$($(params).config[data_db])" );
-
-      "ballast_user" string => "$($(params).ballast_user)";
       
   classes:
       "install_dir_exists"
@@ -316,7 +325,7 @@ bundle agent install_ballast_server(params)
     have_cached_ballast_key::
       "$($(params).ballast_key_file)"
         create => "true",
-	perms => mog("400", "$(ballast_user)", "$(ballast_user)" ),
+	perms => mog("400", "root", "root" ),
 	copy_from => local_dcp( "$($(params).ballast_key_cache)" ),
         classes => results("bundle", "ballast_key");
       
@@ -373,6 +382,48 @@ bundle agent install_ballast_server(params)
          ifvarclass => "have_cached_ballast_key";
       "ALERT: ballast key file not found in cache. Check connection to policyhub server"
         ifvarclass => "!have_cached_ballast_key";
+}
+
+######################################################################
+
+# bundle agent ballast_metrics
+bundle agent ballast_metrics(params)
+# @description: dump metics collected by ballastd into file for scrapping host and load data
+{
+  vars:
+    ballastd_exists::
+      # "params" string => "ballast_vars";
+
+      "ballastd_dump_cmd" string => "/usr/local/sbin/ballastd --jsondump";
+      # "ballastd_dump_cmd" string => "$(ballastd_exec)_test --jsondump";
+
+      "ballastd_dump_result" string => execresult("$(ballastd_dump_cmd)","useshell");
+
+      "ballast_metrics_data" data => parsejson( "$(ballastd_dump_result)" );
+      # "ballast_metrics_data_str" string => format("%S", ballast_metrics_data);
+
+      "ballast_active_host_data" data => mergedata( "ballast_metrics_data[active_hosts]" );
+      
+      "active_hosts" slist => getindices( "ballast_active_host_data" );
+
+  classes:
+      
+  methods:
+      
+  commands:
+      
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      # "testing result: $(ballastd_dump_result)";
+      # "testing data: $(ballast_metrics_data_str)";
+      # "testing last: $(ballast_metrics_data[last])";
+      "active hosts: $(active_hosts)";
 }
 
 ######################################################################
@@ -518,7 +569,7 @@ bundle agent manage_ballast_client
   methods:
     install_software::
       "install dependent packages"
-    	usebundle => package_latest("$($(params).dependent_packages)"),
+    	usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_install");
 
     !install_dir_exists::

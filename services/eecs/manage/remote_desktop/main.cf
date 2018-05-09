@@ -130,7 +130,7 @@ bundle agent xrdp_vars(params)
       "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "clipit", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
         comment => "remove all desktop/GUI-based network, screenlock, screensaver, torrent, web-browser packages from server";
 
-      "guacctl_download_weblink"  string => "https://raw.githubusercontent.com/apache/incubator-guacamole-server/master/bin/guacctl";
+      "guacctl_download_weblink"  string => "https://raw.githubusercontent.com/apache/incubator-guacamole-server/master/bin/gu4acctl";
 
 
     ## XWRAPPER CONFIGURATION
@@ -144,8 +144,14 @@ bundle agent xrdp_vars(params)
       "lxde_autostart_file" string => "/etc/xdg/lxsession/LXDE/autostart";
       "lxde_autostart_template" string => "$(this.promise_dirname)/data/lxde_autostart.mustache";
 
+      "lxpanel_default_panel_file" string => "/etc/xdg/lxpanel/default/panels/panel";
+      "lxpanel_lxde_panel_file" string => "/etc/xdg/lxpanel/LXDE/panels/panel";
+      "lxde_default_panel_template" string => "$(this.promise_dirname)/data/lxde_default_panel.mustache";
+
       "lxde_logout_script" string => "/usr/bin/lxde-logout";
       "lxde_logout_template" string => "$(this.promise_dirname)/data/lxde_logout.mustache";
+
+      "lxde_default_backgroundfile" string => "/usr/share/lxpanel/images/background.png";
 
       
   reports:
@@ -176,7 +182,23 @@ bundle agent configure_xrdp(params)
         template_method => "mustache",
         edit_template => "$($(params).lxde_autostart_template)",
         classes => results("bundle", "lxde_autostart"),
-	comment => "expand /etc/xdg/lxsession/LXDE/autostart file using template from staging cache in this promise directory";
+        comment => "expand /etc/xdg/lxsession/LXDE/autostart file using template from staging cache in this promise directory";
+
+      "$($(params).lxpanel_default_panel_file)"
+        create => "true",
+	perms => mog("644", "root", "root" ),
+        template_method => "mustache",
+        edit_template => "$($(params).lxpanel_default_panel_template)",
+        classes => results("bundle", "lxpanel_default_panel"),
+	comment => "expand /etc/xdg/lxpanel/default/panels/panel file using template from staging cache in this promise directory";
+
+      "$($(params).lxpanel_lxde_panel_file)"
+        create => "true",
+	perms => mog("644", "root", "root" ),
+        template_method => "mustache",
+        edit_template => "$($(params).lxde_default_panel_template)",
+        classes => results("bundle", "lxpanel_lxde_panel"),
+	comment => "expand /etc/xdg/lxpanel/LXDE/panels/panel file using template from staging cache in this promise directory";
 
       "$($(params).lxde_logout_script)"
         create => "true",
@@ -198,6 +220,12 @@ bundle agent configure_xrdp(params)
         ifvarclass => "xwrapper_config_repaired";
       "$($(params).lxde_autostart_file) edited"
         ifvarclass => "lxde_autostart_repaired";
+      "$($(params).lxpanel_default_panel_file) edited"
+        ifvarclass => "lxpanel_default_panel_repaired";
+      "$($(params).lxpanel_lxde_panel_file) edited"
+        ifvarclass => "lxpanel_lxde_panel_repaired";
+      "$($(params).lxde_logout_script) edited"
+        ifvarclass => "lxde_logout_repaired";
 }
 
 ######################################################################

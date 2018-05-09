@@ -56,8 +56,10 @@ bundle agent config_login_defs
       # Debian/Ubuntu set umask in /etc/login.defs if pam_umask.so is enabled
       "files[login_defs]"   string => "/etc/login.defs";
       "files[common_session]"   string => "/etc/pam.d/common-session";
+      "files[security_limits]"   string => "/etc/security/limits.conf";
 
       "pam_umask_enable" string => "session optional        pam_umask.so";
+      "debian_user_max_logins" string => "debian        -       maxlogins       1";
 
     redhat::
       # RHEL 6 and 7 seem to set umask in /etc/bashrc
@@ -108,4 +110,10 @@ bundle agent edit_login_defs
       handle => "edit_pam_common_session",
       edit_line => append_if_no_line("$(config_login_defs.pam_umask_enable)"),
       comment => "Set pam to allow for /etc/login.defs to be activated";
+
+    cstest_node.debian::
+      "$(config_login_defs.files[security_limits])"
+      handle => "edit_security_limits",
+      edit_line => append_if_no_line("$(config_login_defs.debian_user_max_logins)"),
+      comment => "set the cloud image default debian user to only login concurrently once for cstest nodes";
 }

@@ -101,7 +101,7 @@
 	
 	"5101": {
 	    comment: "atom.io custom repo",
-	    context: "teaching",
+	    context: "cslab_node",
 	    url: "https://packagecloud.io/AtomEditor/atom/any/",
 	    distribution: "any",
 	    components: [ "main" ],

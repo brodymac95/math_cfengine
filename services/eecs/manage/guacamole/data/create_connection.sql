@@ -80,7 +80,7 @@ FROM (
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'width' AS parameter_name, '{{{vars.guac_database_vars.rdp_width}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'height' AS parameter_name, '{{{vars.guac_database_vars.rdp_height}}}' AS parameter_value
     -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'dpi' AS parameter_name, '{{{vars.guac_database_vars.rdp_dpi}}}' AS parameter_value
-    -- UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'resize-method' AS parameter_name, '{{{vars.guac_database_vars.rdp_resize_method}}}' AS parameter_value
+    UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'resize-method' AS parameter_name, '{{{vars.guac_database_vars.rdp_resize_method}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'enable-printing' AS parameter_name, '{{{vars.guac_database_vars.rdp_enable_printing}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-hostname' AS parameter_name, '{{{vars.guac_create_connection.hostname}}}' AS parameter_value
     UNION SELECT '{{{vars.guac_create_connection.conname}}}' AS connection_name, 'sftp-port' AS parameter_name, '{{{vars.guac_database_vars.ssh_port}}}' AS parameter_value
