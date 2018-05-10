@@ -15,6 +15,7 @@ bundle common manage_main_file_control
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
       "input[ballast]" string => "$(this.promise_dirname)/ballast/main.cf";
       "input[emacs_server]" string => "$(this.promise_dirname)/emacs_server/main.cf";
+      "input[fail2ban]" string => "$(this.promise_dirname)/fail2ban/main.cf";
 
     development::
       "input[guacamole_installer]" string => "$(this.promise_dirname)/guacamole/main_testing.cf";
@@ -138,17 +139,20 @@ bundle agent manage_os_tenant_cluster
       "turn on ballast service"     usebundle => ballast_server("on_with_metrics");
       "turn on guacamole service"   usebundle => guacamole_server("on");
       "turn on apache web service"  usebundle => web_server("on");
+      "turn on fail2ban for guac"   usebundle => fail2ban_server("on");
       "ballast client management"   usebundle => manage_ballast_client;
 
     ssh_bastion.!uaf2_client::
       "admin user management"       usebundle => manage_sys_users;
       # "turn on ballast service"     usebundle => ballast_server("on");
+      "turn on fail2ban for ssh"    usebundle => fail2ban_server("on");
       "ballast client management"   usebundle => manage_ballast_client;
 
     ssh_bastion.uaf2_client::
       "uaf2 user management"        usebundle => install_uaf2_client,
       	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
       "mount emcity nfs shares"     usebundle => autofs("on");
+      "turn on fail2ban for ssh"    usebundle => fail2ban_server("on");
       "ballast client management"   usebundle => manage_ballast_client;
 
     cluster_node.!uaf2_client::
@@ -216,6 +220,7 @@ bundle agent manage_os_tenant_minimal_cluster
       "turn on mail send-only"   usebundle => mail_server("on");
       "admin user management"    usebundle => manage_sys_users;
       "standard user management" usebundle => manage_users;
+      "turn on fail2ban for ssh" usebundle => fail2ban_server("on");
       "ballast client manage"    usebundle => manage_ballast_client;
 
       # "standard user management" usebundle => manage_users;
@@ -227,6 +232,7 @@ bundle agent manage_os_tenant_minimal_cluster
       	comment => "install and configure tom's uaf2_client if defined as authentication method in host_data";
       "mount emcity nfs shares"  usebundle => autofs("on");
       # "turn on ballast service"  usebundle => ballast_server("on");
+      "turn on fail2ban for ssh" usebundle => fail2ban_server("on");
       "ballast client manage"    usebundle => manage_ballast_client;
 
       "manage root password"     usebundle => manage_root_passwd,
