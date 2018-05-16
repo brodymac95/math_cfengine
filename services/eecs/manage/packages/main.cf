@@ -106,6 +106,9 @@ bundle agent manage_custom_packages
     java_bluej_ide::
       "install Java BlueJ IDE from Duke University for Coursera Java Course" usebundle => install_java_bluej_ide;
 
+    wireshark::
+      "install wireshark (likely needs additional work)" usebundle => install_wireshark;
+
     pyrosetta::
       "install python pyrosetta" usebundle => install_pyrosetta;
 

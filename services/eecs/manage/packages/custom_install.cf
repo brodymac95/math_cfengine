@@ -381,6 +381,49 @@ bundle agent install_java_bluej_ide
 
 #############################################
 
+bundle agent install_wireshark
+# @decription: manual installer for wireshark
+{
+  vars:
+      "dumpcap_file" string => "/usr/bin/dumpcap";
+      "wireshark_group" string => "wireshark";
+      
+    debian::
+      "dependent_packages"  slist => { "wireshark", },
+        comment => "install full wireshark metapackage",
+        policy => "overridable";
+
+  classes:
+      "dumpcap_installed"
+        expression => fileexists("$(dumpcap_file)");
+
+  methods:
+    debian::
+      "install dependent packages" usebundle => package_latest("$(dependent_packages)"),
+        classes => results("bundle", "dependent_packages_installed");
+      
+  files:
+    debian::
+      "$(dumpcap_file)"
+      	perms => mog("755","root","$(wireshark_group)"),
+        comment => "make sure the dumpcap exec file is owned by required group";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+    (inform_mode|verbose_mode).(!debian)::
+      "$(this.bundle): ERROR: cannot install $(download_file) on this OS platform. Must be Debian";
+
+    (DEBUG|DEBUG_install_python_graphics)::
+      "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_install_python_graphics).dependent_package_installed_kept::
+      "$(dependent_package) has been installed";
+    (DEBUG|DEBUG_install_python_graphics).graphics_py_installed::
+      "$(download_file) has been installed in $(install_dir)";
+}
+
+#############################################
+
 bundle agent install_python_graphics
 # @decription: manual installer for graphics.py
 {
