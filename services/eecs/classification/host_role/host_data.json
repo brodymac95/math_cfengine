@@ -17,12 +17,6 @@
         "role": "csasrv",
         "owner": "Murtuza Jadliwala",
     },
-    "jb_257_3432_res1": {
-	"machine": "workstation",
-	"purpose": "research",
-        "role": "wirelesswst",
-        "owner": "Prabhu Janakaraj",
-    },
     "jb_253_5261_nuc": {
 	"machine": "workstation",
 	"purpose": "research",
@@ -47,6 +41,18 @@
         "role": "capplab",
         "owner": "Pu Wang_Kalvik Jakkala",
     },
+    "jb_257_3432_res1": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "wirelesswst",
+        "owner": "Prabhu Janakaraj",
+    },
+    "jb_257_5271LAB1": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "sensors",
+        "owner": "Remi Chou",
+    },
     "wh_330_a01": {
 	"machine": "workstation",
 	"purpose": "research",
@@ -70,5 +76,11 @@
 	"purpose": "research",
         "role": "robotics",
         "owner": "Hongsheng He",
+    },
+    "wh_331_6528_11": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "security",
+        "owner": "Sergio Salinas",
     },
 }
