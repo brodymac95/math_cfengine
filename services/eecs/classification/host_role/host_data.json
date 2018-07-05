@@ -47,7 +47,13 @@
         "role": "wirelesswst",
         "owner": "Prabhu Janakaraj",
     },
-    "jb_257_5271LAB1": {
+    "jb_257_5271lab1": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "sensors",
+        "owner": "Remi Chou",
+    },
+    "jb_257_5271lab2": {
 	"machine": "workstation",
 	"purpose": "research",
         "role": "sensors",
