@@ -130,7 +130,7 @@ bundle agent xrdp_vars(params)
       "absent_packages" slist => { "network-manager", "wicd", "wicd-daemon", "wicd-gtk", "python-wicd", "wireless-tools", "wpasupplicant", "lxlock", "light-locker", "xscreensaver", "xscreensaver-data", "clipit", "deluge", "deluge-gtk", "deluge-common", "firefox-esr", },
         comment => "remove all desktop/GUI-based network, screenlock, screensaver, torrent, web-browser packages from server";
 
-      "guacctl_download_weblink"  string => "https://raw.githubusercontent.com/apache/incubator-guacamole-server/master/bin/gu4acctl";
+      "guacctl_download_weblink"  string => "https://raw.githubusercontent.com/apache/guacamole-server/master/bin/guacctl";
 
 
     ## XWRAPPER CONFIGURATION
