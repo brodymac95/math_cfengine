@@ -24,27 +24,27 @@
         },
         "1011":
         {
-	    "comment": "allow incoming ping requests (type 8) from WSU wired public network for any server host"
+	    "comment": "allow incoming ping requests (type 8) from WSU wired public network and WSU VPN for any server host"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,10.250.0.0/24",
             "protocol": "icmp",
 	    "icmp_type": "echo-request",
             "target": "ACCEPT",
         },
         "1012":
         {
-	    "comment": "allow incoming ping replies (type 0) from WSU wired public network for any server host"
+	    "comment": "allow incoming ping replies (type 0) from WSU wired public network and WSU VPN for any server host"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,10.250.0.0/24",
             "protocol": "icmp",
 	    "icmp_type": "echo-reply",
             "target": "ACCEPT",
         },  
         "1021":
         {
-	    "comment": "allow incoming SSH from WSU wired public network for any server host"
+	    "comment": "allow incoming SSH from WSU wired public network and WSU VPN for any server host"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,10.250.0.0/24",
             "destination_port": "22",
             "target": "ACCEPT",
         },
