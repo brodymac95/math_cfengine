@@ -52,6 +52,9 @@ bundle common cron_scheduler
       # DEFINE JOBS
       # "install_software" and => { "any", };
 
+      "update_user_lists" and => { "Hr05", "Min00_05", "guac_gateway", },
+      comment => "update user lists and add/remove users on guacamole gateways every morning at 5am";
+
       "install_software" and => { "Q6H", "Min00_05", },
       comment => "install/update software at start of every 6 hours only if system load is low (removed)";
 

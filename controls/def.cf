@@ -92,7 +92,8 @@ bundle common def
                    # 2. will cause a DNS lookup for every access
                    # ".*$(def.domain)",
 
-                   # Assume /16 LAN clients to start with
+                   # Assume /16 LAN clients to start with (156.26.0.0/16)
+		   # NOTE: WILL NEED TO CHANGE THIS IF POLICYHUB IS RUNNING ON OPENSTACK
                    "$(sys.policy_hub)/16",
 
 		   # allow for OpenStack provisioning subnet in datacentre (VLAN 973)

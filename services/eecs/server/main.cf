@@ -67,6 +67,10 @@ bundle server srv_paths_access
         string => "/srv/cfengine/configs",
         comment => "Define system and user configuration repository source location";
 
+      "path[user_lists]"
+        string => "/srv/user_lists",
+        comment => "Define user lists repository source location used by ITS for uploading database query files";
+
       "paths"
         slist => getvalues(path);
       
@@ -102,6 +106,10 @@ bundle agent config_policy_server
 
       "host_by_key_dir" string => "/var/cfengine/host_by_key/";
 
+      "user_lists_dir" string => "/srv/user_lists";
+      "its_scp_user" string => "appworx";
+      "its_scp_user_desc" string => "ITS user for student list scp";
+
   files:
     policy_server::
       "$(host_by_key_dir)/."
@@ -121,11 +129,31 @@ bundle agent config_policy_server
         classes => results("bundle", "cf_pwhash_file"),
         comment => "expand pwhash script to /usr/local/bin using template in this promise directory";
       
+      "$(user_lists_dir)/."
+	create => "true",
+        perms => mog("770","root", "$(its_scp_user)"),
+        comment => "ensure user_lists directory exists and has correct permissions for ITS access";
+
+  users:
+    policy_server::
+      "$(its_scp_user)"
+      policy => "present",
+      description => "$(its_scp_user)",
+      shell => "/bin/bash",
+      home_dir => "/home/$(its_scp_user)",
+      home_bundle => home_skel( "$(its_scp_user)","$(its_scp_user)", "$(user_settings.default_mode)", "/home/$(its_scp_user)", "$(user_settings.home_skeleton)" ),
+      comment => "add local ITS appworx user to policy server for nightly scp of student enrolment lists";
+      
   methods:
     install_software::
       "install dependent packages"
     	usebundle => package_latest("$(dependent_packages)"),
         classes => results("bundle", "dependent_packages_install");      
+
+    policy_server::
+      "ensure ssh authorized_keys is copied into ITS appworx user (use bundle in manage/ssh/main.cf)"
+        usebundle => ensure_user_ssh_authorized_keys( "$(its_scp_user)", "$(its_scp_user)", "/home/$(its_scp_user)" ),
+        classes => results("bundle", "$(its_scp_user)_ssh_auth_keys");
 
   reports:
     (inform_mode|verbose_mode)::

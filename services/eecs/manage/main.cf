@@ -353,11 +353,12 @@ bundle agent manage_workstation_host
 {
   methods:
 
-      "configure login motd" usebundle => config_login_banner;
+      "configure login motd"     usebundle => config_login_banner;
       "configure login defaults" usebundle => config_login_defs;
-      "turn OFF sshd server"      usebundle => sshd_server("off");
+      "mount nfs shares"         usebundle => autofs("on");
+      "turn OFF sshd server"     usebundle => sshd_server("off");
 
-      "manage root password" usebundle => manage_root_passwd,
+      "manage root password"     usebundle => manage_root_passwd,
         comment => "add root password hash for new hosts by running the cf-pwhash.sh script";
 
       "system/admin user management" usebundle => manage_sys_users;
@@ -365,7 +366,7 @@ bundle agent manage_workstation_host
     !uaf2_client|!uaf2_legacy::
       "standard user management" usebundle => manage_users;
 
-    (testing|research).install_software.!NO_INSTALLS::
+    install_software.!NO_INSTALLS::
       "repository management" usebundle => manage_repositories;
 
     install_software.!NO_INSTALLS::

@@ -120,7 +120,11 @@ bundle agent autofs_vars(params)
       "autofs_master_file" string => "$(config_dir)/auto.master";
       "autofs_master_template" string => "$(templates_dir)/auto_master.tpl.txt";
 
+    uaf2_client::
       "autofs_map_files[/opt/homes]" string => "auto.opt_homes";
+
+    subnet_roose_private::
+      "autofs_map_files[/mnt/array]" string => "auto.targaryen_array";
 
     # any::
     #   # Copy configuration parameters passed into a local array

@@ -178,9 +178,9 @@ bundle agent ballast_vars
     # 	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
 
     os_tenant_cluster::
-      "config[data_host]" string => "$(os_metadata.ballastd_host_data)", # Using underlying OpenStack metadata, but needs to be called in template directly
+      "config[data_host]" string => "$(os_metadata.ballastd_ip)", # Using underlying OpenStack metadata, but needs to be called in template directly
+      # "config[data_host]" string => "10.10.10.28", # hardcoding ssh bastion for workaround with manual gateway
       	comment => "host name(s) and/or IP address(es) of Ballast server(s). No default";
-      # "config[data_host]" string => "10.10.10.10"; # hardcoding ssh bastion for testing
 
     any::
       ## SERVER/CLIENT SPECIFIC CONFIG PARAMETERS
@@ -214,7 +214,7 @@ bundle agent ballast_vars
       #              (example: load_hook /usr/local/bin/myload)";
       
       ## CLIENT SPECIFIC CONFIG PARAMETERS
-      "config[alias_domain]" string => ".$(sys.domain)",
+      "config[alias_domain]" string => ".$(global.cs_domain)",
 	comment => "domain for which aliases are relevant. No default
                   (value must begin with a period)";
       "config[alias_text]" string => "unavailable",

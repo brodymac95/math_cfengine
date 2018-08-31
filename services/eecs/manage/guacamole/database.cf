@@ -44,7 +44,7 @@ bundle agent configure_guac_database
         usebundle => guac_add_all_connections( "@(ballast_metrics.active_hosts)", "$(params)" ),
         classes => if_ok("connections_added");
 
-    connections_added::
+    update_user_lists.connections_added::
       "import and add all users into guacamole database"
         usebundle => guac_add_all_users( "@(ballast_metrics.active_hosts)", "$(params)" );
 
@@ -83,12 +83,13 @@ bundle agent guac_database_vars
      
       "user_cache_dir" string => "$(sys.workdir)/state/user_lists/";
       "student_csv_fixed_file" string => "cs_ece_ee_courses_fixed.csv";
-      "persistent_user_source_path" string => "/srv/cfengine/configs/user_lists/persistent_gateway_users.json";
+      "persistent_user_source_path" string => "/srv/user_lists/persistent_gateway_users.json";
 
     # development::
     #   "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_17fall_test_only.csv";
     # !development::
-      "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_CURRENT.csv";
+      # "its_student_user_source_path" string => "/srv/cfengine/configs/user_lists/cs_ece_ee_courses_CURRENT.csv";
+      "its_student_user_source_path" string => "/srv/user_lists/cs_ece_ee_courses.csv";
 
     any::
     ## USER PARAMETERS
