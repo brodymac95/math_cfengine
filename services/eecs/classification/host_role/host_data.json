@@ -137,7 +137,7 @@
 
     
     "SERVERS": {},
-    "policyhub_prod": {
+    "policyhub_legacy": {
 	"machine": "server",
 	"purpose": "infrastructure",
         "role": "policysrv",
@@ -391,7 +391,8 @@
 	"_internal_comment": "laptop has a NVIDIA Quatro FX 880M graphics. Can install nvidia-legacy-340xx-kernel-dkms, nvidia-settings-legacy-340xx but this causes a graphics issue when laptop attempts to wake from suspend mode"
     }
     "jb_258_3143_lab11": {
-	"machine": "workstation",
+	"_internal_comment" : "workstation needed SSH access in summer 2018, so is now a server",
+	"machine": "server",
 	"purpose": "research",
         "role": "matlab_desktop",
         "owner": "Kaushik_sinha",
