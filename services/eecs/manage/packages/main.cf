@@ -8,7 +8,7 @@
 bundle common packages_main_file_control
 {
   vars:
-    "input[ad]" string => "$(this.promise_dirname)/ad.cf";
+    # "input[ad]" string => "$(this.promise_dirname)/ad.cf";
     "input[custom_install]" string => "$(this.promise_dirname)/custom_install.cf";
     "input[deep_learning]" string => "$(this.promise_dirname)/deep_learning.cf";
     "input[install]" string => "$(this.promise_dirname)/installation.cf";
@@ -85,8 +85,8 @@ bundle agent manage_custom_packages
 
   methods:
 
-    ad_authentication::
-      "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
+    # ad_authentication::
+    #   "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
       
     ldap_removal::
       "remove old ldap config files and packages" usebundle => remove_ldap;

@@ -11,6 +11,7 @@ bundle common manage_main_file_control
 
 #    "input[testing]" string => "$(this.promise_dirname)/iptables/testing.cf";
 
+      "input[active_directory_auth]" string => "$(this.promise_dirname)/ad_auth/main.cf";
       "input[autostart]" string => "$(this.promise_dirname)/autostart/main.cf";
       "input[iptables]" string => "$(this.promise_dirname)/iptables/main.cf";
       "input[login_defaults]" string => "$(this.promise_dirname)/login_defaults/main.cf";
@@ -207,6 +208,9 @@ bundle agent manage_server_host
 
     tftp_server::
       "install and configure tftp server if defined in custom packages" usebundle => config_tftp_server;
+
+    ad_authentication::
+      "join host to ad domain" usebundle => join_host_to_ad;
 
     uaf2_client::
       "install and configure tom's uaf2_client if defined in custom packages" usebundle => install_uaf2_client;
