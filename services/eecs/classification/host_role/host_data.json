@@ -123,7 +123,7 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configuration": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "galileo", "fbreader", "cups-pdf", "android-tools-adb", "android-tools-fastboot", "firmware-iwlwifi", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "yubikey-personalization-gui", "galileo", "fbreader", "cups-pdf", "android-tools-adb", "android-tools-fastboot", "firmware-iwlwifi", ],
 	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", "java_bluej_ide", ],
      	"security": [ "linux_show_player", ],
     },
