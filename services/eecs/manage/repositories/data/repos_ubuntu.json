@@ -1,6 +1,6 @@
 {
     "repos_to_ensure": {	
-	"1001": {
+	"1000": {
 	    comment: "COMMENTED OUT: ubuntu-server 14.04 trusty cdrom",
 	    context: "ubuntu_14_4",
 	    url: "cdrom:[Ubuntu-Server 14.04.3 LTS _Trusty Tahr_ - Release amd64 (20150805)]/",
@@ -8,7 +8,7 @@
 	    components: [ "main", "restricted" ],
 	    types: [ "# deb" ],
 	},
-	"1101": {
+	"1401": {
 	    comment: "ubuntu 14.04 trusty standard repository",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -16,7 +16,7 @@
 	    components: [ "main", "restricted",  ],
 	    types: [ "deb", "deb-src" ],
 	},
-	"1102": {
+	"1402": {
 	    comment: "ubuntu 14.04 trusty security repository",
 	    context: "ubuntu_14_4",
 	    url: "http://security.ubuntu.com/ubuntu",
@@ -24,7 +24,7 @@
 	    components: [ "main", "restricted",  ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"1103": {
+	"1403": {
 	    comment: "ubuntu 14.04 trusty updates repository",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -32,7 +32,7 @@
 	    components: [ "main", "restricted" ],
 	    types: [ "deb", "deb-src" ],
 	},
-	"1104": {
+	"1404": {
 	    comment: "ubuntu 14.04 trusty universe and multiverse repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -40,7 +40,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"1105": {
+	"1405": {
 	    comment: "ubuntu 14.04 trusty universe and multiverse update repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -48,7 +48,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"1106": {
+	"1406": {
 	    comment: "ubuntu 14.04 trusty universe and multiverse security repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -56,7 +56,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"1107": {
+	"1407": {
 	    comment: "ubuntu 14.04 trusty all backports repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_14_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -64,7 +64,7 @@
 	    components: [ "main", "restricted", "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"1108": {
+	"1408": {
 	    comment: "COMMENTED OUT: ubuntu 16.04 trusty partner repository - not part of ubuntu",
 	    context: "ubuntu_14_4",
 	    url: "http://archive.canonical.com/ubuntu",
@@ -73,7 +73,7 @@
 	    types: [ "# deb", "# deb-src" ],
 	},
 	
-	"2001": {
+	"1600": {
 	    comment: "COMMENTED OUT: ubuntu-server 16.04 xenial cdrom",
 	    context: "ubuntu_16_4",
 	    url: "cdrom:[Ubuntu-Server 16.04.1 LTS _Xenial Xerus_ - Release amd64 (20160719)]/",
@@ -81,7 +81,7 @@
 	    components: [ "main", "restricted" ],
 	    types: [ "# deb" ],
 	},
-	"2101": {
+	"1601": {
 	    comment: "ubuntu 16.04 xenial standard repository",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -89,7 +89,7 @@
 	    components: [ "main", "restricted",  ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2102": {
+	"1602": {
 	    comment: "ubuntu 16.04 xenial security repository",
 	    context: "ubuntu_16_4",
 	    url: "http://security.ubuntu.com/ubuntu",
@@ -97,7 +97,7 @@
 	    components: [ "main", "restricted",  ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2103": {
+	"1603": {
 	    comment: "ubuntu 16.04 xenial updates repository",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -105,7 +105,7 @@
 	    components: [ "main", "restricted" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2104": {
+	"1604": {
 	    comment: "ubuntu 16.04 xenial universe and multiverse repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -113,7 +113,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2105": {
+	"1605": {
 	    comment: "ubuntu 16.04 xenial universe and multiverse update repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -121,7 +121,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2106": {
+	"1606": {
 	    comment: "ubuntu 16.04 xenial universe and multiverse security repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -129,7 +129,7 @@
 	    components: [ "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2107": {
+	"1607": {
 	    comment: "ubuntu 16.04 xenial all backports repositories - not fully supported by ubuntu team",
 	    context: "ubuntu_16_4",
 	    url: "http://us.archive.ubuntu.com/ubuntu/",
@@ -137,7 +137,7 @@
 	    components: [ "main", "restricted", "universe", "multiverse" ],
 	    types: [ "deb", "# deb-src" ],
 	},
-	"2108": {
+	"1608": {
 	    comment: "COMMENTED OUT: ubuntu 16.04 xenial partner repository - not part of ubuntu",
 	    context: "ubuntu_16_4",
 	    url: "http://archive.canonical.com/ubuntu",
@@ -145,10 +145,9 @@
 	    components: [ "partner" ],
 	    types: [ "# deb", "# deb-src" ],
 	},
-	
-	"5101": {
+	"1611": {
 	    comment: "ubuntu 16.04 xenial umake repository for development installations",
-	    context: "ubuntu_make",
+	    context: "ubuntu_16_4 & ubuntu_make",
 	    url: "http://ppa.launchpad.net/ubuntu-desktop/ubuntu-make/ubuntu",
 	    distribution: "xenial",
 	    components: [ "main" ],
@@ -157,9 +156,92 @@
 	    keyfile_fingerprint: "399B 698E EA9E F163 B6F9  A0F6 2CC9 8497 A123 1595",
 	},
 
+	"1800": {
+	    comment: "COMMENTED OUT: ubuntu-server 18.04 bionic cdrom",
+	    context: "ubuntu_18_4",
+	    url: "cdrom:[Ubuntu-Server 16.08.1 LTS _Bionic Beaver_ - Release amd64 (20180426)]/",
+	    distribution: "xenial",
+	    components: [ "main", "restricted" ],
+	    types: [ "# deb" ],
+	},
+	"1801": {
+	    comment: "ubuntu 18.04 bionic standard repository",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic",
+	    components: [ "main", "restricted",  ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1802": {
+	    comment: "ubuntu 18.04 bionic security repository",
+	    context: "ubuntu_18_4",
+	    url: "http://security.ubuntu.com/ubuntu",
+	    distribution: "bionic-security",
+	    components: [ "main", "restricted",  ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1803": {
+	    comment: "ubuntu 18.04 bionic updates repository",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic-updates",
+	    components: [ "main", "restricted" ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1804": {
+	    comment: "ubuntu 18.04 bionic universe and multiverse repositories - not fully supported by ubuntu team",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic",
+	    components: [ "universe", "multiverse" ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1805": {
+	    comment: "ubuntu 18.04 bionic universe and multiverse update repositories - not fully supported by ubuntu team",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic-updates",
+	    components: [ "universe", "multiverse" ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1806": {
+	    comment: "ubuntu 18.04 bionic universe and multiverse security repositories - not fully supported by ubuntu team",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic-security",
+	    components: [ "universe", "multiverse" ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1807": {
+	    comment: "ubuntu 18.04 bionic all backports repositories - not fully supported by ubuntu team",
+	    context: "ubuntu_18_4",
+	    url: "http://us.archive.ubuntu.com/ubuntu/",
+	    distribution: "bionic-backports",
+	    components: [ "main", "restricted", "universe", "multiverse" ],
+	    types: [ "deb", "# deb-src" ],
+	},
+	"1808": {
+	    comment: "COMMENTED OUT: ubuntu 18.04 bionic partner repository - not part of ubuntu",
+	    context: "ubuntu_18_4",
+	    url: "http://archive.canonical.com/ubuntu",
+	    distribution: "bionic",
+	    components: [ "partner" ],
+	    types: [ "# deb", "# deb-src" ],
+	},
+	"1811": {
+	    comment: "ubuntu 18.04 bionic umake repository for development installations",
+	    context: "ubuntu_18_4 & ubuntu_make",
+	    url: "http://ppa.launchpad.net/ubuntu-desktop/ubuntu-make/ubuntu",
+	    distribution: "bionic",
+	    components: [ "main" ],
+	    types: [ "deb", "deb-src" ],
+	    keyfile: "ubuntu_make.txt",
+	    keyfile_fingerprint: "399B 698E EA9E F163 B6F9  A0F6 2CC9 8497 A123 1595",
+	},
+
     	"8101": {
 	    comment: "External network WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, !subnet_cs_blue, !subnet_cs_pink",
+	    context: "wsu_local_repo & !subnet_cs_blue & !subnet_cs_pink",
 	    url: "http://baley-ext.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
@@ -169,7 +251,7 @@
 	},
     	"8102": {
 	    comment: "bluenet WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, subnet_cs_blue",
+	    context: "wsu_local_repo & subnet_cs_blue",
 	    url: "http://baley-blue.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
@@ -179,7 +261,7 @@
 	},
     	"8103": {
 	    comment: "pinknet WSU VTW10 Tom Wallis debian repository",
-	    context: "debian, subnet_cs_pink",
+	    context: "wsu_local_repo & subnet_cs_pink",
 	    url: "http://baley-pink.cs.wichita.edu/wsu/",
 	    distribution: "debian-wsu-local10",
 	    components: [ "main" ],
