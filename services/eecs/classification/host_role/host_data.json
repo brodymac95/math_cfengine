@@ -262,7 +262,7 @@
         "role": "rdpsrv",
         "owner": "kaushik_sinha",
 	"security": [ "ssh_public", "rdp_public", ],
-	"custom_packages": [ "ad_authentication", "deep_learning",  "ubuntu_make", ],
+	"custom_packages": [ "ad_authentication",  "ubuntu_make", ],
 	"authentication": "local_users_own_group",
 	"users": {
 	    "roose": "Ben Roose",
