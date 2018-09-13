@@ -238,6 +238,16 @@
 	    keyfile: "ubuntu_make.txt",
 	    keyfile_fingerprint: "399B 698E EA9E F163 B6F9  A0F6 2CC9 8497 A123 1595",
 	},
+	"2101": {
+	    comment: "sublime text application repo",
+	    context: "ubuntu_18_4 & sublime_text",
+	    url: "https://download.sublimetext.com/",
+	    distribution: "",
+	    components: [ "apt/stable/" ],
+	    types: [ "deb" ],
+	    keyfile: "sublimehq-pub.txt",
+	    keyfile_fingerprint: "1EDD E2CD FC02 5D17 F6DA  9EC0 ADAE 6AD2 8A8F 901A",
+	},
 
     	"8101": {
 	    comment: "External network WSU VTW10 Tom Wallis debian repository",

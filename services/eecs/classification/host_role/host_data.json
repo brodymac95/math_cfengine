@@ -261,7 +261,7 @@
 	"purpose": "research",
         "role": "rdpsrv",
         "owner": "kaushik_sinha",
-	"custom_packages": [ "ad_authentication",  "ubuntu_make", ],
+	"custom_packages": [ "ad_authentication",  "ubuntu_make", "sublime_text", "deep_learning", ],
 	"authentication": "local_users_own_group",
 	"users": {
 	    "roose": "Ben Roose",

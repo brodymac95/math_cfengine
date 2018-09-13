@@ -62,6 +62,7 @@ bundle agent install_deep_learning_packages
 				"python-matplotlib",
 				"python-biopython",
 				"ubuntu-make",
+				"sublime-text",
       };
 
       # deep learning software required - reverse order for installation?
