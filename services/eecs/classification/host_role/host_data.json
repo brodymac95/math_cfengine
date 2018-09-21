@@ -269,6 +269,7 @@
 	    "p862d927": "Kaushik Sinha",
 	    "p377z922": "Omid Keivani",
 	    "r465h499": "Sayan Bishnu",
+	    "e467z249": "Davis Peck",
 	},
     },
     "crypto_ltsp": {
@@ -389,6 +390,7 @@
 	"users": {
 	    "p862d927": "Kaushik Sinha",
 	    "p377z922": "Omid Keivani",
+	    "r465h499": "Sayan Bishnu",
 	},
 	"extra_repository_packages": [ "r-base", "python", "python-matplotlib", "ipython", "ipython-notebook", "python-pandas", "python-sympy", "python-scikits-learn", "python-libsvm", "python-pymc", "texworks", "nautilus-dropbox" ],
 	"custom_packages": [ "matlab_research", "deep_learning",  "ubuntu_make", "pip_pattern", "pip_orange", "texworks_dictionaries" ],

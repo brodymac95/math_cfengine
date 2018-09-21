@@ -5,7 +5,7 @@
         "output": "ACCEPT",
         "forward": "DROP"
     },
-
+    
     "filter_rules":
     {
         "1000":
