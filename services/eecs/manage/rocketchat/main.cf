@@ -1,0 +1,138 @@
+##############################################################################
+#
+#   manage/rocketchat/main.cf - EECS rocketchat installation and configuration
+#   Maintained: Ben Roose and WuLUG, ver 0.1
+#
+###############################################################################
+
+
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
+body file control
+{
+      inputs => { "$(sys.libdir)/stdlib.cf",
+		  "$(sys.workdir)/inputs/services/eecs/classification/host_role/main.cf" };
+}
+
+######################################################################
+# Public entry point: 
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. rocketchat debian installation: https://rocket.chat/docs/installation/manual-installation/debian/
+# 2. cfengine documentation: https://docs.cfengine.com/docs/3.12/
+
+
+# bundle agent rocketchat_server
+bundle agent rocketchat_server(state)
+# @description: if rocketchat can be run as a service, then use this high level bundle to control the rocketchat service. Bundle needs to be adjusted for rocketchat specifics
+{
+  vars:      
+      "rocketchat_exec" string => "/usr/sbin/rocketchat";
+
+  classes:
+      # DEFINE SERVER STATES
+      # "on"  expression => "any"; # use for testing only
+      "on"  expression => strcmp("$(state)","on");
+      "off" expression => strcmp("$(state)","off");
+
+      "rocketchat_exists"
+	expression => fileexists( "$(rocketchat_exec)" );
+
+  methods:
+
+    off.rocketchat_exists::
+      "ensure service is stopped if rocketchat_server is off"
+      	usebundle => standard_services( "rocketchat", "stop" ),
+      	classes => if_ok("rocketchat_server_off");
+
+    ## ENSURE SERVICES ARE RUNNING AND CONFIGURED
+    on.rocketchat_exists::
+      "ensure service is running if rocketchat_server is on"
+      	usebundle => standard_services( "rocketchat", "start" ),
+      	classes => if_ok("rocketchat_server_on");
+
+      "generate all rocketchat server variables"
+        usebundle => rocketchat_server_vars;
+
+      "configure rocketchat server"
+      	usebundle => rocketchat_server_configuration,
+      	classes => results("bundle", "rocketchat");
+      
+    on.rocketchat_repaired::
+      "restart rocketchat service after configuration"
+      	usebundle => standard_services( "rocketchat", "restart" ),
+      	classes => if_ok("rocketchat_server_restart");
+
+    ## INSTALL ALL SOFTWARE FOR ROCKETCHAT SERVER
+    on.install_software::
+      "generate all rocketchat server variables"  usebundle => rocketchat_server_vars;
+
+      "install dependent packages"
+    	usebundle => package_latest("$(rocketchat_server_vars.dependent_packages)"),
+        classes => results("bundle", "dependent_packages_install");
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_rocketchat_server)::
+      "=== $(this.bundle) ===";
+
+      "rocketchat server is not installed on this host"
+        ifvarclass => "!rocketchat_exists";
+      "rocketchat server is turned off"
+        ifvarclass => "rocketchat_server_off";
+      "rocketchat server is turned on and running"
+        ifvarclass => "rocketchat_server_on";
+      "rocketchat server restarted due to configuration change"
+        ifvarclass => "rocketchat_server_restart";
+      "$(rocketchat_server_vars.dependent_packages) installed"
+        ifvarclass => "dependent_packages_install_repaired";
+}
+
+######################################################################
+
+bundle agent rocketchat_server_vars
+# @description: use this bundle to store all required variables
+{
+      
+  vars:
+
+    ## INSTALL PARAMETERS FOR ROCKETCHAT REQUIRED PACKAGES
+    debian::
+      "dependent_packages" slist => { "mongodb", "curl", "graphicsmagick", "npm", "nodejs", },
+        comment => "set of apt packages required for server";
+
+    ## CONFIGURATION PARAMETERS FOR ROCKETCHAT
+      "example_var" string => "value";
+      
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+}
+
+######################################################################
+
+bundle agent rocketchat_server_configuration
+# @description: use this bundle to install and configure the custom rocketchat files.
+# To call a variable from bundle above, use $(rocketchat_server_vars.example_var)
+{
+      
+  vars:
+      
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_rocketchat_server)::
+      "=== $(this.bundle) ===";
+
+}
+
+######################################################################
