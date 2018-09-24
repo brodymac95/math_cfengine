@@ -54,7 +54,7 @@ bundle agent rocketchat_server(state)
         usebundle => rocketchat_server_vars;
 
       "configure rocketchat server"
-      	usebundle => rocketchat_server_configuration,
+      	usebundle => config_rocketchat_server,
       	classes => results("bundle", "rocketchat");
       
     on.rocketchat_repaired::
@@ -113,7 +113,7 @@ bundle agent rocketchat_server_vars
 
 ######################################################################
 
-bundle agent rocketchat_server_configuration
+bundle agent config_rocketchat_server
 # @description: use this bundle to install and configure the custom rocketchat files.
 # To call a variable from bundle above, use $(rocketchat_server_vars.example_var)
 {
