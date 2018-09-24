@@ -5,11 +5,6 @@
 #
 ###############################################################################
 
-
-
-# PROTIP: Use body file control to help make modular policy.
-# "There can be only one" body common control per policy entry (promises.cf,update.cf)
-
 # TESTING ONLY:INPUT STANDARD LIBRARY and HOST CLASSIFICATION (Remove after testing)
 body file control
 {
@@ -18,7 +13,7 @@ body file control
 }
 
 ######################################################################
-# Public entry point: 
+# Public entry point: rocketchat_server(on) OR rocketchat_server(off)
 ######################################################################
 
 # NOTES for future development of configuration:
