@@ -116,12 +116,14 @@
 
     "OPENSTACK": {}
     "os_kvm": {
+	"_internal_comment" : "os_kvm removed from cfengine control! This entry can be deleted"
 	"machine": "os_node",
 	"purpose": "infrastructure",
         "role": "undercloud",
         "owner": "eecs",
     },
     "os_director": {
+	"_internal_comment" : "os_kvm removed from cfengine control! This entry can be deleted"
 	"machine": "os_node",
 	"purpose": "infrastructure",
         "role": "undercloud",
@@ -129,6 +131,7 @@
 	"user_configuration": [ "roose", ],
     },
     "os_radosgw": {
+	"_internal_comment" : "os_kvm removed from cfengine control! This entry can be deleted"
 	"machine": "os_node",
 	"purpose": "infrastructure",
         "role": "undercloud",
@@ -193,6 +196,7 @@
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "kira": {
+	"_internal_comment" : "kira no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "teaching",
         "role": "ltspsrv",
@@ -202,6 +206,7 @@
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "kirk": {
+	"_internal_comment" : "kirk no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "teaching",
         "role": "ltspsrv",
@@ -229,6 +234,7 @@
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "sisko": {
+	"_internal_comment" : "sisko no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "teaching",
         "role": "ltspsrv",
@@ -238,6 +244,7 @@
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "spock": {
+	"_internal_comment" : "spock no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "teaching",
         "role": "ltspsrv",
@@ -247,6 +254,7 @@
 	"custom_packages": [ "ad_authentication", "python_graphics_lib", ],
     },
     "scotty": {
+	"_internal_comment" : "scotty no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "teaching",
         "role": "rdpsrv",
@@ -273,6 +281,7 @@
 	},
     },
     "crypto_ltsp": {
+	"_internal_comment" : "crypto no longer exists! This entry can be deleted"
 	"machine": "server",
 	"purpose": "research",
         "role": "filesrv_ldapsrv",
