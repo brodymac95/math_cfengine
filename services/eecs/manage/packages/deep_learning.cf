@@ -40,11 +40,14 @@ bundle agent install_deep_learning_packages
 				"python-pip",
 				"python-numpy",
 				"python-scipy",
+				"python-sklearn",
 				"python-nose",
 				"python-yaml",
 				"python-docopt",
 				"python-matplotlib",
 				"python-biopython",
+				"python-virtualenv",
+				"python-pip",
       };
 
     ubuntu::
@@ -56,11 +59,14 @@ bundle agent install_deep_learning_packages
 				"python-pip",
 				"python-numpy",
 				"python-scipy",
+				"python-sklearn",
 				"python-nose",
 				"python-yaml",
 				"python-docopt",
 				"python-matplotlib",
 				"python-biopython",
+				"python-virtualenv",
+				"python-pip",
 				"ubuntu-make",
 				"sublime-text",
       };
