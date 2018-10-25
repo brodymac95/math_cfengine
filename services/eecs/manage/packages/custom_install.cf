@@ -366,8 +366,8 @@ bundle agent cuda_by_example_vars(params)
 #        policy => "overridable";
       
     debian::
-      "conf[_dependent_packages]"  slist => { "nvidia-driver", "nvidia-cuda-toolkit", },
-        comment => "cuda_by_example depends on nvidia cuda compiler and gpu drivers",
+      "conf[_dependent_packages]"  slist => { "freeglut3-dev", "nvidia-driver", "nvidia-cuda-toolkit", },
+        comment => "cuda_by_example depends on OpenGL Utility Toolkit, nvidia cuda compiler and gpu drivers",
         policy => "overridable";
 
     any::
