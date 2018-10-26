@@ -59,6 +59,12 @@
         "role": "sensors",
         "owner": "Remi Chou",
     },
+    "wh_312_lab001": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "mobile_apps",
+        "owner": "Zhiyong Shan",
+    },
     "wh_330_a01": {
 	"machine": "workstation",
 	"purpose": "research",
