@@ -6,6 +6,13 @@
 	"link_type": "wireless",
 	"site": "off_campus"
     }
+    "192.168.85.0/24": {
+	"subnet_nickname": "roose_private",
+	"location": "roose_pan",
+	"vlan": "no_vlan",
+	"link_type": "wireless",
+	"site": "off_campus"
+    }
 
     "156.26.10.0/25": {
 	"subnet_nickname": "cs_blue",

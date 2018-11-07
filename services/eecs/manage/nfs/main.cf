@@ -125,6 +125,7 @@ bundle agent autofs_vars(params)
 
     subnet_roose_private::
       "autofs_map_files[/mnt/array]" string => "auto.targaryen_array";
+      "autofs_map_files[/mnt/tinydata]" string => "auto.tiny_data";
 
     # any::
     #   # Copy configuration parameters passed into a local array
