@@ -65,6 +65,24 @@
         "role": "mobile_apps",
         "owner": "Zhiyong Shan",
     },
+    "wh_312_lab002": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "mobile_apps_laptop",
+        "owner": "Zhiyong Shan",
+    },
+    "wh_312_lab003": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "mobile_apps_laptop",
+        "owner": "Zhiyong Shan",
+    },
+    "wh_312_lab004": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "mobile_apps_laptop",
+        "owner": "Zhiyong Shan",
+    },
     "wh_330_a01": {
 	"machine": "workstation",
 	"purpose": "research",
