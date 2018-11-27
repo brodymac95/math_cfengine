@@ -59,12 +59,6 @@
         "role": "sensors",
         "owner": "Remi Chou",
     },
-    "wh_303_lab001": {
-	"machine": "workstation",
-	"purpose": "research",
-        "role": "robotics",
-        "owner": "Hongsheng He",
-    },
     "wh_312_lab001": {
 	"machine": "server",
 	"purpose": "research",
@@ -108,6 +102,12 @@
         "owner": "Hongsheng He",
     },
     "wh_330_3053_r04": {
+	"machine": "workstation",
+	"purpose": "research",
+        "role": "robotics",
+        "owner": "Hongsheng He",
+    },
+    "wh_330_3053_r05": {
 	"machine": "workstation",
 	"purpose": "research",
         "role": "robotics",
