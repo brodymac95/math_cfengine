@@ -43,8 +43,15 @@
 	"site": "jabara_hall"
     }
 
+    "172.16.0.0/16": {
+	"subnet_nickname": "wsu_private_net1",
+	"location": "WH_research_labs",
+	"vlan": "undefined",
+	"link_type": "wired",
+	"site": "Wallace_hall"
+    }
     "172.18.208.0/24": {
-	"subnet_nickname": "wsu_labs",
+	"subnet_nickname": "wsu_private_net2",
 	"location": "EE_328",
 	"vlan": "undefined",
 	"link_type": "wired",
@@ -57,7 +64,7 @@
 	"link_type": "wireless",
 	"site": "campus_wide"
     }
-    "10.1.1.0/24": {
+    "10.250.0.0/24": {
 	"subnet_nickname": "wsu_vpn",
 	"location": "off_campus",
 	"vlan": "undefined",

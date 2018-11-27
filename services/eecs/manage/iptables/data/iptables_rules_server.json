@@ -17,9 +17,17 @@
         },
         "2":
         {
-	    "comment": "allow incoming SSH from WSU wired public network"
+	    "comment": "allow incoming SSH from WSU public and private networks"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,172.0.0.0/8",
+            "destination_port": "22",
+            "target": "ACCEPT",
+        },
+        "3":
+        {
+	    "comment": "allow incoming SSH from WSU VPN private network"
+            "chain": "INPUT"
+            "source_ip": "10.250.0.0/24",
             "destination_port": "22",
             "target": "ACCEPT",
         },
@@ -27,7 +35,7 @@
         {
 	    "comment": "allow incoming CFEngine connections for policy_server only"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,172.0.0.0/8,10.250.0.0/24",
             "destination_port": "5308",
             "target": "ACCEPT",
 	    "context": "policy_server",

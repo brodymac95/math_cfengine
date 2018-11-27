@@ -92,7 +92,21 @@ bundle common def
                    # ".*$(def.domain)",
 
                    # Assume /16 LAN clients to start with
+		   # WSU public network 156.26.0.0/16 if policy hub sits on that IP range
                    "$(sys.policy_hub)/16",
+
+                   # allow for OpenStack provisioning subnet in datacentre (VLAN 973)
+		   "192.168.251.0/24",
+
+		   # allow for WSU internal "labs" private subnet (used in Wallace Hall)
+		   "172.16.0.0/16",
+		   # allow for WSU internal "labs" private subnet (used in Experiential Engineering Building)
+		   "172.18.0.0/16",
+
+		   # allow for wsu-secure wireless and vpn subnets
+		   "172.27.0.0/16",
+		   # "10.1.1.0/24", # OLD WSU VPN - NO LONGER USED
+		   "10.250.0.0/24", # NEW WSU VPN
 
                    # Uncomment below if HA is used
                    #"@(def.policy_servers)"
