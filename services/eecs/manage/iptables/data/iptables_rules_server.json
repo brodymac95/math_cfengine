@@ -40,7 +40,28 @@
             "target": "ACCEPT",
 	    "context": "policy_server",
         },
-        "1000":
+
+        "201":
+        {
+	    "comment": "allow incoming HTTP from WSU networks for wsu_web_access"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16,172.0.0.0/8,10.250.0.0/24",
+            "destination_port": "80",
+            "target": "ACCEPT",
+	    "context": "wsu_web_access"
+        },
+        "202":
+        {
+	    "comment": "allow incoming HTTPS from WSU networks for wsu_web_access"
+            "chain": "INPUT"
+            "source_ip": "156.26.0.0/16,172.0.0.0/8,10.250.0.0/24",
+            "destination_port": "443",
+            "target": "ACCEPT",
+	    "context": "wsu_web_access"
+        },
+
+
+	"1000":
         {
 	    "comment": "final INPUT rule REJECTS all other connections"
             "chain": "INPUT",
