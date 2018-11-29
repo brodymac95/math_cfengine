@@ -42,9 +42,9 @@
         },  
         "1021":
         {
-	    "comment": "allow incoming SSH from WSU wired public network for any server host"
+	    "comment": "allow incoming SSH from WSU wired public and private networks for any server host"
             "chain": "INPUT"
-            "source_ip": "156.26.0.0/16",
+            "source_ip": "156.26.0.0/16,172.0.0.0/8,10.250.0.0/24",
             "destination_port": "22",
             "target": "ACCEPT",
         },

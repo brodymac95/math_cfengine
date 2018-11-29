@@ -99,12 +99,14 @@ bundle common def
 		   # allow for OpenStack provisioning subnet in datacentre (VLAN 973)
 		   "192.168.251.0/24",
 
-		   # allow for WSU internal "labs" subnet (used in the EEB building)
+		   # allow for WSU internal "labs" private subnet (used in Wallace Hall)
+		   "172.16.0.0/16",
+		   # allow for WSU internal "labs" private subnet (used in Experiential Engineering Building)
 		   "172.18.0.0/16",
 
 		   # allow for wsu-secure wireless and vpn subnets
 		   "172.27.0.0/16",
-		   # "10.1.1.0/24", # OLD WSU VPN
+		   # "10.1.1.0/24", # OLD WSU VPN - NO LONGER USED
 		   "10.250.0.0/24", # NEW WSU VPN
 		   
                    # Uncomment below if HA is used
@@ -133,10 +135,13 @@ bundle common def
         slist => {
                    # COMMENT THE NEXT LINE OUT AFTER ALL MACHINES HAVE BEEN BOOTSTRAPPED.
                    #"0.0.0.0/0", # allow any IP
-		   
+
+		   ## BOOTSTRAPPING IP RANGES
 		   "156.26.10.0/25", # allow only CS bluenet IPs to be trusted for bootstrapping
 		   "156.26.250.0/25", # allow only CS data center public IPs to be trusted for bootstrapping
 		   "192.168.251.0/24", # allow only OpenStack provisioning subnet in datacentre (VLAN 973)
+
+		   "10.250.0.0/24", # allow from WSU VPN subnet
 
 		   #"172.18.208.152/32", # TURNED OFF: allow bootstrapping barclay VM server in R&S lab, EE-328D
         },
