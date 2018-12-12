@@ -31,8 +31,6 @@ bundle agent install_matlab
       "matlab_dir" string =>"/opt/matlab/";     
       "executable_link" string =>"/usr/local/bin/matlab";
 
-      "params" string => "matlab_vars";
-
   classes: 
       # "matlab_dir_is_present"
       # expression => fileexists("$(matlab_dir)");
@@ -40,19 +38,19 @@ bundle agent install_matlab
       #   expression => fileexists("$(executable_link)");
 
       "install_dir_exists"
-	expression => fileexists( "$(params).install_unrolled_dir)/." );
+	expression => fileexists( "$(matlab_vars.install_unrolled_dir)/." );
 
       "app_exec_file_exists"
-        and => { fileexists( "$($(params).app_exec_file)" ), };
+        expression => fileexists( "$(matlab_vars.app_exec_file)" );
 
       
   methods:
-      "generate all matlab variables"  usebundle => $(params),
+      "generate all matlab variables"  usebundle => matlab_vars,
         inherit => "true";
 
     install_software::
       "install dependent packages"
-    	usebundle => package_latest("$(params).dependent_packages)"),
+    	usebundle => package_latest( "$(matlab_vars.dependent_packages)" ),
         classes => results("bundle", "dependent_packages_install"),
         comment => "pull package list from matlab_vars";
 
@@ -60,12 +58,12 @@ bundle agent install_matlab
      # DOWNLOAD INSTALLATION TARBALL
     !install_dir_exists::
       "download and expand matlab installation tarball"
-    	usebundle => install_tarball_v2( "$($(params).install_tarball_path)", "$($(params).install_server)","$($(params).install_dir)" );
+    	usebundle => install_tarball_v2( "$(matlab_vars.install_tarball_path)", "$(matlab_vars.install_server)","$(matlab_vars.install_dir)" );
         # classes => results("bundle", "install_tarball");
 
     install_dir_exists.!app_exec_file_exists::
       "Install matlab to /opt from expanded tarball on local system"
-      usebundle => matlab_installer("$(params)");
+      usebundle => matlab_installer("matlab_vars");
 
 #      "matlab_tidy" usebundle => matlab_tidy("matlab_vars.conf");
 
@@ -89,21 +87,21 @@ bundle agent matlab_vars
 
       ## TARBALL INSTALL VARS
       "install_server"  string => "$(sys.policy_hub)";
-      "install_tarball_path"  string => "/srv/cfengine/packages/matlab_installer.tar.gz";
+      "install_tarball_path"  string => "/srv/cfengine/packages/matlab_2018b.tar.bz";
       "install_dir"  string => "/root/";
-      "install_unrolled_dir"  string => "$(install_dir)/matlab2015_installer/";
+      "install_unrolled_dir"  string => "/root/matlab_2018b/";
+      "matlab_installer_dir" string => "/root/matlab_2018b/matlab_R2018b_glnxa64/";
 
       ## MATLAB INSTALL VARS
       "matlab_dir" string =>"/opt/matlab/";
       "matlab_exec_binary" string =>"$(matlab_dir)bin/matlab";
       "matlab_system_exec" string =>"/usr/local/bin/matlab";
       "app_exec_file" string =>"$(matlab_system_exec)";
-      
-      "template_installer_file" string => "$(this.promise_dirname)/matlab_installer.mustache";
-      "matlab_installer_file" string => "installer.txt";
+      "template_installer_file" string => "$(this.promise_dirname)/data/matlab_installer_input.mustache";
+      "matlab_installer_file" string => "$(matlab_installer_dir)/installer_input.txt";
       "installer_log_file" string => "/var/log/matlab_install.log";
 
-      "desktop_icon_file" string =>"matlab.png";
+      "desktop_icon_file" string =>"$(install_unrolled_dir)/desktop_files/matlab.png";
       "desktop_file_install_location" string =>"/usr/share/applications/matlab.desktop";
       "desktop_icon_install_location" string =>"/usr/share/pixmaps/matlab.png";
 
@@ -117,14 +115,14 @@ bundle agent matlab_vars
       #   policy => "overridable";
 
     matlab_research::
-      "license_key" string =>"34128-40921-39156-38420-24841-17749-28780-12545-16055-45535-20492";
-      "license_file" string =>"$(install_unrolled_dir)license_research/license.dat";
-      "desktop_file" string =>"matlab-r.desktop";
+      "license_key" string =>"52293-04575-49632-23146-03172-45066-24293-53219-19492-53259-47241-14834-26648-08458";
+      "license_file" string =>"$(install_unrolled_dir)/research/license.dat";
+      "desktop_file" string =>"$(install_unrolled_dir)/desktop_files/matlab-r.desktop";
       
     matlab_classroom::
-      "license_key" string =>"30975-39490-53803-34518-40127";
-      "license_file" string =>"$(install_unrolled_dir)license_classroom/license.dat";
-      "desktop_file" string =>"matlab-c.desktop";
+      "license_key" string =>"38706-15056-64528-12027-57898-29661";
+      "license_file" string =>"$(install_unrolled_dir)/classroom/license.dat";
+      "desktop_file" string =>"$(install_unrolled_dir)/desktop_files/matlab-c.desktop";
 
     # any::   
     #   # Copy configuration parameters passed, into a local array
@@ -217,7 +215,7 @@ bundle agent matlab_installer(params)
         expression => fileexists( "$($(params).install_unrolled_dir)" );
 
       "matlab_installer_file_exists"  
-        expression => fileexists( "$($(params).install_unrolled_dir)$($(params).matlab_installer_file)" );
+        expression => fileexists( "$($(params).matlab_installer_file)" );
 
       "matlab_dir_exists"
         expression => fileexists( "$($(params).matlab_dir)" );
@@ -231,7 +229,7 @@ bundle agent matlab_installer(params)
 
   files:
     matlab_src_dir_exists.!matlab_installer_file_exists::
-      "$($(params).unrolled_dir)$($(params).matlab_installer_file)"
+      "$($(params).matlab_installer_file)"
         create => "true",
         perms => mog ("644", "root", "root"),
         edit_defaults => empty,
@@ -260,19 +258,20 @@ bundle agent matlab_installer(params)
         comment => "create symbolic link for system binaries: /usr/local/bin/matlab link to /opt/matlab/bin/matlab";
 
       "$($(params).desktop_file_install_location)"
-      copy_from => local_cp("$($(params).install_unrolled_dir)$($(params).desktop_file)"),
+      copy_from => local_cp("$($(params).desktop_file)"),
       perms => mog("644", "root", "root"),
       comment => "copy the desktop file into the system's applications directory for GUI users";
 
       "$($(params).desktop_icon_install_location)"
-      copy_from => local_cp("$($(params).unrolled_dir)$($(params).desktop_icon_file)"),
+      copy_from => local_cp("$($(params).desktop_icon_file)"),
       perms => mog("644", "root", "root"),
       comment => "copy the desktop icon file into the system's pixmaps directory for GUI users";
 
   commands:
     (matlab_src_dir_exists.matlab_installer_file_exists).!(matlab_dir_exists.matlab_exec_binary_exists):: 
-      "./install -inputFile $($(params).matlab_installer_file)"
-      contain => in_dir_shell("$($(params).install_unrolled_dir)"),
+      "./install -inputFile installer_input.txt"
+      # "./install -inputFile $($(params).matlab_installer_file)"
+      contain => in_dir_shell("$($(params).matlab_installer_dir)"),
       comment => "non-interactively install matlab to $($(params).matlab_dir).";
 
   reports:
