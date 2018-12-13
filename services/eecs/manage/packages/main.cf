@@ -11,6 +11,7 @@ bundle common packages_main_file_control
     # "input[ad]" string => "$(this.promise_dirname)/ad.cf";
     "input[custom_install]" string => "$(this.promise_dirname)/custom_install.cf";
     "input[deep_learning]" string => "$(this.promise_dirname)/deep_learning.cf";
+    "input[matlab_install]" string => "$(this.promise_dirname)/matlab.cf";
     "input[standard_install]" string => "$(this.promise_dirname)/installation.cf";
     "input[ldap_removal]" string => "$(this.promise_dirname)/ldap_removal.cf";
     #"input[upgrade]" string => "$(this.promise_dirname)/packages/upgrades.cf";
@@ -88,6 +89,9 @@ bundle agent manage_custom_packages
     # ad_authentication::
     #   "configure sssd or kerberos and join host to ad domain" usebundle => join_host_to_ad;
       
+    matlab_classroom|matlab_research::
+      "install matlab with classroom or research license" usebundle => install_matlab;
+
     ldap_removal::
       "remove old ldap config files and packages" usebundle => remove_ldap;
 

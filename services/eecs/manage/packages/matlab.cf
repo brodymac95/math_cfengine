@@ -263,7 +263,7 @@ bundle agent matlab_installer(params)
 
       "$($(params).matlab_installer_file)"
         create => "true",
-        perms => mog ("644", "root", "root"),
+        perms => mog ("755", "root", "root"),
         edit_defaults => empty,
         template_method => "mustache",
         edit_template => "$($(params).template_installer_file)",
@@ -382,13 +382,5 @@ body link_from hard_linkchildren(tofile)
 #       "$(this.bundle): Activated";
 
 # }
-
-#############################################
-
-body file_select minutes_old(min)
-{
-      mtime       => irange(0,ago(0,0,0,0,"$(min)",0));
-      file_result => "mtime";
-}
 
 #############################################
