@@ -27,18 +27,18 @@ bundle agent install_matlab
 
   vars:
       # intial variables for testing if matlab is installed
-      #(NOTE: this bundle needs adjusting if we wish these variables to override what is in the matlab_vars bundle!
       "matlab_dir" string =>"/opt/matlab/";     
       "executable_link" string =>"/usr/local/bin/matlab";
 
-  classes: 
-      # "matlab_dir_is_present"
-      # expression => fileexists("$(matlab_dir)");
-      # "executable_link_is_present"
-      #   expression => fileexists("$(executable_link)");
+      "disk_space_available" int => diskfree("$(matlab_vars.install_dir)");
+
+  classes:
+      "disk_space_check_passed"
+        expression => isgreaterthan( $(disk_space_available), $(matlab_vars.disk_space_required) ),
+        comment => "sanity-check for enough free space to install matlab on system";
 
       "install_dirs_exist"
-	expression => filesexist( "@(matlab_vars.all_install_dirs)" );
+	expression => filesexist( "@(matlab_vars.all_install_dirs_for_check)" );
 
       "app_exec_file_exists"
         expression => fileexists( "$(matlab_vars.app_exec_file)" );
@@ -56,36 +56,37 @@ bundle agent install_matlab
 
       
      # DOWNLOAD INSTALLATION TARBALL
-    !install_dirs_exist::
+    !install_dirs_exist.disk_space_check_passed::
       "download and uncompress matlab installation tarball file"
       	usebundle => install_tarball_v2( "$(matlab_vars.all_install_paths)", "$(matlab_vars.install_server)", "$(matlab_vars.install_dir)" );
         # classes => results("bundle", "install_tarball");
 
     install_dirs_exist::
       "Install matlab to /opt from expanded tarball on local system"
-      usebundle => matlab_installer("matlab_vars");
+        usebundle => matlab_installer("matlab_vars");
 
-#      "matlab_tidy" usebundle => matlab_tidy("matlab_vars.conf");
+    app_exec_file_exists::
+      "After Matlab is installed, make sure to delete all installation files"
+        usebundle => matlab_tidy("matlab_vars");
 
   reports:
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 
     DEBUG|DEBUG_install_matlab::
-
-      # "install dirs exist: $(matlab_vars.all_install_dirs)"
-      #   ifvarclass => "install_dirs_exist";
-
-      "$(this.bundle): matlab already installed at $(matlab_vars.matlab_app_dir)"
+      "=== $(this.bundle) ===";
+      "matlab already installed at $(matlab_vars.matlab_app_dir)"
         ifvarclass => "app_exec_file_exists";
+
+      "Not enough disk space available to install matlab!"
+        ifvarclass => not( "disk_space_check_passed" );
 }
 
 #############################################
 
 bundle agent matlab_vars
 {
-  vars:
-  
+  vars:  
       "dependent_packages" slist => { "default-jre", };
 
       ## TARBALL INSTALL VARS
@@ -95,12 +96,15 @@ bundle agent matlab_vars
       "install_dvd2_tarball_path"  string => "http://www.cs.wichita.edu/~roose/matlab_2018b/matlab_2018b_dvd2.tar.xz";
       "all_install_paths" slist => { $(install_licenses_tarball_path), $(install_dvd1_tarball_path), $(install_dvd2_tarball_path) };
 
+      "disk_space_required" int => "40000000"; # Needs to be defined in KB
+      
       "install_dir"  string => "/root/";
 
       "licenses_dir"  string => "/root/matlab_2018b_licenses";
       "dvd1_dir"  string => "/root/matlab_2018b_dvd1";
       "dvd2_dir"  string => "/root/matlab_2018b_dvd2";
-      "all_install_dirs" slist => { "$(licenses_dir)/.", "$(dvd1_dir)/.", "$(dvd2_dir)/.", };
+      "all_install_dirs" slist => { "$(licenses_dir)", "$(dvd1_dir)", "$(dvd2_dir)", };
+      "all_install_dirs_for_check" slist => { "$(licenses_dir)/.", "$(dvd1_dir)/.", "$(dvd2_dir)/.", };
       
       "matlab_install_dir" string => "/root/matlab_2018b/";
 
@@ -146,77 +150,6 @@ bundle agent matlab_vars
     (inform_mode|verbose_mode)::
       "$(this.bundle): Activated";
 }
-
-# bundle agent matlab_report_params(params)
-# {
-#   vars:
-#       "keys" slist => getindices("$(params)");
-
-#   reports:
-#     cfengine_3::
-#       "$(keys) = $($(params)[$(keys)])";
-# }
-
-# bundle agent matlab_packages_installed(params)
-# {
-#   vars:
-#     debian::  
-#       "desired_package" slist => { 
-# 				   "default-jre",
-# 				   "tar",
-#       };
-#     redhat::
-#       "desired_package" slist => {
-# 	# ??
-#       };
-
-#   packages:  
-#       "$(desired_package)"
-#         policy => "present",
-#         package_module => apt_get,
-#         version => "latest",
-#         comment => "MatLab depends on Java Runtime";
-
-#   reports:
-#     (inform_mode|verbose_mode)::
-#       "$(this.bundle): Activated";
-
-# }
-
-# #############################################
-
-# bundle agent matlab_tarball_is_present(params)
-# {
-#   classes: 
-#       "matlab_tarball_is_present"
-#         expression => fileexists("$($(params)[_install_dir])$($(params)[_tarball])");
-
-#       "matlab_src_dir_is_present"
-#         expression => fileexists("$($(params)[_unrolled_dir])");
-
-#   files: 
-#     !matlab_tarball_is_present::
-#       "$($(params)[_install_dir])$($(params)[_tarball])"
-#         copy_from => secure_cp("$($(params)[_download_file])", "$($(params)[_download_server])"),
-#         comment => "Copying MatLab installer file from source server.";
-
-#   commands:
-#     matlab_tarball_is_present.!matlab_src_dir_is_present::
-#       "/bin/tar -xzf $($(params)[_tarball])"
-#         contain => in_dir_shell("$($(params)[_install_dir])"),
-#         comment => "Unrolling matlab installer tarball to $($(params)[_install_dir])";
-
-#   reports:
-#     (inform_mode|verbose_mode)::
-#       "$(this.bundle): Activated";
-
-#     DEBUG.matlab_tarball_is_present::
-#       "MatLab tarball is on disk.";
-
-#     DEBUG.matlab_src_dir_is_present::
-#       "MatLab unrolled/untarred directory is present.";
-
-# }
 
 #############################################
 
@@ -271,25 +204,11 @@ bundle agent matlab_installer(params)
         comment => "Expand non-interactive matlab installer file into install dir from template in this promise dir";
 
     matlab_exec_binary_exists::
-      # "$($(params).matlab_app_dir)"
-      #   perms => mog("755", "root", "root"),
-      #   file_select => dirs,
-      #   depth_search => recurse("inf"),
-      #   comment => "make sure matlab sub-directories can be accessed by all users";
-
       "$($(params).matlab_app_dir)"
         perms => mog("755", "root", "root"),
         # file_select => plain,
         depth_search => recurse("inf"),
         comment => "make sure files in matlab directories can be accessed by all users";
-
-      # "$($(params).matlab_app_dir)/bin"
-      #   perms => mog("755", "root", "root"),
-      #   comment => "make sure matlab/bin directory can be accessed by all users";
-
-      # "$($(params).matlab_exec_binary)"
-      #   perms => mog("755", "root", "root"),
-      #   comment => "make sure matlab binary file can be accessed and run by all users";
 
       "$($(params).matlab_system_exec)"
         move_obstructions => "true",
@@ -308,7 +227,6 @@ bundle agent matlab_installer(params)
 
   commands:
     matlab_installer_file_exists.!matlab_exec_binary_exists:: 
-      # "./install -inputFile installer_input.txt"
       "./install -inputFile $($(params).matlab_installer_file)"
         contain => in_dir_shell("$($(params).matlab_install_dir)"),
         comment => "non-interactively install matlab to $($(params).matlab_app_dir).";
@@ -329,58 +247,40 @@ bundle agent matlab_installer(params)
 
 #############################################
 
-body link_from hard_linkchildren(tofile)
+bundle agent matlab_tidy(params)
 {
-# @Description: using the standard library linkchildren body, but creating hardlinks!
-      source         => "$(tofile)";
-      link_type      => "hardlink";
-      when_no_source => "force";
-      link_children  => "true";
-      when_linking_children => "if_no_such_file"; # "override_file";
+  vars:  
+      "all_install_dirs" slist => { "@($(params).all_install_dirs)", "$($(params).matlab_install_dir)" };
+      
+  classes:
+      "matlab_install_dir_exists"
+        expression => fileexists( "$($(params).matlab_install_dir)/." );
+      
+  files:
+    matlab_install_dir_exists::
+      "$(all_install_dirs)"
+        pathtype => "literal",
+        delete => tidy,
+        file_select => plain,
+        depth_search => recurse("inf"),
+        comment => "Remove all installation files";
+
+      "$(all_install_dirs)"
+        pathtype => "literal",
+        delete => tidy,
+        file_select => dirs,
+        depth_search => recurse("inf"),
+        comment => "Remove all installation sub-directories";
+
+      "$(all_install_dirs)/."
+        pathtype => "literal",
+        delete => tidy,
+        file_select => dirs,
+        comment => "Remove all installation directories";
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
 }
-
-
-#############################################
-
-# bundle agent matlab_tidy(params)
-# {
-#   classes:
-#       "matlab_install_dir_exists"  
-#         expression => fileexists("$($(params)[_unrolled_dir])");
-
-#       "matlab_tarball_exists"
-#         expression => fileexists("$($(params)[_install_dir])$($(params)[_tarball])");
-
-#   reports:
-#     DEBUG.!matlab_install_dir_exists.!matlab_tarball_exists::
-#       "MatLab installer files have been removed.";
-
-#   files:
-#     matlab_install_dir_exists::
-#       "$($(params)[_unrolled_dir])"
-#         pathtype => "literal",
-#         delete => tidy,
-#         file_select => minutes_old(20),
-#         depth_search => recurse("inf"),
-#         comment => "Remove all files within $($(params)[_unrolled_dir]) created in last 20 minutes.";
-
-#       "$($(params)[_unrolled_dir])"
-#         pathtype => "literal",
-#         delete => tidy,
-#         file_select => minutes_old(20),
-#         depth_search => include_base,
-#         comment => "Remove the directory $($(params)[_unrolled_dir]).";
-
-# #    matlab_tarball_exists::
-# #      "$($(params)[_install_dir])$($(params)[_tarball])"
-# #        pathtype => "literal",
-# #        delete => tidy,
-# #        comment => "Remove $($(params)[_tarball]).";
-
-#   reports:
-#     (inform_mode|verbose_mode)::
-#       "$(this.bundle): Activated";
-
-# }
 
 #############################################
