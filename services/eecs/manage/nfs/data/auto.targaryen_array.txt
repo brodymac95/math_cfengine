@@ -1,4 +1,5 @@
 ## auto.targaryen_array manged by CFEngine
-audio -fstype=nfs4 -rw,intr,soft 192.168.80.2:/export/audio
-data -fstype=nfs4 -rw,intr,soft 192.168.80.2:/export/data
-video -fstype=nfs4 -rw,intr,soft 192.168.80.2:/export/video
+audio -fstype=nfs4 -rw,intr,soft srv1.lan:/export/audio
+data -fstype=nfs4 -rw,intr,soft srv1.lan:/export/data
+video -fstype=nfs4 -rw,intr,soft srv1.lan:/export/video
+software -fstype=nfs4 -rw,intr,soft srv1.lan:/export/software
