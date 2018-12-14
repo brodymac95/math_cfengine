@@ -91,6 +91,13 @@
 	},
 	"custom_packages": [ "deep_learning", "ubuntu_make", ],
     },
+    "matlab_test": {
+	"machine": "server",
+	"purpose": "testing",
+        "role": "testing-matlab",
+        "owner": "eecs",
+	"custom_packages": [ "matlab_research", ],
+    },
 
     "oldtesting": {
 	"machine": "server",
@@ -123,8 +130,8 @@
 	    "roose": "Ben Roose",
 	},
 	"user_configuration": [ "roose", ],
-	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "yubikey-personalization-gui", "galileo", "fbreader", "cups-pdf", "android-tools-adb", "android-tools-fastboot", "firmware-iwlwifi", ],
-	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", "java_bluej_ide", ],
+	"extra_repository_packages": [ "lightdm", "i3", "feh", "volti", "network-manager-gnome", "keychain", "thunar", "rdesktop", "octave", "asunder", "audacity", "soundconverter", "git", "vlc", "vlc-plugin-access-extra", "yubikey-personalization-gui", "galileo", "fbreader", "cups-pdf", "android-tools-adb", "android-tools-fastboot", "firmware-iwlwifi", ],
+	"custom_packages": [ "linux_show_player", "etc_offline_editor", "skype", "zoom", "java_bluej_ide", ],
      	"security": [ "linux_show_player", ],
     },
    "jb_223_3432_lt2": {
