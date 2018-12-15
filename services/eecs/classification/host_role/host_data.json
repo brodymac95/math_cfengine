@@ -269,7 +269,7 @@
 	"purpose": "research",
         "role": "rdpsrv",
         "owner": "kaushik_sinha",
-	"custom_packages": [ "ad_authentication",  "ubuntu_make", "sublime_text", "deep_learning", ],
+	"custom_packages": [ "ad_authentication",  "ubuntu_make", "sublime_text", "deep_learning", "matlab_research", ],
 	"authentication": "local_users_own_group",
 	"users": {
 	    "roose": "Ben Roose",
@@ -278,6 +278,7 @@
 	    "p377z922": "Omid Keivani",
 	    "r465h499": "Sayan Bishnu",
 	    "e467z249": "Davis Peck",
+	    "pram": "Parikshit Ram",
 	},
     },
     "crypto_ltsp": {

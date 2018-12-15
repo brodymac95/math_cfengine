@@ -56,12 +56,12 @@ bundle agent install_matlab
 
       
      # DOWNLOAD INSTALLATION TARBALL
-    !install_dirs_exist.disk_space_check_passed::
+    !install_dirs_exist.!app_exec_file_exists.disk_space_check_passed::
       "download and uncompress matlab installation tarball file"
       	usebundle => install_tarball_v2( "$(matlab_vars.all_install_paths)", "$(matlab_vars.install_server)", "$(matlab_vars.install_dir)" );
         # classes => results("bundle", "install_tarball");
 
-    install_dirs_exist::
+    install_dirs_exist|app_exec_file_exists::
       "Install matlab to /opt from expanded tarball on local system"
         usebundle => matlab_installer("matlab_vars");
 
@@ -176,12 +176,13 @@ bundle agent matlab_installer(params)
 
 
   files:
+    !matlab_exec_binary_exists::
       "$($(params).matlab_install_dir)/."
         create => "true",
         perms => mog("755", "root", "root"),
         comment => "ensure the installation directory exists";
 
-    matlab_install_dir_exists::
+    matlab_install_dir_exists.!matlab_exec_binary_exists::
       "$($(params).matlab_install_dir)"
         link_from => hard_linkchildren("$($(params).dvd1_dir)"),
         # link_from => linkfrom( "$($(params).dvd1_dir)", "hardlink" ),
@@ -207,7 +208,7 @@ bundle agent matlab_installer(params)
       "$($(params).matlab_app_dir)"
         perms => mog("755", "root", "root"),
         # file_select => plain,
-        depth_search => recurse("inf"),
+        depth_search => recurse_with_base("inf"),
         comment => "make sure files in matlab directories can be accessed by all users";
 
       "$($(params).matlab_system_exec)"
@@ -238,7 +239,7 @@ bundle agent matlab_installer(params)
     DEBUG.matlab_installer_file_exists::
       "MatLab installer file $($(params).matlab_installer_file) is present";
 
-    DEBUG.!matlab_installer_file_exists::
+    DEBUG.!matlab_installer_file_exists.!matlab_exec_binary_exists::
       "MatLab installer file $($(params).matlab_installer_file) is not present";
 
     DEBUG.matlab_app_dir_exists.matlab_system_exec_exists::
