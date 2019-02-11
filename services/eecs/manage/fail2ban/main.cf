@@ -129,7 +129,7 @@ bundle agent fail2ban_server_vars
 
     ## GLOBAL/DEFAULT_CONFIG IN /etc/fail2ban/jail.local
     any::
-      "default[ignoreip]"      string => "127.0.0.1/8,172.27.0.0/16",
+      "default[ignoreip]"      string => "127.0.0.1/8,172.0.0.0/8",
       comment => "can be an IP address, a CIDR mask or a DNS host. Fail2ban will not ban a host which matches an address in this list. Several addresses can be defined using space or comma separator. ignoring localhost and WSU on-site labs";
       "default[bantime]"       string => "600",
       comment => "number of seconds that a host is banned.";
