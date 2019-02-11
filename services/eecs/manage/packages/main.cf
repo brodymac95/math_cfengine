@@ -9,8 +9,8 @@ bundle common packages_main_file_control
 {
   vars:
     "input[standard_install]" string => "$(this.promise_dirname)/installation.cf";
-      #"input[matlab]" string => "$(this.promise_dirname)/matlab.cf"; ERRORS OUT!
-
+    "input[matlab_install]" string => "$(this.promise_dirname)/matlab.cf";
+      
       "inputs"
         slist => getvalues(input);
 }
@@ -29,6 +29,29 @@ bundle agent manage_packages
   methods:
       "manage standard repository packages" usebundle => manage_repository_packages;
 
+    install_custom_packages::
+      "manage custom installer packages only if custom packages are specified in host_data.json file"
+      usebundle => manage_custom_packages;
 }
 
 ###################################
+
+bundle agent manage_custom_packages
+# @description: custom scripting for packages required by users but not in standard repositories
+{
+  methods:
+
+    matlab_classroom|matlab_research::
+            "install matlab with classroom or research license" usebundle => install_matlab;
+
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_manage_packages)::
+      "=== $(this.bundle) ===";
+      "Custom packages to be installed: $(classify_host.custom_packages)";
+
+}
+
+####################################
