@@ -88,6 +88,7 @@
 	"purpose": "research",
         "role": "robotics",
         "owner": "Hongsheng He",
+	"custom_packages": [ "matlab_research", ],
     },
     "wh_330_a02": {
 	"machine": "workstation",
@@ -112,6 +113,7 @@
 	"purpose": "research",
         "role": "robotics",
         "owner": "Hongsheng He",
+	"custom_packages": [ "matlab_research", ],
     },
     "wh_331_6528_11": {
 	"machine": "workstation",
