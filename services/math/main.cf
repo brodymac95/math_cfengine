@@ -1,0 +1,43 @@
+###############################################################################
+#
+#   main.cf - EECS entry promises
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+bundle common math_main_file_control
+{
+  vars:
+      "inputs"
+      slist => {
+	"$(this.promise_dirname)/version_control/main.cf",
+	"$(this.promise_dirname)/classification/main.cf",
+	# "$(this.promise_dirname)/scheduler/main.cf",
+	# "$(this.promise_dirname)/inventory/main.cf",
+	"$(this.promise_dirname)/lib/main.cf",
+	"$(this.promise_dirname)/manage/main.cf",
+	"$(this.promise_dirname)/server/main.cf",
+      };
+}
+
+body file control
+{
+      inputs => { @(math_main_file_control.inputs) };
+}
+
+bundle agent math_main
+{
+
+  methods:
+      "Update from github" usebundle => vcs_update;
+      # "set schedule (cron)" usebundle => cron_scheduler;
+      # "Inventory" usebundle => inventory_main;
+      "Manage" usebundle => manage_main;
+
+    policy_server::
+      "Manage" usebundle => config_policy_server;
+
+  reports:
+      (inform_mode|verbose_mode)::
+            "$(this.bundle): Activated";
+}

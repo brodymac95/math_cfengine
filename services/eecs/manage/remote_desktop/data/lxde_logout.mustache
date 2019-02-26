@@ -1,8 +1,0 @@
-#!/bin/sh
-# {{{vars.xrdp_vars.lxde_logout_script}}} is configured by CFEngine
-
-# DISABLED: default uses lxsession-logout but this has shutdown/reboot options
-# lxsession-logout --banner "/usr/share/lxde/images/logout-banner.png" --side=top
-
-# remote terminal server only needs for user logout (do not want shutdown/reboot/suspend options)
-pkill -SIGTERM -f lxsession

@@ -1,0 +1,54 @@
+{
+    "hostname": {
+	"machine": "os_test_cluster OR os_node OR server OR workstation OR laptop"
+	"purpose": "whatever",
+        "role": "role",
+        "owner": "client",
+	"security": [ "ssh_public", "rdp_public", "etc", ],
+	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups OR uaf2_client or uaf2_legacy",
+        "users": { "myWSU ID OR local_user": "full name" },
+	"extra_repository_packages": [ "package1", "package2" ],
+	"custom_packages": [ "package1", "package2" ],
+	"printers": [ "printer1", "printer2" ],
+	"NOT IMPLEMENTED-network_interfaces": { "eth0": "ip_address", "eth1": "ip_address" }
+    },
+
+    "TESTING": {},
+    "policyhub_dev": {
+	"machine": "server",
+	"purpose": "cfe-dev",
+        "role": "policysrv",
+        "owner": "development",
+	"authentication": "local_users_shared_group",
+    },
+    
+    "guac_test_vm_1": {
+	"machine": "os_test_cluster",
+	"purpose": "math-testguac",
+        "role": "guac_gateway",
+        "owner": "development",
+    },
+    "cstest_bastion": {
+	"machine": "os_tenant_minimal_cluster",
+	"purpose": "cstest",
+        "role": "ssh_bastion",
+        "owner": "development",
+	"authentication": "manage_debian_user",
+    },
+    "cstest_node": {
+	"machine": "os_tenant_minimal_cluster",
+	"purpose": "cstest",
+        "role": "cluster_node",
+        "owner": "development",
+	"authentication": "manage_debian_user",
+    },
+    
+    "SERVERS": {},
+    "policyhub_prod": {
+	"machine": "server",
+	"purpose": "infrastructure",
+        "role": "policysrv",
+        "owner": "production",
+    },
+
+}

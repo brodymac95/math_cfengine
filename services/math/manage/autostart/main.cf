@@ -1,0 +1,107 @@
+##############################################################################
+#
+#   manage/autorun/main.cf - EECS rc.local configuration
+#   Maintained: Ben Roose, ver 0.2
+#
+###############################################################################
+
+# PROTIP: Use body file control to help make modular policy.
+# "There can be only one" body common control per policy entry (promises.cf,update.cf)
+
+# TESTING ONLY:INPUT STANDARD LIBRARY (Remove after testing)
+#body file control
+#{
+#      inputs => { "$(sys.libdir)/stdlib.cf" };
+#}
+
+######################################################################
+# Public entry point: config_rc_local bundle
+######################################################################
+
+# NOTES for future development of configuration:
+# 1. PROBLEM, due to emptying file, copying from template and then inserting the autostart lines, we end up running the full bundle every time it runs. Need to check this and fix. Slowed it down with 60 min action elapse time, but need a better fix
+
+bundle agent config_rc_local
+# @description: sets /etc/rc.local from a template file and inserts autostart commands
+{
+  vars:
+      "template_file" string => "$(this.promise_dirname)/rclocal_template.txt";
+      "rclocal_file"     string => "/etc/rc.local";
+
+      "iptables_filter" string => "$(sys.workdir)/state/security/iptables/filter/cf.iptables.filter.policy";
+
+      "autostart[iptables]" string => "
+echo 'restore iptables firewall at boot time [CFEngine configured]'
+/sbin/iptables-restore < $(iptables_filter)";
+
+    autostart_scmmanager::
+      "autostart[scmmanager]" string => "
+echo 'start scmmanager at boot time [CFEngine configured]'
+/etc/init.d/scm-server start";
+      
+      
+# acpi_pm_clock is not currently autostarting, but if VM servers start freezing again, uncomment the following lines!
+#      "autostart[acpi_pm_clock]" string => "
+#echo 'Added by CFEngine to set clock source to acpi_pm'
+#echo 'acpi_pm' > /sys/devices/system/clocksource/clocksource0/current_clocksource";
+
+      
+    any::
+      "insertions" slist => getvalues( "autostart" );
+      
+  files:
+    debian::
+      "$(rclocal_file)"
+      handle => "set_rc_local",
+      create => "true",
+      perms => mog ("755", "root", "root"),
+      edit_defaults => empty,
+      edit_line => expand_template("$(template_file)"),
+      action => if_elapsed("60"),
+      comment => "Ensure rc.local file is configured correctly";
+
+  methods:
+    debian::
+      "insert autostart elements into file"
+      usebundle => edit_rc_local( $(rclocal_file), @(insertions) );
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config_rc_local)::
+      "$(this.bundle): autostart items: $(insertions)";
+      "=== $(this.bundle) ===";
+    (DEBUG|DEBUG_config_rc_local).debian::
+      "autostart items: $(insertions)";
+    (DEBUG|DEBUG_config_rc_local).redhat::
+      "WARNING: $(this.bundle) has not been configured for Red Hat OS";
+}
+
+###############################################################################
+
+bundle agent edit_rc_local(file, line)
+# @description: inserts autostart commands before exit 0
+{
+  files:
+      "$(file)"
+      handle => "edit_rc_local",
+      edit_line => insert_line_into_rc_local("$(line)"),
+      #classes => results("bundle", "rc_local"),
+      comment => "insert line before exit 0 in file";
+}
+
+######################################################################
+
+bundle edit_line insert_line_into_rc_local(line)
+{
+  insert_lines:
+      "$(line)" location => before_exit_0,
+      comment => "insert line before exit 0 in file";
+}
+
+body location before_exit_0
+{
+      select_line_matching => "exit 0";
+      before_after => "before";
+}

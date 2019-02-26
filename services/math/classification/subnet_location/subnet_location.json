@@ -1,0 +1,81 @@
+{
+    "156.26.14.0/24": {
+	"subnet_nickname": "math_desktop",
+	"location": "JB_2nd_3rd_Floor",
+	"vlan": "14",
+	"link_type": "wired",
+	"site": "jabara_hall"
+    },
+    "192.168.1.0/24": {
+	"subnet_nickname": "ltsp_private",
+	"location": "JB_2ndFloor",
+	"vlan": "805",
+	"link_type": "wired",
+	"site": "jabara_hall"
+    }
+    "172.18.208.0/24": {
+	"subnet_nickname": "wsu_labs",
+	"location": "EE_328",
+	"vlan": "undefined",
+	"link_type": "wired",
+	"site": "experiential_engineering_building"
+    }
+    "172.27.0.0/16": {
+	"subnet_nickname": "wsu_secure",
+	"location": "campus_wireless",
+	"vlan": "undefined",
+	"link_type": "wireless",
+	"site": "campus_wide"
+    }
+    "10.1.1.0/24": {
+	"subnet_nickname": "wsu_vpn",
+	"location": "off_campus",
+	"vlan": "undefined",
+	"link_type": "wireless",
+	"site": "off_campus"
+    }
+    "156.26.181.0/26": {
+	"subnet_nickname": "dc_math_public",
+	"location": "dc_right_rack",
+	"vlan": "undefined",
+	"link_type": "wired",
+	"site": "data_centre"
+    },
+    "156.26.250.64/26": {
+	"subnet_nickname": "os_public",
+	"location": "dc_openstack",
+	"vlan": "971",
+	"link_type": "wired",
+	"site": "data_centre"
+    },
+    "192.168.251.0/24": {
+	"subnet_nickname": "os_provisioning",
+	"location": "dc_openstack",
+	"vlan": "973",
+	"link_type": "wired",
+	"site": "data_centre"
+    }
+    "192.168.250.0/24": {
+	"subnet_nickname": "os_ipmi",
+	"location": "dc_openstack",
+	"vlan": "972",
+	"link_type": "wired",
+	"site": "data_centre"
+    }
+
+    "10.10.10.0/24": {
+	"subnet_nickname": "os_teaching",
+	"location": "dc_openstack",
+	"vlan": "teaching",
+	"link_type": "neutron",
+	"site": "data_centre"
+    }
+    "10.10.11.0/24": {
+	"subnet_nickname": "os_testing",
+	"location": "dc_openstack",
+	"vlan": "testing",
+	"link_type": "neutron",
+	"site": "data_centre"
+    }
+
+}

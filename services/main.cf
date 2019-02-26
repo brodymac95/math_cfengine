@@ -7,7 +7,7 @@
 
 body file control
 {
-  inputs => { "services/eecs/main.cf" };
+  inputs => { "services/math/main.cf" };
 }
 
 bundle agent main
@@ -20,8 +20,12 @@ bundle agent main
      # Here is the main policy entry for our organization. If other groups want
      # to start managing their own policies, or if we acquire another
      # organization, we can create an org tree for them and activate it here.
-     "eecs"
-       usebundle => eecs_main,
-       handle => "service_catalogue_methods_any_eecs",
-       comment => "entry bundle for entire eecs policy.";
+     # "eecs"
+     #   usebundle => eecs_main,
+     #   handle => "service_catalogue_methods_any_eecs",
+     #   comment => "entry bundle for entire eecs policy.";
+     "math"
+       usebundle => math_main,
+       handle => "service_catalogue_methods_any_math",
+       comment => "entry bundle for entire math policy.";
 }

@@ -1,0 +1,56 @@
+###############################################################################
+#
+#   classification/main.cf - EECS classification promises
+#   Maintained: Ben Roose, ver 0.1
+#
+###############################################################################
+
+bundle common classification_main_file_control
+{
+  vars:
+    "inputs"
+      slist =>
+      {
+	"$(this.promise_dirname)/host_role/main.cf",
+	# "$(this.promise_dirname)/metadata/main.cf",
+	"$(this.promise_dirname)/subnet_location/main.cf",
+      };
+
+    "bundles"
+      slist =>
+      {
+	"global",
+	"classify_host",
+	"classify_subnet_location",
+	# "os_metadata",
+      };
+
+}
+
+body file control
+{
+      inputs => { @(classification_main_file_control.inputs) };
+}
+
+bundle common global
+{
+  vars:
+      "cluster_name" string => "$(classify_host.host_purpose)";
+      "service_domain" string => "cs.wichita.edu";
+      "root_email" string => "sullivan@math.wichita.edu";
+      "time_zone" string => "America/Chicago";
+      "support" string => "MATH: Brody Sullivan (sullivan@math.wichita.edu)";
+
+      "system_creation_time" string => filestat( "/usr", "ctime" ),
+        comment => "defining the unix epoch time of when the directory '/usr' was created
+                    to assume a baseline for host system creation time";
+      
+  reports:
+    (inform_mode|verbose_mode)::
+      "$(this.bundle): Activated";
+
+    (DEBUG|DEBUG_config)::
+      "=== $(this.bundle) ===";
+
+      # "system created at unix epoch time: $(system_creation_time)";
+}

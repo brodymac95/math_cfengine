@@ -1,2 +1,0 @@
-## auto.tiny_data manged by CFEngine
-audio -fstype=nfs4 -rw,intr,soft tiny.local:/export/audio-musicbrainz

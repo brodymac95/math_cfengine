@@ -1,4 +1,0 @@
-realm = ad.wichita.edu
-security = ads
-workgroup = AD
-kerberos method = system keytab
