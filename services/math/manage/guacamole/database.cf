@@ -34,16 +34,18 @@ bundle agent configure_guac_database
 
     # have active_hosts list from ballast_metrics bundle in ballast/main.cf
       "add all groups and connections into guacamole database"
-        usebundle => guac_add_all_connections( "@(ballast_metrics.active_hosts)", "$(params)" ),
+        usebundle => guac_add_all_connections( "@(classify_host.guacamole_hosts)", "$(params)" ),
+        # usebundle => guac_add_all_connections( "@(ballast_metrics.active_hosts)", "$(params)" ),
         classes => if_ok("connections_added");
 
-    update_user_lists.connections_added::
+    # update_user_lists.connections_added::
+    connections_added::
       "import and add all users into guacamole database"
-        usebundle => guac_add_all_users( "@(ballast_metrics.active_hosts)", "$(params)" );
+        usebundle => guac_add_all_users( "@(classify_host.guacamole_hosts)", "$(params)" );
 
-    any::
-      "delete temporary sql query and insert files from cache directory after file is older than 1 day"
-        usebundle => guac_tidy ("$($(params).sql_cache_dir)", "1" );
+    # any::
+    #   "delete temporary sql query and insert files from cache directory after file is older than 1 day"
+    #     usebundle => guac_tidy ("$($(params).sql_cache_dir)", "1" );
 
   reports:
     (inform_mode|verbose_mode)::
@@ -86,15 +88,14 @@ bundle agent guac_database_vars
 
     any::
     ## USER PARAMETERS
-      "user_organization" string => "EECS";
+      "user_organization" string => "MATH";
       "admin_user_role"   string => "System Admin";
       "faculty_user_role" string => "Faculty";
       "adjunct_user_role" string => "Adjunct";
       "student_user_role" string => "Student";
-      "username" string => "${GUAC_USERNAME}",
-        comment => "Parameter token: ${GUAC_USERNAME} = username of the current Guacamole user";
-      "password" string => "${GUAC_PASSWORD}",
-        comment => "Parameter token: ${GUAC_PASSWORD} = password of the current Guacamole user";
+
+      "guacamole_db_user_password" string => "NOW()",
+        comment => "mySQL guacamole_db requires a password at user creation. Randomizing passwords with mySQL NOW() function for security, since users will authenticate with AD/LDAP passwords";
 
     ## CONNECTION GROUP PARAMETERS
       "ballast_host_alias" string => "$(global.cluster_name)";
@@ -106,6 +107,11 @@ bundle agent guac_database_vars
       "rdp_group_name" string => "$(global.cluster_name)_RDP_GUI_desktop";
 
      ## GLOBAL PARAMETERS FOR ALL CONNECTIONS
+      "username" string => "${GUAC_USERNAME}",
+        comment => "Connection username with parameter token: ${GUAC_USERNAME} = username of the current Guacamole user";
+      "password" string => "${GUAC_PASSWORD}",
+        comment => "Connection password with parameter token: ${GUAC_PASSWORD} = password of the current Guacamole user";
+
       "max_connections_per_group" string => "128",
         comment => "maximum number of concurrent connections to allow to this group at any one time regardless of user
                     NULL will use the default value specified in guacamole.properties";
@@ -148,7 +154,7 @@ bundle agent guac_database_vars
 	"ssh_connection_weight" string => "1",
 	  comment => "DISABLED IN TEMPLATE: The weight for a connection, used for applying weighted load balancing algorithms when connections are part of a BALANCING group.Integer value, where values 1 or greater weight the connection relative to other connections in that group, and values below 1 cause the connection to be disabled in the group. If NULL, the connection will be assigned a default weight of 1";
       "ssh_failover_only" string => "false",
-        comment => "DISABLED IN TEMPLATE: Whether this connection should be used for failover situations only, also known as a hot spare. If this column is set to TRUE or 1, this connection will be used only when another connection within the same BALANCING connection group has failed due to an error within the remote desktop";
+       comment => "DISABLED IN TEMPLATE: Whether this connection should be used for failover situations only, also known as a hot spare. If this column is set to TRUE or 1, this connection will be used only when another connection within the same BALANCING connection group has failed due to an error within the remote desktop";
 
      ## GLOBAL PARAMETERS SPECIFIC FOR RDP CONNECTIONS
       "max_rdp_connections_per_connection" string => "4",
@@ -200,7 +206,7 @@ bundle agent guac_database_vars
 
 ######################################################################
 
-bundle agent guac_add_all_connections(cluster_ips, params)
+bundle agent guac_add_all_connections(guac_hosts, params)
 # @description: create all connection groups and coonections
 {
   vars:
@@ -216,37 +222,27 @@ bundle agent guac_add_all_connections(cluster_ips, params)
       	usebundle => guac_create_connection_group( "$($(params).rdp_group_name)", "BALANCING", "", "1", "$(params)" ),
         classes => if_ok("rdp_group_created");
 
-      # THIS IDEA FAILED: guac cannot connect directly to ballast with ssh
-      # "create SSH connection to the ballast alias for this cluster with no parent group"
-      #   usebundle => guac_create_connection( "$($(params).ssh_ballast_alias_name)",
-      # 					     "$($(params).ballast_host_alias)",
-      # 					     "ssh", "", "$(params)" );
-
-      # "create SSH connection to the ballast last host alias for this cluster with no parent group"
-      #   usebundle => guac_create_connection( "$($(params).ssh_ballast_last_alias_name)",
-      # 					     "$($(params).ballast_host_alias)$(ballast_vars.config[alias_last])",
-      # 					     "ssh", "", "$(params)" );
     ssh_group_created::
       "create SSH connections to hosts within SSH load-balanced group"
-      	usebundle => guac_create_connection( "$(global.cluster_name)_SSH_$(cluster_ips)", "$(cluster_ips)",
+      	usebundle => guac_create_connection( "$(global.cluster_name)_SSH_$(guac_hosts)", "$(guac_hosts)",
 					     "ssh", "$($(params).ssh_group_name)", "$(params)" );
 
     rdp_group_created::
       "create RDP connections to hosts within RDP load-balanced group"
-      	usebundle => guac_create_connection( "$(global.cluster_name)_RDP_$(cluster_ips)", "$(cluster_ips)",
+      	usebundle => guac_create_connection( "$(global.cluster_name)_RDP_$(guac_hosts)", "$(guac_hosts)",
 					     "rdp", "$($(params).rdp_group_name)", "$(params)" );
       
 }
 
 ######################################################################
 
-bundle agent guac_add_all_users(cluster_ips, params)
+bundle agent guac_add_all_users(guac_hosts, params)
 # @description create users in database and add connection permissions to each user
 {
   vars:
 
   methods:
-      "import CSV data for all persistent users and students enrolled in EECS classes"
+      "import JSON and CSV data for all persistent users and students enrolled in EECS classes"
         usebundle => import_user_data( "$(params)" ),
         classes => if_ok("users_imported");
 
@@ -258,7 +254,8 @@ bundle agent guac_add_all_users(cluster_ips, params)
     	  "$(import_user_data.admin_data[$(import_user_data.admin_users)][fullname])",
     	  "$(import_user_data.admin_data[$(import_user_data.admin_users)][email])",
     	  "$($(params).user_organization)",
-      	  "$($(params).admin_user_role)",
+          "$($(params).admin_user_role)",
+	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "admin_user");
 
@@ -289,6 +286,7 @@ bundle agent guac_add_all_users(cluster_ips, params)
     	  "$(import_user_data.faculty_data[$(import_user_data.faculty_users)][email])",
     	  "$($(params).user_organization)",
       	  "$($(params).faculty_user_role)",
+	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "faculty_user");
 
@@ -310,11 +308,11 @@ bundle agent guac_add_all_users(cluster_ips, params)
 
       ## DOES NOT SEEM LIKE WE NEED TO ADD USERS TO INDIVIDUAL CONNECTIONS WITHIN A BALANCED GROUP!!
       # "add each faculty user to each SSH load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(guac_hosts)",
       #     "$(import_user_data.faculty_users)", "$(params)" );
 
       # "add each faculty user to each RDP load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(guac_hosts)",
       #     "$(import_user_data.faculty_users)", "$(params)" );
 
     ## ADJUNCT USERS
@@ -325,6 +323,7 @@ bundle agent guac_add_all_users(cluster_ips, params)
     	  "$(import_user_data.adjunct_data[$(import_user_data.adjunct_users)][email])",
     	  "$($(params).user_organization)",
       	  "$($(params).adjunct_user_role)",
+	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "adjunct_user");
 
@@ -345,20 +344,21 @@ bundle agent guac_add_all_users(cluster_ips, params)
       "$(import_user_data.adjunct_users)", "$(params)" );
 
     ## STUDENT USERS
-      "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
-      	usebundle => guac_create_user(
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.fullname_col)])",
-    	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
-    	  "$($(params).user_organization)",
-      	  "$($(params).student_user_role)",
-          "$(params)");
-        # classes => results("bundle", "student_user");
+      # "create each student user from imported CSV data (ensure mywsu_ids are lowercase as usernames)"
+      # 	usebundle => guac_create_user(
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.fullname_col)])",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
+      # 	  "$($(params).user_organization)",
+      # 	  "$($(params).student_user_role)",
+      #           "$($(params).guacamole_db_user_password)",			       
+      #     "$(params)");
+      #   # classes => results("bundle", "student_user");
 
-      "add each student user to SSH load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
-      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");
+      # "add each student user to SSH load-balanced connection group"
+      # 	usebundle => guac_add_user_to_connection( "group", "$($(params).ssh_group_name)",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+      #     "$(params)");
 
       # "add each student user to SSH ballast alias connection"
       #   usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_ballast_alias_name)",
@@ -370,19 +370,19 @@ bundle agent guac_add_all_users(cluster_ips, params)
       # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
       #     "$(params)" );
 
-      "add each student user to RDP load-balanced connection group"
-      	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
-      	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
-          "$(params)");      
+      # "add each student user to RDP load-balanced connection group"
+      # 	usebundle => guac_add_user_to_connection( "group", "$($(params).rdp_group_name)",
+      # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
+      #     "$(params)");      
 
       ## DOES NOT SEEM LIKE WE NEED TO ADD USERS TO INDIVIDUAL CONNECTIONS WITHIN A BALANCED GROUP!!
       # "add each student user to each SSH load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(cluster_ips)",
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).ssh_group_name)_$(guac_hosts)",
       # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
       #     "$(params)");
 
       # "add each student user to each RDP load-balanced connection"
-      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(cluster_ips)",
+      # 	usebundle => guac_add_user_to_connection( "connection", "$($(params).rdp_group_name)_$(guac_hosts)",
       # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.mywsu_col)])",
       #     "$(params)");
 
@@ -553,7 +553,7 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
 
 ######################################################################
 
-bundle agent guac_create_user(username, full_name, email_address, organization, role, params)
+bundle agent guac_create_user(username, full_name, email_address, organization, role, password, params)
 # @description: use a mustache template to add entries into required mySQL tables for a guacamole user with associated details and using a set of global parameters
 {
   vars:
@@ -807,21 +807,21 @@ bundle agent import_user_data(params)
 	# action => if_elapsed("60"),
 	comment => "perform a secure remote copy of the persistent gateway users json file";
 
-      "$($(params).user_cache_dir)/$(student_csv_source_cache)"
-	perms => mo("400","root"),
-	copy_from => secure_cp( "$($(params).its_student_user_source_path)", $(sys.policy_hub) ),
-      	classes => results("bundle", "student_csv_cache"),
-	# action => if_elapsed("60"),
-	comment => "perform a secure remote copy of the ITS student user list csv file";
+      # "$($(params).user_cache_dir)/$(student_csv_source_cache)"
+      # 	perms => mo("400","root"),
+      # 	copy_from => secure_cp( "$($(params).its_student_user_source_path)", $(sys.policy_hub) ),
+      # 	classes => results("bundle", "student_csv_cache"),
+      # 	# action => if_elapsed("60"),
+      # 	comment => "perform a secure remote copy of the ITS student user list csv file";
 
-  commands:
-      ## CSV DATA MANIPULATION AND REPAIRS
-    student_csv_source_cache_exists.(!student_fixed_file_exists|student_csv_cache_repaired)::
-      "$(perl_tolower_mywsu_cmd) $(student_csv_source_cache)"
-        args => "| $(perl_crlf_fix_cmd) > $(student_csv_fixed_file)",
-        contain => in_dir_shell( "$($(params).user_cache_dir)" ),
-      	classes => results("bundle", "student_csv_fixed"),
-        comment => "ensure myWSU_IDs are lowercase and turn all \n in file to \r\n as required in CSV standard RFC 4180";
+  # commands:
+  #     ## CSV DATA MANIPULATION AND REPAIRS
+  #   student_csv_source_cache_exists.(!student_fixed_file_exists|student_csv_cache_repaired)::
+  #     "$(perl_tolower_mywsu_cmd) $(student_csv_source_cache)"
+  #       args => "| $(perl_crlf_fix_cmd) > $(student_csv_fixed_file)",
+  #       contain => in_dir_shell( "$($(params).user_cache_dir)" ),
+  #     	classes => results("bundle", "student_csv_fixed"),
+  #       comment => "ensure myWSU_IDs are lowercase and turn all \n in file to \r\n as required in CSV standard RFC 4180";
       
   reports:
     (inform_mode|verbose_mode)::

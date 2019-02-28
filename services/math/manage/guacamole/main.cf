@@ -74,10 +74,10 @@ bundle agent guacamole_server(state)
         classes => results("bundle", "guac_authentication");
 
     # UNCOMMENT WHEN READY TO IMPLEMENT AUTOMATION ON GUACAMOLE_DB
-    # on.(guac_authentication_repaired|guac_authentication_kept)::
-    #   "configure guacamole database with connections and users (ensure guacamole.cf input file is loaded)"
-    #   	usebundle => configure_guac_database,
-    #   	classes => if_ok("config_guac_db");
+    on.(guac_authentication_repaired|guac_authentication_kept)::
+      "configure guacamole database with connections and users (ensure guacamole.cf input file is loaded)"
+      	usebundle => configure_guac_database,
+      	classes => if_ok("config_guac_db");
 
 
     ## RESTARTING SERVICES AFTER INSTALLATION AND CONFIGURATION
@@ -99,11 +99,6 @@ bundle agent guacamole_server(state)
     	usebundle => package_latest("$(guacamole_vars.dependent_packages)"),
         classes => results("bundle", "dependent_packages_install"),
         comment => "pull package list from guacamole_vars";
-
-      # "download and expand guacamole installation tarball"
-      # 	usebundle => install_tarball("guacamole_vars"),
-      #   classes => results("bundle", "download_tarball"),
-      #   comment => "use packages/custom_install.cf generic bundle";
       
       "install guacamole server and client from source files"
       	usebundle => install_guac_server("guacamole_vars"),
@@ -542,7 +537,7 @@ bundle agent configure_guac_authentication(params)
   commands:
     mysql_db_repaired::
       "/bin/cat $($(params).guac_mysql_schema_files) | $(mysql_cmd) \"$($(params).guac_props[mysql-database])\" "
-        contain => in_shell,
+       contain => in_shell,
       	classes => results("bundle", "adding_mysql_schema"),
         comment => "add guacamole schema to newly created mysql database";
       
