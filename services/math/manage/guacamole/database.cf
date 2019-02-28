@@ -94,9 +94,6 @@ bundle agent guac_database_vars
       "adjunct_user_role" string => "Adjunct";
       "student_user_role" string => "Student";
 
-      "guacamole_db_user_password" string => "NOW()",
-        comment => "mySQL guacamole_db requires a password at user creation. Randomizing passwords with mySQL NOW() function for security, since users will authenticate with AD/LDAP passwords";
-
     ## CONNECTION GROUP PARAMETERS
       "ballast_host_alias" string => "$(global.cluster_name)";
 
@@ -255,7 +252,6 @@ bundle agent guac_add_all_users(guac_hosts, params)
     	  "$(import_user_data.admin_data[$(import_user_data.admin_users)][email])",
     	  "$($(params).user_organization)",
           "$($(params).admin_user_role)",
-	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "admin_user");
 
@@ -286,7 +282,6 @@ bundle agent guac_add_all_users(guac_hosts, params)
     	  "$(import_user_data.faculty_data[$(import_user_data.faculty_users)][email])",
     	  "$($(params).user_organization)",
       	  "$($(params).faculty_user_role)",
-	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "faculty_user");
 
@@ -323,7 +318,6 @@ bundle agent guac_add_all_users(guac_hosts, params)
     	  "$(import_user_data.adjunct_data[$(import_user_data.adjunct_users)][email])",
     	  "$($(params).user_organization)",
       	  "$($(params).adjunct_user_role)",
-	  "$($(params).guacamole_db_user_password)",			       
           "$(params)" );
         # classes => results("bundle", "adjunct_user");
 
@@ -351,8 +345,7 @@ bundle agent guac_add_all_users(guac_hosts, params)
       # 	  "$(import_user_data.student_data[$(import_user_data.row_index)][$(import_user_data.email_col)])",
       # 	  "$($(params).user_organization)",
       # 	  "$($(params).student_user_role)",
-      #           "$($(params).guacamole_db_user_password)",			       
-      #     "$(params)");
+      #           "$(params)");
       #   # classes => results("bundle", "student_user");
 
       # "add each student user to SSH load-balanced connection group"
@@ -553,7 +546,7 @@ bundle agent guac_create_connection(conname, hostname, protocol, parent_group, p
 
 ######################################################################
 
-bundle agent guac_create_user(username, full_name, email_address, organization, role, password, params)
+bundle agent guac_create_user(username, full_name, email_address, organization, role, params)
 # @description: use a mustache template to add entries into required mySQL tables for a guacamole user with associated details and using a set of global parameters
 {
   vars:

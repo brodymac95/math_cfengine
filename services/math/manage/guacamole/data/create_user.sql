@@ -3,6 +3,7 @@
 
 -- Generate salt
 SET @salt = UNHEX(SHA2(UUID(), 256));
+SET @pass = NOW();
 
 -- Create user and hash password with salt
 INSERT INTO guacamole_user (username, full_name, email_address, organization, organizational_role, password_date, password_salt, password_hash)
@@ -13,5 +14,5 @@ VALUES ('{{{vars.guac_create_user.username}}}',
         '{{{vars.guac_create_user.role}}}',
 	NOW(),
 	@salt,
-	UNHEX(SHA2(CONCAT('{{{vars.guac_create_user.password}}}', HEX(@salt)), 256))
+	UNHEX(SHA2(CONCAT(@pass, HEX(@salt)), 256))
        );
