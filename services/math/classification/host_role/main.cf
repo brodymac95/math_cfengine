@@ -55,6 +55,14 @@ bundle common classify_host
       ifvarclass => canonify("$(host_data[$(canonified_host)][authentication])"),
       meta => { "inventory", "attribute_name=authentication" };      
 
+    "guacamole_hosts"
+      data => mergedata( "host_data[$(canonified_host)][guacamole_hosts]" ),
+      ifvarclass => isvariable("host_data[$(canonified_host)][guacamole_hosts]"),
+      comment => "create data subset of guacamole_hosts from host_data.json file";
+ 
+    "guacamole_hosts_json_str" string => format("%S", "guacamole_hosts"),
+      ifvarclass => isvariable("host_data[$(canonified_host)][guacamole_hosts]");
+
     "security_rules"
       data => mergedata( "host_data[$(canonified_host)][security]" ),
       ifvarclass => isvariable("host_data[$(canonified_host)][security]"),
@@ -179,6 +187,11 @@ bundle common classify_host
       #   meta => { "derived-from=sys.host,hardclass and host_data file" },
       #   comment => "Add class configure_interfaces if found for host from external data file.";
 
+      "guacamole_hosts_exist"
+	expression => isvariable("guacamole_hosts"),
+      	meta => { "derived-from=sys.host,hardclass and host_data file" },
+	comment => "Add class guacamole_hosts_exist if found for host from external data file.";
+
       "custom_security_rules"
 	expression => isvariable("security_rules"),
 	meta => { "derived-from=sys.host,hardclass and host_data file" },
@@ -228,6 +241,7 @@ bundle common classify_host
       # "Found users: $(user_list)";
       
       #  "Contents of 'external file' data container: '$(hosts_json_str)'";
+      "Contents of 'guacamole_hosts' data container: '$(guacamole_hosts_json_str)'";
       #  "Contents of 'security_rules' data container: '$(security_rules_json_str)'";
       #  "Contents of 'wsu_users' data container: '$(users_json_str)'";
       #  "Contents of 'extra_packages' data container: '$(extra_packages_json_str)'";

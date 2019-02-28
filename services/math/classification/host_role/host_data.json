@@ -4,6 +4,7 @@
 	"purpose": "whatever",
         "role": "role",
         "owner": "client",
+	"guacamole_hosts": [ "ip_address ", "or", "dns_hostname" ],
 	"security": [ "ssh_public", "rdp_public", "etc", ],
 	"authentication": "local_users_shared_group OR local__users_own_group OR local_users_custom_groups OR uaf2_client or uaf2_legacy",
         "users": { "myWSU ID OR local_user": "full name" },
@@ -27,6 +28,7 @@
 	"purpose": "math-testguac",
         "role": "guac_gateway",
         "owner": "development",
+	"guacamole_hosts": [ "10.10.11.15", ],
     },
     "cstest_bastion": {
 	"machine": "os_tenant_minimal_cluster",
